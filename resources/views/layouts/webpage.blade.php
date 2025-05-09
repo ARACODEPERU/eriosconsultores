@@ -11,7 +11,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     
     <!--====== Title ======-->
-    <title>ERIOS CONSULTORES</title>
+    <title>ERIOS CONSULTORES | Home</title>
     <!--====== Favicon Icon ======-->
     <link rel="shortcut icon" href="{{ asset('themes/webpage/images/favicon.png') }}" type="image/png">
 
