@@ -1,95 +1,109 @@
-
-<footer class="main-footer">
-    <div class="bg-image zoom-two" style="background-image: url({{ asset('themes/webpage/images/background/4.jpg') }})"></div>
-
-    <!--Widgets Section-->
-    <div class="widgets-section">
-        <div class="auto-container">
-            <div class="row">
-                <!--Footer Column-->
-                <div class="footer-column col-xl-3 col-lg-12 col-md-6 col-sm-12">
-                    <div class="footer-widget about-widget">
-                        <div class="logo">
-                            <a href="">
-                                <img src="{{ asset('themes/webpage/images/EDUCAP-LogoFondo.jpg') }}" alt="" >
-                            </a>
-                        </div>
-                        <div class="text">Presentación corta de educap</div>
-                    </div>
-                </div>
-
-                <!--Footer Column-->
-                <div class="footer-column col-xl-2 col-lg-4 col-md-6 col-sm-12">
-                    <div class="footer-widget">
-                        <h4 class="widget-title">Navegar</h4>
-                        <ul class="user-links">
-                            <li><a href="#">Home</a></li>
-                            <li><a href="#">Nosotros</a></li>
-                            <li><a href="#">Cursos</a></li>
-                            <li><a href="#">Contacto</a></li>
-                        </ul>
-                    </div>
-                </div>
-
-                <!--Footer Column-->
-                <div class="footer-column col-xl-2 col-lg-4 col-md-6 col-sm-12">
-                    <div class="footer-widget">
-                        <h4 class="widget-title">Politicas</h4>
-                        <ul class="user-links">
-                            <li><a href="#">Calidad</a></li>
-                            <li><a href="#">Privacidad</a></li>
-                            <li><a href="#">Libro de reclamaciones</a></li>
-                        </ul>
-                    </div>
-                </div>
-
-                <!--Footer Column-->
-                <div class="footer-column col-xl-5 col-lg-4 col-md-6 col-sm-12">
-                    <div class="footer-widget contact-widget">
-                        <h4 class="widget-title">Contacto</h4>
-                        <div class="widget-content">
-                            <ul class="contact-info">
-                                <li>
-                                    <i class="fa fa-phone-square"></i> 
-                                    <a href="tel:+51977627207">+51 977627207</a>
-                                </li>
-                                <li>
-                                    <i class="fa fa-envelope"></i> 
-                                    <a href="">
-                                        correo@dominio.com
-                                    </a>
-                                </li>
-                                <li>
-                                    <i class="fa fa-map-marker-alt"></i> Dirección de la oficina principal
-                                </li>
+<div>
+    <footer id="footer-part">
+        <div class="footer-top pt-40 pb-70">
+            <div class="container">
+                <div class="row">
+                    <div class="col-lg-4 col-md-6">
+                        <div class="footer-about mt-40">
+                            <div class="logo">
+                                <a href="#"><img src="{{ asset('themes/webpage/images/logo-2.png') }}" alt="Logo"></a>
+                            </div>
+                            <p>Gravida nibh vel velit auctor aliquetn quibibendum auci elit cons equat ipsutis sem nibh id elit. Duis sed odio sit amet nibh vulputate.</p>
+                            <ul class="mt-20">
+                                <li><a href="#"><i class="fa fa-facebook-f"></i></a></li>
+                                <li><a href="#"><i class="fa fa-twitter"></i></a></li>
+                                <li><a href="#"><i class="fa fa-google-plus"></i></a></li>
+                                <li><a href="#"><i class="fa fa-instagram"></i></a></li>
                             </ul>
-                            <ul class="social-icon-two">
-                                <li><a href="#"><i class="fab fa-twitter"></i></a></li>
-                                <li><a href="#"><i class="fab fa-facebook"></i></a></li>
-                                <li><a href="#"><i class="fab fa-pinterest"></i></a></li>
-                                <li><a href="#"><i class="fab fa-instagram"></i></a></li>
+                        </div> <!-- footer about -->
+                    </div>
+                    <div class="col-lg-3 col-md-6 col-sm-6">
+                        <div class="footer-link mt-40">
+                            <div class="footer-title pb-25">
+                                <h6>Sitemap</h6>
+                            </div>
+                            <ul>
+                                <li><a href="index.html"><i class="fa fa-angle-right"></i>Home</a></li>
+                                <li><a href="about.html"><i class="fa fa-angle-right"></i>About us</a></li>
+                                <li><a href="courses.html"><i class="fa fa-angle-right"></i>Courses</a></li>
+                                <li><a href="blog.html"><i class="fa fa-angle-right"></i>News</a></li>
+                                <li><a href="events.html"><i class="fa fa-angle-right"></i>Event</a></li>
                             </ul>
-                            {{-- <div class="subscribe-form">
-                                <form method="post" action="#">
-                                    <div class="form-group">
-                                        <input type="email" name="email" class="email" value="" placeholder="Email Address" required="">
-                                        <button type="button" class="theme-btn btn-style-one"><i class="fa fa-long-arrow-alt-right"></i></button>
+                            <ul>
+                                <li><a href="#"><i class="fa fa-angle-right"></i>Gallery</a></li>
+                                <li><a href="shop.html"><i class="fa fa-angle-right"></i>Shop</a></li>
+                                <li><a href="teachers.html"><i class="fa fa-angle-right"></i>Teachers</a></li>
+                                <li><a href="#"><i class="fa fa-angle-right"></i>Support</a></li>
+                                <li><a href="contact.html"><i class="fa fa-angle-right"></i>Contact</a></li>
+                            </ul>
+                        </div> <!-- footer link -->
+                    </div>
+                    <div class="col-lg-2 col-md-6 col-sm-6">
+                        <div class="footer-link support mt-40">
+                            <div class="footer-title pb-25">
+                                <h6>Support</h6>
+                            </div>
+                            <ul>
+                                <li><a href="#"><i class="fa fa-angle-right"></i>FAQS</a></li>
+                                <li><a href="#"><i class="fa fa-angle-right"></i>Privacy</a></li>
+                                <li><a href="#"><i class="fa fa-angle-right"></i>Policy</a></li>
+                                <li><a href="#"><i class="fa fa-angle-right"></i>Support</a></li>
+                                <li><a href="#"><i class="fa fa-angle-right"></i>Documentation</a></li>
+                            </ul>
+                        </div> <!-- support -->
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="footer-address mt-40">
+                            <div class="footer-title pb-25">
+                                <h6>Contact Us</h6>
+                            </div>
+                            <ul>
+                                <li>
+                                    <div class="icon">
+                                        <i class="fa fa-home"></i>
                                     </div>
-                                </form>
-                            </div> --}}
+                                    <div class="cont">
+                                        <p>143 castle road 517 district, kiyev port south Canada</p>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="icon">
+                                        <i class="fa fa-phone"></i>
+                                    </div>
+                                    <div class="cont">
+                                        <p>+3 123 456 789</p>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="icon">
+                                        <i class="fa fa-envelope-o"></i>
+                                    </div>
+                                    <div class="cont">
+                                        <p>info@yourmail.com</p>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div> <!-- footer address -->
+                    </div>
+                </div> <!-- row -->
+            </div> <!-- container -->
+        </div> <!-- footer top -->
+        
+        <div class="footer-copyright pt-10 pb-25">
+            <div class="container">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="copyright text-md-left text-center pt-15">
+                            <p>&copy; Copyrights 2025 | ERIOS All rights reserved. </p>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!--Footer Bottom-->
-    <div class="footer-bottom">
-        <div class="auto-container">
-            <div class="inner-container">
-                <div class="copyright-text">&copy; Copyright reservados a Educap | Desarrollado por <a href="https://www.aracodeperu.com/">Aracode Smart Solutión</a></div>
-            </div>
-        </div>
-    </div>
-</footer>
+                    <div class="col-md-4">
+                        <div class="copyright text-md-right text-center pt-15">
+                            <p>Desarrollado por <span><a href="">ARACODE SMART SOLUTIONS</a></span> </p>
+                        </div>
+                    </div>
+                </div> <!-- row -->
+            </div> <!-- container -->
+        </div> <!-- footer copyright -->
+    </footer>
+</div>

@@ -145,13 +145,17 @@ p {
 }
 .main-btn:hover {
     color: #ffc600;
-    border-color: #07294d;
-    background-color: #07294d;
+    /* border-color: #07294d;
+    background-color: #07294d; */
+    border-color: #004aad;
+    background-color: #004aad;
 }
 .main-btn-2 {
     color: #ffc600;
-    border-color: #07294d;
-    background-color: #07294d;
+    /* border-color: #07294d;
+    background-color: #07294d; */
+    border-color: #004aad;
+    background-color: #004aad;
 }
 .main-btn-2:hover {
     color: #07294d;
@@ -162,7 +166,7 @@ p {
 
 .section-title {}
 .section-title h5 {
-    color: #07294d;
+    color: #004aad;
     position: relative;
     padding-bottom: 12px;
 }
@@ -569,7 +573,7 @@ p {
 /*===== Header top =====*/
 
 .header-top {
-    background-color: #07294d;
+    background-color: #004aad;
     padding-top: 15px;
     padding-bottom: 15px;
 }
@@ -686,7 +690,7 @@ p {
 .navigation .navbar .navbar-nav li a {
     font-size: 15px;
     font-weight: 500;
-    color: #07294d;
+    color: #004aad;
     text-transform: uppercase;
     -webkit-transition: all 0.4s linear;
     transition: all 0.4s linear;
@@ -700,7 +704,7 @@ p {
     position: absolute;
     top: 110%;
     left: 0;
-    background-color: #07294d;
+    background-color: #004aad;
     width: 180px;
     opacity: 0;
     visibility: hidden;
@@ -741,7 +745,7 @@ p {
 .navbar .navbar-toggler .icon-bar {
     width: 30px;
     height: 2px;
-    background-color: #07294d;
+    background-color: #004aad;
     display: block;
     margin: 5px 0;
     position: relative;
@@ -772,7 +776,7 @@ p {
 }
 .right-icon ul li a {
     font-size: 18px;
-    color: #07294d;
+    color: #004aad;
     position: relative;
     padding-right: 7px;
 }
@@ -794,16 +798,16 @@ p {
     border-bottom: 1px solid #edf0f2;
 }
 .header-two .header-contact ul li {
-    color: #07294d;
+    color: #004aad;
 }
 .header-two .header-contact ul li a {
-    color: #07294d;
+    color: #004aad;
 }
 .header-two .header-right .social .follow-us {
-    color: #07294d;
+    color: #004aad;
 }
 .header-two .header-right .social ul li a {
-    color: #07294d;
+    color: #004aad;
 }
 .header-two .header-right .social ul li a:hover {
     color: #ffc600;
@@ -811,7 +815,7 @@ p {
     transition: all 0.4s linear;
 }
 .header-two .login-register ul li a {
-    color: #07294d;
+    color: #004aad;
     font-size: 16px;
     font-weight: 500;
     padding: 6px 18px;
@@ -820,7 +824,7 @@ p {
     transition: all 0.3s linear;
 }
 .header-two .login-register ul li a:hover {
-    background: #07294d;
+    background: #004aad;
     color: #fff;
 }
 .header-two .login-register ul li::before {
@@ -837,7 +841,7 @@ p {
 }
 .header-two .navigation .navbar .navbar-nav li .sub-menu li a {
     border-bottom: 1px solid #edeff2;
-    color: #07294d;
+    color: #004aad;
 }
 .header-two .navigation .navbar .navbar-nav li .sub-menu li a.active, .header-two .navigation .navbar .navbar-nav li .sub-menu li a:hover {
     color: #ffc600;
@@ -870,20 +874,20 @@ p {
     padding: 0 0;
 }
 .header-three .navigation.sticky .navbar .navbar-nav li a {
-    color: #07294d;
+    color: #004aad;
 }
 .header-three .navigation.sticky .navbar .navbar-nav li a:hover {
     color: #ffc600;
 }
 .header-three .navigation.sticky .right-icon ul li a {
-    color: #07294d;
+    color: #004aad;
 }
 .header-three .navigation .navbar .navbar-nav li .sub-menu {
     background-color: #fff;
 }
 .header-three .navigation .navbar .navbar-nav li .sub-menu li a {
     border-bottom: 1px solid #edeff2;
-    color: #07294d;
+    color: #004aad;
 }
 .header-three .navigation .navbar .navbar-nav li .sub-menu li a:hover {
     color: #ffc600;
@@ -895,7 +899,7 @@ p {
 }
 .header-four .navigation .navbar .navbar-nav li .sub-menu li a {
     border-bottom: 1px solid #edeff2;
-    color: #07294d;
+    color: #004aad;
 }
 .header-four .navigation .navbar .navbar-nav li .sub-menu li a.active, .header-four .navigation .navbar .navbar-nav li .sub-menu li a:hover {
     color: #ffc600;
@@ -946,8 +950,8 @@ p {
     -webkit-transform: translate(-50%, -50%);
     transform: translate(-50%, -50%);
     background-color: #fff;
-    border: 2px solid #07294d;
-    color: #07294d;
+    border: 2px solid #004aad;
+    color: #004aad;
     padding-left: 20px;
     border-radius: 50px;
 }
@@ -960,7 +964,7 @@ p {
     padding: 0;
     border: 0;
     background-color: transparent;
-    color: #07294d;
+    color: #004aad;
     cursor: pointer;
     font-size: 16px;
 }
@@ -1092,7 +1096,7 @@ p {
 .slider-search .nice-select span {
     font-size: 16px;
     font-family: 'Poppins', sans-serif;
-    color: #07294d;
+    color: #004aad;
     font-weight: 400;
 }
 .slider-search .nice-select .list {
@@ -1102,7 +1106,7 @@ p {
 }
 .slider-search .nice-select::after {
     border-bottom: 0;
-    border-right: 8px solid #07294d;
+    border-right: 8px solid #004aad;
     border-top: 8px solid transparent;
     height: 0px;
     margin-top: -4px;
@@ -1124,7 +1128,7 @@ p {
     padding: 0;
 }
 .slider-search .main-btn:hover {
-    border-color: #07294d;
+    border-color: #004aad;
 }
 .slider-feature {}
 .single-slider-feature {
@@ -1168,11 +1172,11 @@ p {
     height: 100%;
 }
 .slider-cont-4 h1 {
-    color: #07294d;
+    color: #004aad;
     padding-bottom: 35px;
 }
 .slider-cont-4 p {
-    color: #07294d;
+    color: #004aad;
 }
 /*=====================================================
     4. CATEGORY css 
@@ -1188,7 +1192,7 @@ p {
     background-color: #ff6f6f;
 }
 .category {
-    background-color: #07294d;
+    background-color: #004aad;
     border-radius: 10px;
     margin-top: -150px;
     position: relative;
@@ -1257,7 +1261,7 @@ p {
     box-shadow: 0px 0px 60px 0px rgba(0, 0, 0, 0.1);
 }
 .category-text-tow h2 {
-    color: #07294d;
+    color: #004aad;
 }
 /*=====================================================
     5. ABOUT css 
@@ -1383,14 +1387,18 @@ p {
     position: relative;
 }
 .apply-color-1 {
-    background-color: #07294d;
-    border-top-left-radius: 5px;
-    border-bottom-left-radius: 5px;
+    background-color: #004aad;
+    /* border-top-left-radius: 5px;
+    border-bottom-left-radius: 5px; */
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;
 }
 .apply-color-2 {
     background-color: #092e56;
-    border-top-right-radius: 5px;
-    border-bottom-right-radius: 5px;
+    /* border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px; */
+    border-top-right-radius: 0px;
+    border-bottom-right-radius: 0px;
 }
 .apply .apply-cont {
     padding: 45px 50px 50px;
@@ -1429,7 +1437,7 @@ p {
     left: 0;
     width: 50%;
     height: 100%;
-    background-color: #07294d;
+    background-color: #004aad;
     z-index: -1;
 }
 .apply-bg-tow {
@@ -1485,7 +1493,7 @@ p {
 }
 .single-course .thum .price span {
     font-size: 14px;
-    color: #07294d;
+    color: #004aad;
     font-family: 'Montserrat', sans-serif;
     font-weight: 700;
     width: 55px;
@@ -1636,7 +1644,7 @@ p {
     text-align: center;
     font-size: 24px;
     background-color: #ffc600;
-    color: #07294d;
+    color: #004aad;
     border-radius: 50%;
 }
 .feature {
@@ -1821,7 +1829,7 @@ p {
 }
 .single-publication .image .add-cart ul li a:hover {
     background-color: #ffc600;
-    color: #07294d;
+    color: #004aad;
 }
 .single-publication .content {}
 .single-publication .content .book-title a {
@@ -1840,14 +1848,14 @@ p {
     color: #505050;
 }
 .single-publication .content .writer-name span {
-    color: #07294d;
+    color: #004aad;
     padding-bottom: 10px;
 }
 .single-publication .content .price {}
 .single-publication .content .price .normal-price {
     font-size: 16px;
     font-weight: 600;
-    color: #07294d;
+    color: #004aad;
 }
 .single-publication .content .price .discount-price {
     font-size: 14px;
@@ -1994,7 +2002,7 @@ p {
     margin-right: 8px;
 }
 .single-news .news-cont ul li a span {
-    color: #07294d;
+    color: #004aad;
 }
 .single-news .news-cont a {
     display: block;
@@ -2021,7 +2029,7 @@ p {
 ======================================================*/
 
 .footer-top {
-    background-color: #07294d;
+    background-color: #004aad;
 }
 .footer-about {
     padding-right: 50px;
@@ -2195,7 +2203,7 @@ p {
     margin-top: -154px;
 }
 .category-form .form-title {
-    background-color: #07294d;
+    background-color: #004aad;
     padding-top: 35px;
     padding-bottom: 40px;
 }
@@ -2252,7 +2260,7 @@ p {
 }
 .single-course-2>.thum .price span {
     font-size: 14px;
-    color: #07294d;
+    color: #004aad;
     font-family: 'Montserrat', sans-serif;
     font-weight: 700;
     width: 55px;
@@ -2339,7 +2347,7 @@ p {
 
 .counter-3 {}
 .counter-3 p {
-    color: #07294d;
+    color: #004aad;
     font-weight: 600;
 }
 /*===== Index-4 =====*/
@@ -2401,7 +2409,7 @@ p {
 }
 .teachers-2 .teachers-2-single .cont span {
     font-size: 14px;
-    color: #07294d;
+    color: #004aad;
 }
 .teachers-2 .teachers-2-single .cont span i {
     margin-right: 5px;
@@ -2411,7 +2419,7 @@ p {
     z-index: 5;
 }
 .happy-student {
-    background-color: #07294d;
+    background-color: #004aad;
     padding-top: 65px;
     padding-left: 80px;
     padding-right: 80px;
@@ -2420,7 +2428,7 @@ p {
     position: relative;
 }
 .happy-student {
-    background-color: #07294d;
+    background-color: #004aad;
     padding-top: 65px;
     padding-left: 80px;
     padding-right: 80px;
@@ -2611,7 +2619,7 @@ p {
     border-top-right-radius: 5px;
 }
 .category-form-3 .form-title h3 {
-    color: #07294d;
+    color: #004aad;
 }
 .category-form-3 .form-title span {
     font-weight: 600;
@@ -2621,7 +2629,7 @@ p {
 }
 .category-form-3 .main-btn:hover {
     color: #ffc600;
-    border-color: #07294d;
+    border-color: #004aad;
 }
 /*=====================================================
     20. PAGE BANNER  css 
@@ -2743,7 +2751,7 @@ p {
 }
 .courses-pagination .pagination .page-item a {
     font-size: 15px;
-    color: #07294d;
+    color: #004aad;
     width: 40px;
     height: 40px;
     line-height: 36px;
@@ -3098,7 +3106,7 @@ p {
 }
 .related-courses .title h3 {
     font-size: 30px;
-    color: #07294d;
+    color: #004aad;
 }
 .course-features {
     background-color: #fff;
@@ -3107,7 +3115,7 @@ p {
 }
 .course-features h4, .You-makelike h4 {
     font-size: 24px;
-    color: #07294d;
+    color: #004aad;
     padding-bottom: 15px;
 }
 .course-features ul {}
@@ -3332,7 +3340,7 @@ p {
 }
 .events-address ul li .single-address .cont h6 {
     font-size: 15px;
-    color: #07294d;
+    color: #004aad;
 }
 .events-address ul li .single-address .cont span {
     font-size: 14px;
@@ -3513,7 +3521,7 @@ p {
 }
 .sidebar .categories h4, .sidebar .sidebar-post h4 {
     font-size: 24px;
-    color: #07294d;
+    color: #004aad;
 }
 .sidebar .categories ul {
     padding-top: 15px;
@@ -3895,7 +3903,7 @@ p {
 .related-item {}
 .related-item .title h3 {
     font-size: 30px;
-    color: #07294d;
+    color: #004aad;
 }
 /*=====================================================
     31. CONTACT PAGE css 
@@ -3964,8 +3972,8 @@ p.form-message.success, p.form-message.error {
     width: 50px;
     line-height: 50px;
     border-radius: 50%;
-    border: 1px solid #07294d;
-    color: #07294d;
+    border: 1px solid #004aad;
+    color: #004aad;
     font-size: 24px;
     text-align: center;
 }
@@ -4028,7 +4036,7 @@ p.form-message.success, p.form-message.error {
 }
 .single-teacher-2 .teacher-image .teacher-social ul li a {
     font-size: 16px;
-    color: #07294d;
+    color: #004aad;
     ;
     -webkit-transition: all 0.4s ease-out 0s;
     transition: all 0.4s ease-out 0s;
@@ -4060,7 +4068,7 @@ p.form-message.success, p.form-message.error {
     position: relative;
 }
 .admission-info {
-    background-color: #07294d;
+    background-color: #004aad;
     padding: 70px 40px;
 }
 .admission-info .admission-title {
@@ -4085,7 +4093,7 @@ p.form-message.success, p.form-message.error {
     color: #ffc600;
 }
 .admission-card {
-    background-color: #07294d;
+    background-color: #004aad;
 }
 .admission-card .card-image img {
     width: 100%;
@@ -4163,7 +4171,7 @@ p.form-message.success, p.form-message.error {
 }
 .course-meta .price span {
     font-size: 16px;
-    color: #07294d;
+    color: #004aad;
 }
 .course-meta .admin {
     float: right;
@@ -4267,7 +4275,7 @@ p.form-message.success, p.form-message.error {
     overflow: hidden;
     display: block;
     padding: 17px 25px;
-    background-color: #07294d;
+    background-color: #004aad;
 }
 .faq-accordion-cont .accordion .card .card-header a.collapsed {
     background-color: #fff;
@@ -4314,7 +4322,7 @@ p.form-message.success, p.form-message.error {
     color: #fff;
 }
 .faq-accordion-cont .accordion .card .card-header a.collapsed ul li>.head {
-    color: #07294d;
+    color: #004aad;
 }
 .faq-accordion-cont .accordion .card .card-header a ul li>.time {
     font-size: 15px;
@@ -4343,7 +4351,7 @@ p.form-message.success, p.form-message.error {
     padding: 6px 0;
 }
 .privacy-list ul li a {
-    color: #07294d;
+    color: #004aad;
     font-weight: 700;
     transition: .3s;
 }
@@ -4377,7 +4385,7 @@ p.form-message.success, p.form-message.error {
     box-sizing: border-box;
     font-size: 14px;
     font-weight: 500;
-    color: #07294d;
+    color: #004aad;
 }
 .main-btn.register-submit {
     width: 170px;
@@ -4387,7 +4395,7 @@ p.form-message.success, p.form-message.error {
     color: #555;
 }
 .term-service {
-    color: #07294d;
+    color: #004aad;
     transition: .3s;
 }
 a.term-service:hover {
@@ -4402,7 +4410,7 @@ a.term-service:hover {
 }
 .loginhere-link {
     font-weight: 700;
-    color: #07294d;
+    color: #004aad;
     transition: .3s;
 }
 a.loginhere-link:hover {
