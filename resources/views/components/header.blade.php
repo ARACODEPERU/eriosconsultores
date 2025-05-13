@@ -23,12 +23,12 @@
                                     <li><a href="#"><i class="fab fa-linkedin" aria-hidden="true"></i></a></li>
                                 </ul>
                             </div> <!-- social -->
-                            <div class="login-register">
+                            {{-- <div class="login-register">
                                 <ul>
                                     <li><a href="register.html">Login</a></li>
                                     <li><a href="register.html">Register</a></li>
                                 </ul>
-                            </div>
+                            </div> --}}
                         </div> <!-- header right -->
                     </div>
                 </div> <!-- row -->
