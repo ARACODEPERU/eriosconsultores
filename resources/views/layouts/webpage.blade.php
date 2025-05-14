@@ -93,6 +93,11 @@
     <!--====== FOOTER PART START ======-->
     <x-footer />
     <!--====== FOOTER PART ENDS ======-->
+
+    
+    <!--Whatsapp Start-->
+    <x-whatsapp /> 
+    <!--Whatsapp End--
    
     <!--====== BACK TO TP PART START ======-->
     
