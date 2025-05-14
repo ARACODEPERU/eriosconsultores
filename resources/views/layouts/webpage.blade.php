@@ -13,7 +13,7 @@
     <!--====== Title ======-->
     <title>ERIOS CONSULTORES | Home</title>
     <!--====== Favicon Icon ======-->
-    <link rel="shortcut icon" href="{{ asset('themes/webpage/images/favicon.png') }}" type="image/png">
+    <link rel="shortcut icon" href="{{ asset('themes/webpage/images/Logo_Icon.png') }}" type="image/png">
 
     <!--====== Slick css ======-->
     <link rel="stylesheet" href="{{ asset('themes/webpage/css/slick.css') }}">
@@ -44,6 +44,9 @@
 
     <!--====== Responsive css ======-->
     <link rel="stylesheet" href="{{ asset('themes/webpage/css/responsive.css') }}">
+
+    <!--====== Sky-Tabs css ======-->
+    <link rel="stylesheet" href="{{ asset('themes/webpage/css/sky-tabs.css') }}">
 
   
 </head>
