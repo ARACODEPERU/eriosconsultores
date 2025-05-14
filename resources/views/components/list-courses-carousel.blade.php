@@ -31,7 +31,7 @@
                                     <a href="#" class="main-btn" style="background: #f8f8f8;">Leer Más</a>
                                 </div>
                                 <div class="col-md-6">
-                                    <a href="#" class="main-btn">Leer Más</a>
+                                    <a href="#" class="main-btn"><i class="fa fa-shopping-cart" aria-hidden="true"></i> Adquirir</a>
                                 </div>
                             </div>
                         </div>
@@ -58,7 +58,7 @@
                                     <a href="#" class="main-btn" style="background: #f8f8f8;">Leer Más</a>
                                 </div>
                                 <div class="col-md-6">
-                                    <a href="#" class="main-btn">Leer Más</a>
+                                    <a href="#" class="main-btn"><i class="fa fa-shopping-cart" aria-hidden="true"></i> Adquirir</a>
                                 </div>
                             </div>
                         </div>
@@ -85,7 +85,7 @@
                                     <a href="#" class="main-btn" style="background: #f8f8f8;">Leer Más</a>
                                 </div>
                                 <div class="col-md-6">
-                                    <a href="#" class="main-btn">Leer Más</a>
+                                    <a href="#" class="main-btn"><i class="fa fa-shopping-cart" aria-hidden="true"></i> Adquirir</a>
                                 </div>
                             </div>
                         </div>
@@ -112,7 +112,7 @@
                                     <a href="#" class="main-btn" style="background: #f8f8f8;">Leer Más</a>
                                 </div>
                                 <div class="col-md-6">
-                                    <a href="#" class="main-btn">Leer Más</a>
+                                    <a href="#" class="main-btn"><i class="fa fa-shopping-cart" aria-hidden="true"></i> Adquirir</a>
                                 </div>
                             </div>
                         </div>
