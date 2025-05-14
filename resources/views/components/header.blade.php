@@ -64,7 +64,7 @@
                                         <a href="{{ route('web_about') }}">Cursos</a>
                                     </li>
                                     <li class="nav-item">
-                                        <a href="{{ route('web_about') }}">Contactanos</a>
+                                        <a href="{{ route('web_contact_us') }}">Contactanos</a>
                                     </li>
                                     <li class="nav-item">
                                         <a href="{{ route('web_about') }}">Campus Virtual</a>

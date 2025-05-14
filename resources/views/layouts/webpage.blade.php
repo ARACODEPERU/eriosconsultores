@@ -106,10 +106,6 @@
     <!--====== BACK TO TP PART ENDS ======-->
    
     
-    
-    
-    
-    
 
     <!--====== jquery js ======-->
     <script src="{{ asset('themes/webpage/js/vendor/modernizr-3.6.0.min.js') }}"></script>
