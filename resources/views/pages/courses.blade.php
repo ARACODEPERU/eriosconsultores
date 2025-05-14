@@ -60,7 +60,7 @@
                         </ul> <!-- nav -->
                         
                         <div class="float-right">
-                            <li class="nav-item">Showing 4 0f 24 Results</li>
+                            <li class="nav-item"> 4 0f 24 Results</li>
                         </div> <!-- niif search -->
                     </div> <!-- niif top search -->
                 </div>
