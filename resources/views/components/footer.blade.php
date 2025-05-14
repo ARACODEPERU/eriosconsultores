@@ -38,7 +38,7 @@
                                         <i class="fa fa-home"></i>
                                     </div>
                                     <div class="cont">
-                                        <p>143 castle road 517 district, kiyev port south Canada</p>
+                                        <p>Urbanización Los Rosales de Santa Inés mz c lote 9 int. 2</p>
                                     </div>
                                 </li>
                                 <li>
@@ -46,7 +46,7 @@
                                         <i class="fa fa-phone"></i>
                                     </div>
                                     <div class="cont">
-                                        <p>+3 123 456 789</p>
+                                        <p>990 687 621</p>
                                     </div>
                                 </li>
                                 <li>
@@ -54,7 +54,7 @@
                                         <i class="fa fa-envelope-o"></i>
                                     </div>
                                     <div class="cont">
-                                        <p>info@yourmail.com</p>
+                                        <p>eriosc0406@gmail.com</p>
                                     </div>
                                 </li>
                             </ul>
