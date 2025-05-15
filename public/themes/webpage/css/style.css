@@ -2770,7 +2770,8 @@ p {
 ======================================================*/
 
 .courses-single-left {
-    padding: 45px 50px;
+    /* padding: 45px 50px; */
+    padding: 45px 30px;
     background-color: #fff;
 }
 .courses-single-left .title {}
