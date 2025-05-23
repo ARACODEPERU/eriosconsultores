@@ -27,6 +27,9 @@ export default defineConfig({
     },
     build: {
         sourcemap: false,
+        rollupOptions: {
+            external: ['vue-clipboard3'] // Añade vue-clipboard3 como un módulo externo
+        }
     },
     server: {
         sourcemap: true,
