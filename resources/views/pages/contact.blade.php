@@ -24,7 +24,7 @@
     </section>
 
     <!--====== PAGE BANNER PART ENDS ======-->
-
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <!--====== CONTACT PART START ======-->
 
     <section id="contact-page" class="pt-90 pb-120 gray-bg">
