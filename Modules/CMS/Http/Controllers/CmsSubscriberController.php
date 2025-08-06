@@ -42,7 +42,7 @@ class CmsSubscriberController extends Controller
         $validator = Validator::make(
             $request->all(),
             [
-                'email' => 'required|email|unique:cms_subscribers,email|max:255',
+                'email' => 'required|email|max:255',
             ],
             [
                 'email.unique' => 'El correo electrónico ya existe',
