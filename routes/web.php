@@ -27,7 +27,7 @@ use Modules\Blog\Http\Controllers\BlogController;
 use Modules\Sales\Http\Controllers\SalesController;
 
 // Rutas en Blade
-Route::get('/home', [WebPageController::class, 'index'])->name('index_main');
+// Route::get('/home', [WebPageController::class, 'index'])->name('index_main');
 
 // Route::get('/', [WebPageController::class, 'construction'])->name('construction');
 Route::get('/', [WebPageController::class, 'index'])->name('index_main');
