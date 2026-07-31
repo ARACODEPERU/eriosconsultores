@@ -9,11 +9,11 @@
                                 <h6>Navegar</h6>
                             </div>
                             <ul>
-                                <li><a href=""><i class="fa fa-angle-right"></i>Home</a></li>
-                                <li><a href=""><i class="fa fa-angle-right"></i>Nosotros</a></li>
-                                <li><a href=""><i class="fa fa-angle-right"></i>Servicios</a></li>
-                                <li><a href=""><i class="fa fa-angle-right"></i>Cursos</a></li>
-                                <li><a href=""><i class="fa fa-angle-right"></i>Contactanos</a></li>
+                                <li><a href="{{ route('index_main') }}"><i class="fa fa-angle-right"></i>Home</a></li>
+                                <li><a href="{{ route('web_about') }}"><i class="fa fa-angle-right"></i>Nosotros</a></li>
+                                {{-- <li><a href="{{ route('web_services') }}"><i class="fa fa-angle-right"></i>Servicios</a></li> --}}
+                                <li><a href="{{ route('web_courses') }}"><i class="fa fa-angle-right"></i>Cursos</a></li>
+                                <li><a href="{{ route('web_contact_us') }}"><i class="fa fa-angle-right"></i>Contactanos</a></li>
                             </ul>
                         </div> <!-- footer link -->
                     </div>
@@ -38,7 +38,7 @@
                                         <i class="fa fa-home"></i>
                                     </div>
                                     <div class="cont">
-                                        <p>Urbanización Los Rosales de Santa Inés mz c lote 9 int. 2</p>
+                                        <p>{{ $footer[0]->content }}</p>
                                     </div>
                                 </li>
                                 <li>
@@ -46,7 +46,7 @@
                                         <i class="fa fa-phone"></i>
                                     </div>
                                     <div class="cont">
-                                        <p>(+51) 990 687 621</p>
+                                        <p>{{ $footer[1]->content }}</p>
                                     </div>
                                 </li>
                                 <li>
@@ -54,25 +54,40 @@
                                         <i class="fa fa-envelope-o"></i>
                                     </div>
                                     <div class="cont">
-                                        <p><a href="mailto:Info@eriosconsultores.com">Info@eriosconsultores.com</a></p>
+                                        <p><a href="mailto:{{ $footer[2]->content }}">{{ $footer[2]->content }}</a></p>
                                     </div>
                                 </li>
                             </ul>
                         </div>
                         <div class="footer-about mt-40">
                             <ul class="mt-20">
-                                <li><a href="#"><i class="fab fa-facebook-f" aria-hidden="true"></i></a></li>
+                                <li>
+                                    <a style="padding: 0px 5px;" href="{{ $footer[3]->content }}" target="_blank"
+                                        rel="noopener noreferrer">
+                                        <i class="fab fa-facebook-f" aria-hidden="true"></i>
+                                    </a>
+                                </li>
                                 {{-- <li><a href="#"><i class="fa fa-youtube"></i></a></li>
-                                <li><a href="#"><i class="fa fa-twitter"></i></a></li> --}}
-                                <li><a href="#"><i class="fab fa-instagram" aria-hidden="true"></i></a></li>
-                                <li><a href="#"><i class="fab fa-linkedin" aria-hidden="true"></i></a></li>
+                                    <li><a href="#"><i class="fa fa-twitter"></i></a></li> --}}
+                                <li>
+                                    <a style="padding: 0px 5px;" href="{{ $footer[4]->content }}" target="_blank"
+                                        rel="noopener noreferrer">
+                                        <i class="fab fa-instagram" aria-hidden="true"></i>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a style="padding: 0px 5px;" href="{{ $footer[5]->content }}" target="_blank"
+                                        rel="noopener noreferrer">
+                                        <i class="fab fa-linkedin" aria-hidden="true"></i>
+                                    </a>
+                                </li>
                             </ul>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        
+
         <div class="footer-copyright pt-10 pb-25">
             <div class="container">
                 <div class="row">
@@ -83,7 +98,8 @@
                     </div>
                     <div class="col-md-4">
                         <div class="copyright text-md-right text-center pt-15">
-                            <p>Desarrollado por <span><a href="https://aracodeperu.com/">ARACODE SMART SOLUTIONS</a></span> </p>
+                            <p>Desarrollado por <span><a href="https://aracodeperu.com/">ARACODE SMART
+                                        SOLUTIONS</a></span> </p>
                         </div>
                     </div>
                 </div> <!-- row -->
