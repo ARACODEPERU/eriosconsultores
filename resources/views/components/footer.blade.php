@@ -46,7 +46,7 @@
                                         <i class="fa fa-phone"></i>
                                     </div>
                                     <div class="cont">
-                                        <p>990 687 621</p>
+                                        <p>(+51) 990 687 621</p>
                                     </div>
                                 </li>
                                 <li>
@@ -54,7 +54,7 @@
                                         <i class="fa fa-envelope-o"></i>
                                     </div>
                                     <div class="cont">
-                                        <p>eriosc0406@gmail.com</p>
+                                        <p><a href="mailto:Info@eriosconsultores.com">Info@eriosconsultores.com</a></p>
                                     </div>
                                 </li>
                             </ul>
@@ -78,12 +78,12 @@
                 <div class="row">
                     <div class="col-md-8">
                         <div class="copyright text-md-left text-center pt-15">
-                            <p>&copy; Copyrights 2025 | ERIOS All rights reserved. </p>
+                            <p>&copy; Copyrights 2026 | ERIOS CONSULTORES Todos los derechos reservados. </p>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="copyright text-md-right text-center pt-15">
-                            <p>Desarrollado por <span><a href="">ARACODE SMART SOLUTIONS</a></span> </p>
+                            <p>Desarrollado por <span><a href="https://aracodeperu.com/">ARACODE SMART SOLUTIONS</a></span> </p>
                         </div>
                     </div>
                 </div> <!-- row -->

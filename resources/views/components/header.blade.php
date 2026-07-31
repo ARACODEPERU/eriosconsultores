@@ -6,8 +6,8 @@
                     <div class="col-md-6">
                         <div class="header-contact">
                             <ul>
-                                <li><i class="fa fa-envelope"></i><a href="#">info@yourmail.com</a></li>
-                                <li><i class="fa fa-phone"></i><span>+0123-456-5678</span></li>
+                                <li><i class="fa fa-envelope"></i><a href="mailto:Info@eriosconsultores.com">Info@eriosconsultores.com</a></li>
+                                <li><i class="fa fa-phone"></i><span>(+51) 990 687 621</span></li>
                             </ul>
                         </div> <!-- header contact -->
                     </div>
@@ -41,7 +41,7 @@
                     <div class="col-lg-12">
                         <nav class="navbar navbar-expand-lg">
                             <a class="navbar-brand" href="index-4.html">
-                                <img style="width: 180px;" src="{{  asset('themes/webpage/images/Logo_Web.jpg') }}" alt="Logo">
+                                <img style="width: 180px;" src="{{ asset('storage/'.$header[5]->content) }}" alt="Logo">
                             </a>
                             <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
                                 <span class="icon-bar"></span>
