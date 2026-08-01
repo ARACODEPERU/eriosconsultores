@@ -7,7 +7,7 @@
     <!--====== SLIDER PART ENDS ======-->
    
     <!--====== CATEGORY PART START ======-->
-    <x-category-courses-slider />
+    {{-- <x-category-courses-slider /> --}}
     <!--====== CATEGORY PART ENDS ======-->
    
     <!--====== ABOUT PART START ======-->

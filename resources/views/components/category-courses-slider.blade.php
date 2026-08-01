@@ -17,7 +17,7 @@
                                             <img src="{{ asset('themes/webpage/images/all-icon/ctg-1.png') }}" alt="Icon">
                                         </span>
                                         <span class="cont">
-                                            <span>Language</span>
+                                            <span>Tributación</span>
                                         </span>
                                     </span> <!-- single category -->
                                 </a>
@@ -29,7 +29,7 @@
                                             <img src="{{ asset('themes/webpage/images/all-icon/ctg-2.png') }}" alt="Icon">
                                         </span>
                                         <span class="cont">
-                                            <span>Business</span>
+                                            <span>Negocios</span>
                                         </span>
                                     </span> <!-- single category -->
                                 </a>
@@ -41,12 +41,12 @@
                                             <img src="{{ asset('themes/webpage/images/all-icon/ctg-3.png') }}" alt="Icon">
                                         </span>
                                         <span class="cont">
-                                            <span>Literature</span>
+                                            <span>Coaching</span>
                                         </span>
                                     </span> <!-- single category -->
                                 </a>
                             </div>
-                            <div class="col-lg-4">
+                            {{-- <div class="col-lg-4">
                                 <a href="#">
                                     <span class="single-category text-center color-1">
                                         <span class="icon">
@@ -81,7 +81,7 @@
                                         </span>
                                     </span> <!-- single category -->
                                 </a>
-                            </div>
+                            </div> --}}
                         </div> <!-- category slide -->
                     </div>
                 </div> <!-- row -->

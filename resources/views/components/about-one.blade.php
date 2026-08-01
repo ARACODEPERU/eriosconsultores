@@ -4,24 +4,23 @@
             <div class="row">
                 <div class="col-lg-5">
                     <div class="section-title mt-50">
-                        <h5>#Nosotros</h5>
-                        <h2>Bienvenidos a ERIOS </h2>
+                        <h5>{{ $about[0]->content }}</h5>
+                        <h2>{{ $about[1]->content }} </h2>
                     </div> <!-- section title -->
                     <div class="about-cont">
                         <p>
-                            Somos una Compañía peruana que brinda servicios especializados en materia tributaria a las empresas peruanas, 
-                            que les permita cumplir con sus obligaciones tributarias formales y sustanciales y de esta manera evitar el 
-                            riesgo de tener observaciones en una fiscalización de SUNAT y también que les permita optimizar su carga 
-                            fiscal.
+                            {{ $about[2]->content }}
                         </p>
-                        <a href="#" class="main-btn mt-55">Leer Más</a>
+                        <a href="{{ route('web_about') }}" class="main-btn mt-55">Leer Más</a>
                     </div>
-                </div> <!-- about cont -->
-                <div class="col-lg-6 offset-lg-1">
+                </div>
+                <div class="col-lg-7">
+                    <div class="about-image mt-50">
+                        <img src="{{ asset('storage/' . $about[3]->content) }}" alt="About">
+                    </div>  <!-- about image -->
+                </div> 
+                {{-- <div class="col-lg-6 offset-lg-1">
                     <div class="about-event mt-30">
-                        {{-- <div class="event-title">
-                            <h3>Últimos artículos</h3>
-                        </div> --}}
                         <ul>
                             <li>
                                 <div class="single-event">
@@ -45,12 +44,12 @@
                                 </div>
                             </li>
                         </ul> 
-                    </div> <!-- about event -->
-                </div>
+                    </div>
+                </div> --}}
             </div> <!-- row -->
         </div> <!-- container -->
         <div class="about-bg">
-            <img src="{{ asset('themes/webpage/images/about/bg-1.png') }}" alt="About">
+            <img src="{{ asset('storage/' . $about[3]->content ) }}" alt="About">
         </div>
     </section>
 </div>
