@@ -19,7 +19,7 @@
     <!--====== APPLY PART ENDS ======-->
    
     <!--====== COURSE PART START ======-->
-    <x-list-courses-carousel />
+    {{-- <x-list-courses-carousel /> --}}
     <!--====== COURSE PART ENDS ======-->
    
     <!--====== VIDEO BENEFITS PART START ======-->
