@@ -16,7 +16,7 @@
                 </div>
                 <div class="col-lg-7">
                     <div class="about-image mt-50">
-                        <img src="{{ asset('storage/' . $about[3]->content) }}" alt="About">
+                        <img src="{{ asset('storage/' . $about[4]->content) }}" alt="About">
                     </div>  <!-- about image -->
                 </div> 
                 {{-- <div class="col-lg-6 offset-lg-1">
