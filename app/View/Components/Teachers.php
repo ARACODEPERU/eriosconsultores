@@ -28,10 +28,7 @@ class Teachers extends Component
             
         $this->teachers_information = CmsSectionItem::with('item.items')->where('section_id', 8)->get();
     }
-
-    /**
-     * Get the view / contents that represent the component.
-     */
+    
     public function render(): View|Closure|string
     {
         return view('components.teachers', [

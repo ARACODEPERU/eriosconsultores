@@ -256,7 +256,7 @@
     <!--====== NEWS PART ENDS ======-->
    
     <!--====== PATNAR LOGO PART START ======-->
-    <x-patnar-logo />
+    {{-- <x-patnar-logo /> --}}
     <!--====== PATNAR LOGO PART ENDS ======-->
 
 @stop
