@@ -4,23 +4,7 @@
 
     <!--====== PAGE BANNER PART START ======-->
     
-    <section id="page-banner" class="pt-80 pb-80 bg_cover" data-overlay="8" style="background-image: url({{ asset('themes/webpage/images/page-banner-1.jpg') }})">
-        <div class="container">
-            <div class="row">
-                <div class="col-lg-12">
-                    <div class="page-banner-cont">
-                        <h2>Nosotros</h2>
-                        <nav aria-label="breadcrumb">
-                            <ol class="breadcrumb">
-                                <li class="breadcrumb-item"><a href="{{ route('index_main') }}">Inicio</a></li>
-                                <li class="breadcrumb-item active" aria-current="page">Nosotros</li>
-                            </ol>
-                        </nav>
-                    </div>  <!-- page banner cont -->
-                </div>
-            </div> <!-- row -->
-        </div> <!-- container -->
-    </section>
+    <x-hero-about />
     
     <!--====== PAGE BANNER PART ENDS ======-->
 
@@ -176,7 +160,7 @@
    
     <!--====== PATNAR LOGO PART START ======-->
     
-    <div id="patnar-logo" class="pt-40 pb-80 gray-bg">
+    {{-- <div id="patnar-logo" class="pt-40 pb-80 gray-bg">
         <div class="container">
             <div class="row patnar-slide">
                 <div class="col-lg-12">
@@ -211,7 +195,7 @@
                 </div>
             </div> <!-- row -->
         </div> <!-- container -->
-    </div> 
+    </div>  --}}
     
     <!--====== PATNAR LOGO PART ENDS ======-->
    
