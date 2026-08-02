@@ -12,6 +12,8 @@
     <x-about-two />
     <!--====== ABOUT PART ENDS ======-->
 
+    <x-mision-vision-valores />
+
     <!--====== COUNTER PART START ======-->
     
     {{-- <div id="counter-part" class="bg_cover pt-65 pb-110" data-overlay="8" style="background-image: url(images/bg-2.jpg)">
