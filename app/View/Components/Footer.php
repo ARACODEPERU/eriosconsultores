@@ -6,9 +6,12 @@ use Closure;
 use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
 use Modules\CMS\Entities\CmsSection;
+
 class Footer extends Component
 {
+
     protected $footer;
+
     public function __construct()
     {
         $this->footer = CmsSection::where('component_id', 'pie_de_pagina_2')
