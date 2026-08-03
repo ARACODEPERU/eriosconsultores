@@ -42,79 +42,16 @@ class WebPageController extends Controller
 
     public function about()
     {
-
-        // $banner = CmsSection::where('component_id', 'nosotros_banner_area_11')  //siempre cambiar el id del componente
-        //     ->join('cms_section_items', 'section_id', 'cms_sections.id')
-        //     ->join('cms_items', 'cms_section_items.item_id', 'cms_items.id')
-        //     ->select(
-        //         'cms_items.content',
-        //         'cms_section_items.position'
-        //     )
-        //     ->orderBy('cms_section_items.position')
-        //     ->first();
-
-
-        // $visions = CmsSection::where('component_id', 'nosotros_vision_area_12')  //siempre cambiar el id del componente
-        //     ->join('cms_section_items', 'section_id', 'cms_sections.id')
-        //     ->join('cms_items', 'cms_section_items.item_id', 'cms_items.id')
-        //     ->select(
-        //         'cms_items.content',
-        //         'cms_section_items.position'
-        //     )
-        //     ->orderBy('cms_section_items.position')
-        //     ->get();
-
-        // $lider = CmsSection::where('component_id', 'nosotros_lider_area_13')  //siempre cambiar el id del componente
-        //     ->join('cms_section_items', 'section_id', 'cms_sections.id')
-        //     ->join('cms_items', 'cms_section_items.item_id', 'cms_items.id')
-        //     ->select(
-        //         'cms_items.content',
-        //         'cms_section_items.position'
-        //     )
-        //     ->orderBy('cms_section_items.position')
-        //     ->get();
-
-        // return view('pages.nosotros', [
-        //     'banner' => $banner,
-        //     'visions' => $visions,
-        //     'lider' => $lider
-        // ]);
         return view('pages.about');
+    }
+
+    public function services()
+    {
+        return view('pages.services');
     }
 
     public function courses()
     {
-        // $courses = OnliItem::with('course')->get();
-        // $courses = $courses->shuffle();
-        // $categories = AcaCategoryCourse::all();
-
-        // $banner = CmsSection::where('component_id', 'cursos_banner_area_14')  //siempre cambiar el id del componente
-        //     ->join('cms_section_items', 'section_id', 'cms_sections.id')
-        //     ->join('cms_items', 'cms_section_items.item_id', 'cms_items.id')
-        //     ->select(
-        //         'cms_items.content',
-        //         'cms_section_items.position'
-        //     )
-        //     ->orderBy('cms_section_items.position')
-        //     ->first();
-
-        // $title = CmsSection::where('component_id', 'cursos_titulo_area_15')  //siempre cambiar el id del componente
-        //     ->join('cms_section_items', 'section_id', 'cms_sections.id')
-        //     ->join('cms_items', 'cms_section_items.item_id', 'cms_items.id')
-        //     ->select(
-        //         'cms_items.content',
-        //         'cms_section_items.position'
-        //     )
-        //     ->orderBy('cms_section_items.position')
-        //     ->get();
-
-        // return view('pages.cursos', [
-        //     'courses' => $courses,
-        //     'categories' => $categories,
-        //     'banner' => $banner,
-        //     'title' => $title
-        // ]);
-        
         return view('pages.courses');
     }
 

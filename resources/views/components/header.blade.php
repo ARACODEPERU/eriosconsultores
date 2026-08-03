@@ -70,7 +70,7 @@
                                         <a href="{{ route('web_about') }}">Nosotros</a>
                                     </li>
                                     <li class="nav-item">
-                                        <a href="">Servicios</a>
+                                        <a href="{{ route('web_services') }}">Servicios</a>
                                     </li>
                                     <li class="nav-item">
                                         <a href="{{ route('web_courses') }}">Cursos</a>
