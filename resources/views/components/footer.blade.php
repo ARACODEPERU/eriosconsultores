@@ -11,8 +11,8 @@
                             <ul>
                                 <li><a href="{{ route('index_main') }}"><i class="fa fa-angle-right"></i>Home</a></li>
                                 <li><a href="{{ route('web_about') }}"><i class="fa fa-angle-right"></i>Nosotros</a></li>
-                                {{-- <li><a href="{{ route('web_services') }}"><i class="fa fa-angle-right"></i>Servicios</a></li> --}}
-                                <li><a href="{{ route('web_courses') }}"><i class="fa fa-angle-right"></i>Cursos</a></li>
+                                <li><a href="{{ route('web_services') }}"><i class="fa fa-angle-right"></i>Servicios</a></li> 
+                                {{-- <li><a href="{{ route('web_courses') }}"><i class="fa fa-angle-right"></i>Cursos</a></li> --}}
                                 <li><a href="{{ route('web_contact_us') }}"><i class="fa fa-angle-right"></i>Contactanos</a></li>
                             </ul>
                         </div> <!-- footer link -->
