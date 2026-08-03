@@ -72,9 +72,9 @@
                                     <li class="nav-item">
                                         <a href="{{ route('web_services') }}">Servicios</a>
                                     </li>
-                                    <li class="nav-item">
+                                    {{-- <li class="nav-item">
                                         <a href="{{ route('web_courses') }}">Cursos</a>
-                                    </li>
+                                    </li> --}}
                                     <li class="nav-item">
                                         <a href="{{ route('web_contact_us') }}">Contactanos</a>
                                     </li>
