@@ -7,7 +7,7 @@
     <!--====== SLIDER PART ENDS ======-->
    
     <!--====== CATEGORY PART START ======-->
-    <x-category-courses-slider />
+    {{-- <x-category-courses-slider /> --}}
     <!--====== CATEGORY PART ENDS ======-->
    
     <!--====== ABOUT PART START ======-->
@@ -19,7 +19,7 @@
     <!--====== APPLY PART ENDS ======-->
    
     <!--====== COURSE PART START ======-->
-    <x-list-courses-carousel />
+    {{-- <x-list-courses-carousel /> --}}
     <!--====== COURSE PART ENDS ======-->
    
     <!--====== VIDEO BENEFITS PART START ======-->
@@ -256,7 +256,7 @@
     <!--====== NEWS PART ENDS ======-->
    
     <!--====== PATNAR LOGO PART START ======-->
-    <x-patnar-logo />
+    {{-- <x-patnar-logo /> --}}
     <!--====== PATNAR LOGO PART ENDS ======-->
 
 @stop

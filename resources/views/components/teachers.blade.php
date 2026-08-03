@@ -4,29 +4,31 @@
             <div class="row">
                 <div class="col-lg-5">
                     <div class="section-title mt-50">
-                        <h5>#Docentes</h5>
-                        <h2>Conoce a nuestros docentes</h2>
+                        <h5>{{ $teachers_presentation[0]->content }}</h5>
+                        <h2>{{ $teachers_presentation[1]->content }}</h2>
                     </div> <!-- section title -->
                     <div class="teachers-cont">
-                        <p>Lorem ipsum gravida nibh vel velit auctor aliquetn sollicitudirem quibibendum auci elit cons equat ipsutis sem nibh id elit. Duis sed odio sit amet nibh vulputate cursus a sit amet . Morbi accumsan ipsum velit. Nam nec tellus a odio tincidunt  mauris. <br> <br> auci elit cons equat ipsutis sem nibh id elit. Duis sed odio sit amet nibh vulputate cursus a sit amet . Morbi accumsan ipsum velit. Nam nec tellus a odio tincidunt  mauris</p>
+                        <p>{{ $teachers_presentation[2]->content }}</p>
                         <a href="#" class="main-btn mt-55">Ver Todos</a>
                     </div> <!-- teachers cont -->
                 </div>
                 <div class="col-lg-6 offset-lg-1">
                     <div class="teachers mt-20">
                         <div class="row">
+                            @foreach ($teachers_information as $k => $teacher)
                             <div class="col-sm-6">
                                 <div class="single-teachers mt-30 text-center">
                                     <div class="image">
-                                        <img src="{{ asset('themes/webpage/images/teachers/t-1.jpg') }}" alt="Teachers">
+                                        <img src="{{ asset('storage/' . $teacher->item->items[0]->content) }}" alt="Teachers">
                                     </div>
                                     <div class="cont">
-                                        <a href="teachers-single.html"><h6>Mark Alen</h6></a>
-                                        <span>Vice Chancellor</span>
+                                        <a href="teachers-single.html"><h6>{{ $teacher->item->items[1]->content }}</h6></a>
+                                        <span>{{ $teacher->item->items[2]->content }}</span>
                                     </div>
                                 </div> <!-- single teachers -->
                             </div>
-                            <div class="col-sm-6">
+                            @endforeach
+                            {{-- <div class="col-sm-6">
                                 <div class="single-teachers mt-30 text-center">
                                     <div class="image">
                                         <img src="{{ asset('themes/webpage/images/teachers/t-2.jpg') }}" alt="Teachers">
@@ -58,7 +60,7 @@
                                         <span>Aerobics head</span>
                                     </div>
                                 </div> <!-- single teachers -->
-                            </div>
+                            </div> --}}
                         </div> <!-- row -->
                     </div> <!-- teachers -->
                 </div>

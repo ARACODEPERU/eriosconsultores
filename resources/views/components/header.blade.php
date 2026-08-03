@@ -6,8 +6,11 @@
                     <div class="col-md-6">
                         <div class="header-contact">
                             <ul>
-                                <li><i class="fa fa-envelope"></i><a href="mailto:Info@eriosconsultores.com">Info@eriosconsultores.com</a></li>
-                                <li><i class="fa fa-phone"></i><span>(+51) 990 687 621</span></li>
+                                <li>
+                                    <i class="fa fa-envelope"></i>
+                                    <a href="mailto:{{ $header[0]->content }}">{{ $header[0]->content }}</a>
+                                </li>
+                                <li><i class="fa fa-phone"></i><span>{{ $header[1]->content }}</span></li>
                             </ul>
                         </div> <!-- header contact -->
                     </div>
@@ -16,11 +19,20 @@
                             <div class="social d-flex">
                                 <span class="follow-us">Siguenos en :</span>
                                 <ul>
-                                    <li><a href="#"><i class="fab fa-facebook-f" aria-hidden="true"></i></a></li>
+                                    <li>
+                                        <a style="padding: 0px 5px;" href="{{ $header[2]->content }}" target="_blank" rel="noopener noreferrer">
+                                        <i class="fab fa-facebook-f" aria-hidden="true"></i></a>
+                                    </li>
                                     {{-- <li><a href="#"><i class="fa fa-youtube"></i></a></li>
                                     <li><a href="#"><i class="fa fa-twitter"></i></a></li> --}}
-                                    <li><a href="#"><i class="fab fa-instagram" aria-hidden="true"></i></a></li>
-                                    <li><a href="#"><i class="fab fa-linkedin" aria-hidden="true"></i></a></li>
+                                    <li>
+                                        <a style="padding: 0px 5px;" href="{{ $header[3]->content }}" target="_blank" rel="noopener noreferrer">
+                                        <i class="fab fa-instagram" aria-hidden="true"></i></a>
+                                    </li>
+                                    <li>
+                                        <a style="padding: 0px 5px;" href="{{ $header[4]->content }}" target="_blank" rel="noopener noreferrer">
+                                        <i class="fab fa-linkedin" aria-hidden="true"></i></a>
+                                    </li>
                                 </ul>
                             </div> <!-- social -->
                             {{-- <div class="login-register">
@@ -58,7 +70,7 @@
                                         <a href="{{ route('web_about') }}">Nosotros</a>
                                     </li>
                                     <li class="nav-item">
-                                        <a href="{{ route('web_about') }}">Servicios</a>
+                                        <a href="{{ route('web_services') }}">Servicios</a>
                                     </li>
                                     <li class="nav-item">
                                         <a href="{{ route('web_courses') }}">Cursos</a>
@@ -71,12 +83,11 @@
                                     </li>
                                 </ul>
                             </div>
-                            <div class="right-icon text-right">
+                            {{-- <div class="right-icon text-right">
                                 <ul>
-                                    {{-- <li><a href="javascript:void(0)" id="search"><i class="fa fa-search"></i></a></li> --}}
                                     <li><a href="#"><i class="fa fa-shopping-bag"></i><span>0</span></a></li>
                                 </ul>
-                            </div> <!-- right icon -->
+                            </div> --}}
                         </nav> <!-- nav -->
                     </div>
                 </div> <!-- row -->

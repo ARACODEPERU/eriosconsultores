@@ -3,13 +3,12 @@
 @section('content')
 
     <!--====== PAGE BANNER PART START ======-->
-    
-    <x-hero-about />
+    <x-hero-services />
     
     <!--====== PAGE BANNER PART ENDS ======-->
 
    <!--====== ABOUT PART START ======-->
-    <x-about-two />
+    <x-services-two />
     <!--====== ABOUT PART ENDS ======-->
 
     <x-mision-vision-valores />

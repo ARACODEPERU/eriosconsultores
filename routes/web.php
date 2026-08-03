@@ -32,6 +32,7 @@ use Modules\Sales\Http\Controllers\SalesController;
 // Route::get('/', [WebPageController::class, 'construction'])->name('construction');
 Route::get('/', [WebPageController::class, 'index'])->name('index_main');
 Route::get('/nosotros', [WebPageController::class, 'about'])->name('web_about');
+Route::get('/servicios', [WebPageController::class, 'services'])->name('web_services');
 Route::get('/cursos', [WebPageController::class, 'courses'])->name('web_courses');
 Route::get('/curso-descripcion',  [WebPageController::class, 'coursedescription'])->name('web_course_description');
 // Route::get('/curso-descripcion/{id}', [WebPageController::class, 'coursedescription'])->name('web_course_description');
