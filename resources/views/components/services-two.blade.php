@@ -5,7 +5,7 @@
                 <div class="row">
                     <div class="col-lg-6">
                         <div class="section-title mt-50">
-                            <h2>{{ $service->item->items[1]->content }}</h2>
+                            <h3>{{ $service->item->items[1]->content }}</h3>
                         </div> 
                         <div class="about-cont">
                             <p>
