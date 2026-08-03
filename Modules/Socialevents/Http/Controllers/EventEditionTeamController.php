@@ -1,0 +1,152 @@
+<?php
+
+namespace Modules\Socialevents\Http\Controllers;
+
+use App\Http\Controllers\Controller;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Inertia\Inertia;
+use Modules\Socialevents\Entities\EventEdition;
+use Modules\Socialevents\Entities\EventEditionTeam;
+use Modules\Socialevents\Entities\EventTeam;
+
+class EventEditionTeamController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     */
+    public function index($id)
+    {
+        $teams = EventTeam::get();
+
+        $currentEquipment = EventEditionTeam::with('equipo')
+            ->where('edition_id', $id)
+            ->orderBy('points', 'desc')           // 1° Más puntos arriba
+            ->orderBy('goal_difference', 'desc')  // 2° Mejor diferencia de goles
+            ->orderBy('goals_for', 'desc')        // 3° Más goles marcados
+            ->orderBy('matches_won', 'desc')      // 4° Más partidos ganados
+            ->get();
+
+        $edicion = EventEdition::find($id);
+
+        return Inertia::render('Socialevents::Editions/Teams', [
+            'teams' => $teams,
+            'currentEquipment' => $currentEquipment,
+            'edicion' => $edicion,
+        ]);
+    }
+
+    public function store(Request $request)
+    {
+        $this->validate(
+            $request,
+            [
+                'team_id' => 'required',
+                'edition_id' => 'required'
+            ]
+        );
+
+        EventEditionTeam::create([
+            'edition_id' => $request->get('edition_id'),
+            'team_id' => $request->get('team_id')
+        ]);
+    }
+
+    /**
+     * Show the specified resource.
+     */
+    public function show($id)
+    {
+        return view('socialevents::show');
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit($id)
+    {
+        return view('socialevents::edit');
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, $id): RedirectResponse
+    {
+        //
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy($eId, $tId)
+    {
+        $message = null;
+        $success = false;
+        try {
+            // Usamos una transacción para asegurarnos de que la operación se realice de manera segura.
+            DB::beginTransaction();
+
+            // Verificamos si existe.
+            $item = EventEditionTeam::where('edition_id', $eId)
+                ->where('team_id', $tId)
+                ->firstOrFail();
+
+            if($item){
+                EventEditionTeam::where('edition_id', $eId)
+                    ->where('team_id', $tId)
+                    ->delete();
+            }
+
+            // Si todo ha sido exitoso, confirmamos la transacción.
+            DB::commit();
+
+            $message =  'Eliminado correctamente';
+            $success = true;
+        } catch (\Exception $e) {
+            // Si ocurre alguna excepción durante la transacción, hacemos rollback para deshacer cualquier cambio.
+            DB::rollback();
+            $success = false;
+            $message = $e->getMessage();
+        }
+
+        return response()->json([
+            'success' => $success,
+            'message' => $message
+        ]);
+    }
+
+    public function printTeamRoster($editionId, $teamId)
+    {
+        $edition = EventEdition::with('evento')->findOrFail($editionId);
+        $editionTeam = EventEditionTeam::with('equipo.manager')->where('edition_id', $editionId)->where('team_id', $teamId)->firstOrFail();
+        $team = $editionTeam->equipo;
+
+        $data = [
+            'event_name'   => $edition->evento->title,
+            'edition_name' => $edition->name,
+            'team_name'    => $team->name,
+            'manager_name' => $team->manager?->formatted_name ?? 'Sin asignar',
+        ];
+
+        $pdf = Pdf::loadView('socialevents::teams.pdf.team_roster', [
+            'data' => $data
+        ]);
+
+        Storage::disk('public')->deleteDirectory('temp_pdfs');
+        Storage::disk('public')->makeDirectory('temp_pdfs');
+
+        $fileName = 'ficha_inscripcion_' . $team->id . '_' . date('Ymd') . '.pdf';
+        $filePath = 'temp_pdfs/' . $fileName;
+
+        Storage::disk('public')->put($filePath, $pdf->output());
+
+        return response()->json([
+            'url' => asset('storage/' . $filePath)
+        ]);
+    }
+}

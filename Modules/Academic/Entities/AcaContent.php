@@ -5,6 +5,8 @@ namespace Modules\Academic\Entities;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class AcaContent extends Model
 {
@@ -29,5 +31,14 @@ class AcaContent extends Model
     public function theme(): BelongsTo
     {
         return $this->belongsTo(AcaTheme::class, 'theme_id');
+    }
+    public function exam(): HasOne
+    {
+        return $this->hasOne(AcaExam::class, 'content_id', 'id');
+    }
+
+    public function Assistance(): HasMany
+    {
+        return $this->hasMany(AcaStudentAttendance::class, 'content_id');
     }
 }

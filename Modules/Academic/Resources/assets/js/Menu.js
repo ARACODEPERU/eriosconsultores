@@ -7,15 +7,18 @@ import {
     faRocket,
     faCertificate,
     faPlay,
-    faUserGroup
+    faMugHot,
+    faChartLine,
+    faGraduationCap,
+    faClock,
+    faGavel,
+    faHand
 } from "@fortawesome/free-solid-svg-icons";
-import { ref } from 'vue';
-import axios from 'axios';
 
 const menuAcademic = {
     status: false,
     text: "Académico",
-    icom: faBook,
+    icom: faGraduationCap,
     route: 'module',
     permissions: "aca_dashboard",
     items: [
@@ -46,6 +49,43 @@ const menuAcademic = {
             text: "Estudiantes",
             icom: faUserGraduate,
             permissions: "aca_estudiante_listado",
+            info: {
+                title: "Gestión de Estudiantes",
+                content: `
+                    <p class="text-sm text-gray-500 mb-3">
+                        Aquí puede administrar toda la información de los estudiantes:
+                    </p>
+                    <ul class="space-y-2 text-sm text-gray-700">
+                        <li>✏️ <span>Editar datos del estudiante.</span></li>
+                        <li>📜 <span>Ver certificados — habilitar o gestionar certificados.</span></li>
+                        <li>📘 <span>Ver matrículas — inscribir y revisar cursos activos.</span></li>
+                        <li>🔄 <span>Suscripciones — consultar y registrar nuevas.</span></li>
+                        <li>💰 <span>Cobrar — crear boleta o factura.</span></li>
+                        <li>⭐ <span>Cuotas pendientes especiales.</span>
+                            <div class="text-xs text-gray-500 pl-6 mt-1 flex items-center">
+                                👉 Pagos especiales como cuotas, reprogramación, cancelaciones artesanales, etc...
+                            </div>
+                        </li>
+                        <li>
+                        📄 <span>Lista de comprobantes:</span>
+                            <div class="text-xs text-gray-500 pl-6 mt-1 flex items-center">
+                                ➡️ <span class="ml-1">ver detalles</span>
+                            </div>
+                            <div class="text-xs text-gray-500 pl-6 mt-1 flex items-center">
+                                ➡️ <span class="ml-1">descargar pdf.</span>
+                            </div>
+                            <div class="text-xs text-gray-500 pl-6 mt-1 flex items-center">
+                                ➡️ <span class="ml-1">descargar xml.</span>
+                            </div>
+                            <div class="text-xs text-gray-500 pl-6 mt-1 flex items-center">
+                                ➡️ <span class="ml-1">Enviar por correo.</span>
+                            </div>
+                        </li>
+                        <li>🗑️ <span>Eliminar estudiante si es necesario.</span></li>
+                    </ul>
+                `,
+                placement: 'right'
+            }
         },
         {
             route: route("aca_courses_list"),
@@ -91,6 +131,45 @@ const menuAcademic = {
             icom: faBookOpen,
             permissions: "aca_miscursos",
             id: 'btnMenuMycourses'
+        },
+        {
+            route: route("aca_student_exam_review_exams"),
+            status: false,
+            text: "Revisar examenes",
+            icom: faMugHot,
+            permissions: "aca_cursos_revisar_examenes",
+            id: 'btnReviewExams'
+        },
+        {
+            route: route("aca_attendance_administration"),
+            status: false,
+            text: "Revisar Asistencia de alumnos",
+            icom: faClock,
+            permissions: "aca_asistencia_administrador",
+            id: 'btnAsistencia'
+        },
+        {
+            route: route("aca_students_course_participations"),
+            status: false,
+            text: "Calificación de participaciones",
+            icom: faHand,
+            permissions: "aca_gestion_de_participaciones",
+            id: 'btnParticipaciones'
+        },
+        {
+            route: route("aca_grade_management_panel"),
+            status: false,
+            text: "Gestión de Calificaciones",
+            icom: faGavel,
+            permissions: "aca_gestion_de_calificaciones",
+            id: 'btnCalificaciones'
+        },
+        {
+            route: route('aca_reports_dashboard'),
+            status: false,
+            text: 'Reportes',
+            permissions: 'aca_reportes',
+            icom: faChartLine,
         }
     ],
 };

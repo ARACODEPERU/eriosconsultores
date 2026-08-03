@@ -9,6 +9,9 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Mail\Mailables\Address;
+use App\Models\SaleDocument;
+use Modules\Onlineshop\Entities\OnliSale;
+use Modules\Onlineshop\Entities\OnliSaleDetail;
 
 class StudentElectronicTicket extends Mailable
 {
@@ -19,6 +22,7 @@ class StudentElectronicTicket extends Mailable
     public function __construct($data)
     {
         $this->data = $data;
+
     }
 
     /**
@@ -28,7 +32,7 @@ class StudentElectronicTicket extends Mailable
     {
         $from_mail = $this->data['from_mail'];
         $from_name = $this->data['from_name'];
-        $title = $this->data['from_name'];
+        $title = "Comprobante de Pago";//$this->data['from_name'];
 
         return new Envelope(
             from: new Address($from_mail, $from_name),
@@ -38,8 +42,10 @@ class StudentElectronicTicket extends Mailable
 
     public function build()
     {
+        $sale = SaleDocument::with('items')->where('id',$this->data['document_id'])->first();
         return $this->view('academic::emails.student-electronic-ticket', [
-            'data' => $this->data
+            'data' => $this->data,
+            'sale' => $sale,
         ]);
     }
     /**
@@ -49,9 +55,21 @@ class StudentElectronicTicket extends Mailable
      */
     public function attachments(): array
     {
-        //dd($this->data['file_path']);
-        $Attachments = [Attachment::fromPath($this->data['file_path'])->as($this->data['file_name'])];
+        $attachments = [];
 
-        return $Attachments;
+        // El PDF siempre se adjunta. Es buena práctica verificar si existe.
+        // Asumimos que $this->data['file_path'] y $this->data['file_name'] siempre están presentes.
+        if (isset($this->data['file_path']) && file_exists($this->data['file_path'])) {
+            $attachments[] = Attachment::fromPath($this->data['file_path'])
+                                    ->as($this->data['file_name']);
+        }
+
+        // El XML se adjunta CONDICIONALMENTE (solo si existe su ruta y el archivo físico)
+        if (isset($this->data['xml_file_path']) && file_exists($this->data['xml_file_path'])) {
+            $attachments[] = Attachment::fromPath($this->data['xml_file_path'])
+                                    ->as($this->data['xml_file_name']);
+        }
+
+        return $attachments;
     }
 }

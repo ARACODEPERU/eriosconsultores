@@ -1,4 +1,5 @@
 import {
+    faGauge,
     faCashRegister,
     faFileInvoiceDollar,
     faScrewdriverWrench,
@@ -10,16 +11,28 @@ import {
     faListOl,
     faFileLines,
     faFileArrowDown,
-    faFileFragment
+    faFileFragment,
+    faFileCircleQuestion,
+    faCircleDollarToSlot,
+    faHandHoldingDollar,
 } from "@fortawesome/free-solid-svg-icons";
 
-const menuSales = [{
+const menuSales = [
+    {
         status: true,
         text: "Ventas",
         icom: faCashRegister,
         route: 'module',
         permissions: "sale_dashboard",
         items: [
+            {
+                route: route("sales_dashboard"),
+                status: false,
+                text: "Dashboard",
+                permissions: "sale_dashboard",
+                icom: faGauge,
+                dashboard: true,
+            },
 
             {
                 status: false,
@@ -58,12 +71,19 @@ const menuSales = [{
                         text: "Servicios",
                         permissions: "sale_servicios",
                     },
+                    {
+                        status: false,
+                        route: route("sales_print_templates_index"),
+                        text: "Plantillas A4",
+                        permissions: "productos",
+                        badge: "Nuevo",
+                    },
                 ]
             },
             {
                 route: route("establishments.index"),
                 status: false,
-                text: "Tiendas",
+                text: "Establecimiento",
                 permissions: "sale_tienda",
                 icom: faLocationDot,
             },
@@ -77,7 +97,14 @@ const menuSales = [{
             {
                 route: route("sales.index"),
                 status: false,
-                text: "Punto de venta (POS)",
+                text: "Notas de venta",
+                permissions: "punto_ventas",
+                icom: faCashRegister,
+            },
+            {
+                route: route("sales_quick_sale"),
+                status: false,
+                text: "Punto de venta rápido",
                 permissions: "punto_ventas",
                 icom: faCashRegister,
             },
@@ -99,12 +126,20 @@ const menuSales = [{
 
     },
     {
-        status:false,
+        status: true,
         text: 'Facturación Electrónica',
         icom: faBolt,
         route: 'module',
         permissions: 'invo_dashboard',
         items: [
+            {
+                route: route('reports_invoice'),
+                status: false,
+                text: 'Dashboard',
+                permissions: 'invo_dashboard',
+                icom: faGauge,
+                dashboard: true,
+            },
             {
                 route: route('saledocuments_create'),
                 status: false,
@@ -139,9 +174,71 @@ const menuSales = [{
                 text: 'Comunicacion de Baja',
                 permissions: 'invo_comunicacion_baja',
                 icom: faFileArrowDown,
-            }
+            },
+            // {
+            //     route: route('reports_invoice'),
+            //     status: false,
+            //     text: 'Reportes',
+            //     permissions: 'invo_reportes',
+            //     icom: faChartLine,
+            // }
         ]
-    }
+    },
+    {
+        status: true,
+        text: 'Cuentas por cobrar',
+        icom: faHandHoldingDollar,
+        route: 'module',
+        permissions: 'acco_dashboard',
+        items: [
+            {
+                route: route('acco_dashboard'),
+                status: false,
+                text: 'Dashboard',
+                permissions: 'acco_dashboard',
+                icom: faGauge,
+                dashboard: true,
+            },
+            {
+                route: route('acco_document_list'),
+                status: false,
+                text: 'Documentos al Crédito',
+                permissions: 'acco_documento_listado',
+                icom: faFileCircleQuestion,
+                info: {
+                    title: "Documentos al Crédito",
+                    content: `<p class="text-sm text-gray-500 mb-3">
+                        Registrar pagos sin emitir comprobantes
+                        </p>
+                        <ul class="space-y-2 text-sm text-gray-700">
+                            <li>✔ <span> Se entiende que son ventas a crédito</span></li>
+                            <li>✔ <span>Solo se registran pagos.</span></li>
+                            <li>✔ <span>No genera boletas/facturas por los abonos.</span></li>
+                        </ul>`,
+                    placement: 'right'
+                }
+            },
+            {
+                route: route('acco_sales_special_rates'),
+                status: false,
+                text: 'Gestión Ventas en Cuotas',
+                permissions: 'acco_pagos_cuotas_especiales',
+                icom: faCircleDollarToSlot,
+                info: {
+                    title: "Gestión Ventas en Cuotas",
+                    content: `<p class="text-sm text-gray-500 mb-3">
+                        Registrar pagos con emisión de factura/boleta por cada cuota
+                        </p>
+                        <ul class="space-y-2 text-sm text-gray-700">
+                            <li>✔ <span>Se entiende que es un financiamiento por cuotas.</span></li>
+                            <li>✔ <span>Sí genera documento de venta por cada pago.</span></li>
+                        </ul>`,
+                    placement: 'right'
+                }
+            },
+        ]
+    },
+
 ];
 
 export default menuSales;

@@ -3,12 +3,12 @@
 namespace App\Helpers\Invoice;
 
 use App\Models\Company;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Exception;
 use Greenter\Data\DocumentGeneratorInterface;
 use Greenter\Data\GeneratorFactory;
 use Greenter\Data\SharedStore;
 use Greenter\Model\DocumentInterface;
-use Greenter\Model\Response\CdrResponse;
 use Greenter\Model\Sale\SaleDetail;
 use Greenter\Report\HtmlReport;
 use Greenter\Report\PdfReport;
@@ -16,7 +16,7 @@ use Greenter\Report\Resolver\DefaultTemplateResolver;
 use Greenter\Report\XmlUtils;
 use Greenter\See;
 use Greenter\Ws\Services\SunatEndpoints;
-use Barryvdh\DomPDF\Facade\Pdf;
+use Modules\Sales\Support\SalesA4Template;
 
 final class Util
 {
@@ -24,48 +24,57 @@ final class Util
      * @var Util
      */
     private static $current;
+
     /**
      * @var SharedStore
      */
     public $shared;
 
     protected $company;
+
     protected $certificate;
+
     protected $user;
+
     protected $password;
+
     protected $ruc;
+
     protected $mode;
+
     public $service;
+
     public $folder;
 
     private function __construct()
     {
-        $this->shared = new SharedStore();
+        $this->shared = new SharedStore;
         $this->company = Company::first();
         $this->mode = $this->company->mode;
 
         $this->setCredentials($this->company);
         $this->setServiceEndpoint();
-        $this->folder = public_path('storage' . DIRECTORY_SEPARATOR . 'invoice');
+        $this->folder = public_path('storage'.DIRECTORY_SEPARATOR.'invoice');
     }
 
     public static function getInstance(): Util
     {
-        if (!self::$current instanceof self) {
-            self::$current = new self();
+        if (! self::$current instanceof self) {
+            self::$current = new self;
         }
 
         return self::$current;
     }
+
     protected function setCredentials($company)
     {
         if ($this->mode == 'prod') {
-            $this->certificate = __DIR__ . DIRECTORY_SEPARATOR . 'Certificates' . DIRECTORY_SEPARATOR . $company->certificate_sunat;
+            $this->certificate = __DIR__.DIRECTORY_SEPARATOR.'Certificates'.DIRECTORY_SEPARATOR.$company->certificate_sunat;
             $this->ruc = $company->ruc;
             $this->user = $company->user_sunat;
             $this->password = $company->key_sunat;
-        } else if ($this->mode == 'demo') {
-            $this->certificate = __DIR__ . DIRECTORY_SEPARATOR . 'Certificates' . DIRECTORY_SEPARATOR . 'certificate.pem';
+        } elseif ($this->mode == 'demo') {
+            $this->certificate = __DIR__.DIRECTORY_SEPARATOR.'Certificates'.DIRECTORY_SEPARATOR.'certificate.pem';
             $this->ruc = '20000000001';
             $this->user = 'MODDATOS';
             $this->password = 'moddatos';
@@ -79,7 +88,7 @@ final class Util
 
     public function getSee()
     {
-        $see = new See();
+        $see = new See;
 
         $certificate = file_get_contents($this->certificate);
 
@@ -100,12 +109,13 @@ final class Util
             'auth' => 'https://gre-test.nubefact.com/v1',
             'cpe' => 'https://gre-test.nubefact.com/v1',
         ]);
-        //$certificate = file_get_contents(__DIR__ . '/../resources/cert.pem');
+        // $certificate = file_get_contents(__DIR__ . '/../resources/cert.pem');
         $certificate = file_get_contents($this->certificate);
 
         if ($certificate === false) {
             throw new Exception('No se pudo cargar el certificado');
         }
+
         return $api->setBuilderOptions([
             'strict_variables' => true,
             'optimizations' => 0,
@@ -119,7 +129,7 @@ final class Util
 
     public function getGRECompany(): \Greenter\Model\Company\Company
     {
-        return (new \Greenter\Model\Company\Company())
+        return (new \Greenter\Model\Company\Company)
             ->setRuc($this->company->ruc)
             ->setRazonSocial($this->company->business_name);
     }
@@ -131,17 +141,18 @@ final class Util
         <b>Código:</b>{$error->getCode()}<br>
         <b>Descripción:</b>{$error->getMessage()}<br>
         HTML;
+
         return $result;
     }
 
     public function writeXml(DocumentInterface $document, ?string $xml): string
     {
-        return $this->writeFile($document->getName() . '.xml', $xml);
+        return $this->writeFile($document->getName().'.xml', $xml);
     }
 
     public function writeCdr(DocumentInterface $document, ?string $zip): string
     {
-        return $this->writeFile('R-' . $document->getName() . '.zip', $zip);
+        return $this->writeFile('R-'.$document->getName().'.zip', $zip);
     }
 
     public function writeFile(?string $filename, ?string $content): string
@@ -152,52 +163,62 @@ final class Util
 
         $fileDir = $this->folder;
 
-        if (!file_exists($fileDir)) {
+        if (! file_exists($fileDir)) {
             mkdir($fileDir, 0777, true);
         }
-        $filePath = $fileDir . DIRECTORY_SEPARATOR . $filename;
-
+        $filePath = $fileDir.DIRECTORY_SEPARATOR.$filename;
 
         file_put_contents($filePath, $content);
 
         return $filePath;
     }
 
-    public function generatePdf(DocumentInterface $document, $seller = null, $qr_path = null, $format = 'A4', $status = 1,)
+    public function generatePdf(DocumentInterface $document, $seller = null, $qr_path = null, $format = 'A4', $status = 1, $forma_pago = 'Contado')
     {
+        $format = strtolower((string) $format);
+        if ($format === 'ticket') {
+            $format = 't80';
+        } elseif ($format === 'a4') {
+            $format = 'A4';
+        }
 
-        $params = self::getParametersPdf($this->company, $seller);
+        $params = self::getParametersPdf($this->company, $seller, $forma_pago);
 
-        $fileDir = public_path();
+        $fileDir = public_path().DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'invoice';
 
-        if (!file_exists($fileDir)) {
+        if (! file_exists($fileDir)) {
             mkdir($fileDir, 0777, true);
         }
 
-        $filename = $document->getName() . '.pdf';
-        $filePath = $fileDir . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'invoice' . DIRECTORY_SEPARATOR . $filename;
+        $filename = $document->getName().'.pdf';
+        $filePath = $fileDir.DIRECTORY_SEPARATOR.$filename;
 
         if ($format == 'A4') {
-
-            $pdf = Pdf::loadView('sales::sales.invoice_a4', [
-                'document' => $document,
-                'params' => $params,
-                'qr_path' => $qr_path,
-                'status' => $status
-            ]);
+            $pdf = Pdf::loadView(
+                SalesA4Template::electronicView($document->getTipoDoc()),
+                [
+                    'document' => $document,
+                    'params' => $params,
+                    'qr_path' => $qr_path,
+                    'status' => $status,
+                ]
+            );
 
             $pdf->setPaper('a4', 'portrait');
-        } else if ($format == 't80') {
+        } elseif ($format == 't80') {
             $pdf = Pdf::loadView('sales::sales.invoice_ticket_pdf', [
                 'document' => $document,
                 'params' => $params,
                 'qr_path' => $qr_path,
-                'status' => $status
+                'status' => $status,
             ]);
-            $pdf->setPaper(array(0, 0, 273, 500), 'portrait');
+            $pdf->setPaper([0, 0, 273, 1000], 'portrait');
+        } else {
+            throw new \InvalidArgumentException("Formato PDF no soportado: {$format}");
         }
 
-
+        $pdf->setOption('isRemoteEnabled', false);
+        $pdf->setOption('isHtml5ParserEnabled', true);
         $pdf->render();
         $pdf->save($filePath);
 
@@ -207,14 +228,14 @@ final class Util
     public function getPdf(DocumentInterface $document, $seller = null): ?string
     {
 
-        $fileDir = $this->folder . DIRECTORY_SEPARATOR . 'cache';
+        $fileDir = $this->folder.DIRECTORY_SEPARATOR.'cache';
 
         $html = new HtmlReport('', [
             'cache' => $fileDir,
             'strict_variables' => true,
         ]);
 
-        $resolver = new DefaultTemplateResolver();
+        $resolver = new DefaultTemplateResolver;
 
         $template = $resolver->getTemplate($document);
 
@@ -227,7 +248,7 @@ final class Util
             'viewport-size' => '1280x1024',
             'page-width' => '21cm',
             'page-height' => '29.7cm',
-            'footer-html' => __DIR__ . DIRECTORY_SEPARATOR . 'Resources' . DIRECTORY_SEPARATOR . 'footer.html',
+            'footer-html' => __DIR__.DIRECTORY_SEPARATOR.'Resources'.DIRECTORY_SEPARATOR.'footer.html',
         ]);
 
         $binPath = self::getPathBin();
@@ -241,34 +262,32 @@ final class Util
         $params = self::getParametersPdf($this->company, $seller);
 
         $params['system']['hash'] = $hash;
-        $params['user']['footer'] = '<div>consulte en <a href="' . route("find_electronic_invoice") . '">BUSCAR</a></div>';
+        $params['user']['footer'] = '<div>consulte en <a href="'.route('find_electronic_invoice').'">BUSCAR</a></div>';
 
         $pdf = $render->render($document, $params);
 
         if ($pdf === null) {
 
             $error = $render->getExporter()->getError();
-            echo 'Error: ' . $error;
+            echo 'Error: '.$error;
             exit();
         }
 
         // Write html
-        $this->writeFile($document->getName() . '.html', $render->getHtml());
+        $this->writeFile($document->getName().'.html', $render->getHtml());
 
         return $pdf;
     }
 
     public function getGenerator(string $type): ?DocumentGeneratorInterface
     {
-        $factory = new GeneratorFactory();
+        $factory = new GeneratorFactory;
         $factory->shared = $this->shared;
 
         return $factory->create($type);
     }
 
     /**
-     * @param SaleDetail $item
-     * @param int $count
      * @return array<SaleDetail>
      */
     public function generator(SaleDetail $item, int $count): array
@@ -296,7 +315,7 @@ final class Util
 
     public static function getPathBin(): string
     {
-        $path = __DIR__ . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR;
+        $path = __DIR__.DIRECTORY_SEPARATOR.'vendor'.DIRECTORY_SEPARATOR.'bin'.DIRECTORY_SEPARATOR;
         if (self::isWindows()) {
             $path .= 'wkhtmltopdf.exe';
         } else {
@@ -317,26 +336,26 @@ final class Util
 
         $xml = $see->getXmlSigned($document);
 
-        return (new XmlUtils())->getHashSign($xml);
-        //return null;
+        return (new XmlUtils)->getHashSign($xml);
+        // return null;
     }
 
     /**
      * @return array<string, array<string, array<int, array<string, string>>|bool|string>>
      */
-    private static function getParametersPdf($company, $seller = null): array
+    private static function getParametersPdf($company, $seller = null, $forma_pago = 'Contado'): array
     {
 
         $seller_name = 'ARACODE SELLER';
 
         if ($seller) {
-            $seller_name  = $seller->name;
+            $seller_name = $seller->name;
         }
 
         return [
             'system' => [
                 'logo' => null,
-                'hash' => ''
+                'hash' => '',
             ],
             'user' => [
                 'resolucion' => '212321',
@@ -344,14 +363,14 @@ final class Util
                 'extras' => [
                     [
                         'name' => 'FORMA DE PAGO',
-                        'value' => 'Contado'
+                        'value' => $forma_pago,
                     ],
                     [
                         'name' => 'VENDEDOR',
-                        'value' => $seller_name
+                        'value' => $seller_name,
                     ],
                 ],
-            ]
+            ],
         ];
     }
 }

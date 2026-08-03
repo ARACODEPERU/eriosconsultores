@@ -17,9 +17,11 @@ use Exception;
 use Greenter\Model\Company\Address;
 use Greenter\Model\Company\Company;
 use Greenter\Model\Sale\FormaPagos\FormaPagoContado;
+use Greenter\Model\Sale\FormaPagos\FormaPagoCredito;
 use Greenter\Model\Sale\Charge;
 use Greenter\Model\Sale\Detraction;
 use App\Helpers\Invoice\QrCodeGenerator;
+use App\Models\District;
 use App\Models\Kardex;
 use App\Models\KardexSize;
 use App\Models\Product;
@@ -27,7 +29,7 @@ use App\Models\Sale;
 use App\Models\SaleDocumentItem;
 use App\Models\SaleProduct;
 use Illuminate\Support\Facades\DB;
-
+use Greenter\Model\Sale\Cuota;
 class Factura
 {
     protected $see;
@@ -42,7 +44,10 @@ class Factura
     public function create($document_id)
     {
         try {
-            $document = SaleDocument::find($document_id);
+            $document = SaleDocument::with(['quotas' => function ($query) {
+                $query->orderBy('due_date', 'asc'); // Ordena las cuotas por fecha de pago ascendente
+            }])->find($document_id);
+
             $invoice = $this->setDocument($document);
             $see = $this->util->getSee();
             $res = $see->send($invoice);
@@ -53,27 +58,89 @@ class Factura
             $document->invoice_document_name = $invoice->getName();
             $notes = null;
             $status = null;
+            $codeError = null;
 
             if ($res->isSuccess()) {
-                /**@var $res \Greenter\Model\Response\BillResult*/
+                // === CASO ÉXITO O RESPUESTA DE SUNAT ===
                 $cdr = $res->getCdrResponse();
+                $code = (int)$cdr->getCode();
                 $codeError = $cdr->getCode();
-                $messageError = $cdr->getDescription();
                 $notes = json_encode($cdr->getNotes(), JSON_UNESCAPED_UNICODE);
-                if ($cdr->getCode() == 0) {
+
+                if ($code === 0) {
                     $status = 'Aceptada';
-                } elseif ($cdr->getCode() == 2325) {
-                    $status = 'Pendiente';
+                } elseif ($code === 2325) { // Ejemplo de advertencia común
+                    $status = 'Observada'; // O 'Pendiente'
+                } else {
+                    // Otros códigos que llegan a CDR pero no son 0
+                    $status = 'Rechazada';
                 }
 
                 $document->invoice_cdr = $this->util->writeCdr($invoice, $res->getCdrZip());
+                $messageError = $cdr->getDescription();
+
             } else {
+                // === CASO FALLO DE COMUNICACIÓN O ERROR DE SISTEMA ===
                 $error = $res->getError();
                 $codeError = $error->getCode();
                 $messageError = $error->getMessage();
-                $status = 'Rechazada';
-                //return array('success' => $res->isSuccess(), 'details' => $this->util->getErrorResponse($res->getError()));
+                $connectionErrorCodes = [130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 1033];
 
+                // Error 0109 - SUNAT autenticación no disponible
+                if ($codeError === '0109' || stripos($messageError, '0109') !== false) {
+                    $status = 'Pendiente de Reintento';
+                    $messageError = "SUNAT no responde. El comprobante quedará pendiente para reintento manual.";
+                }
+                // Error 2223 - Archivo ya presentado, intentar recuperar CDR
+                elseif ($codeError === '2223' || stripos($messageError, '2223') !== false) {
+                    $ticket = $res->getTicket();
+                    if (!$ticket) {
+                        preg_match('/ticket[:\s]+([A-Z0-9\-]+)/i', $messageError, $matches);
+                        $ticket = $matches[1] ?? null;
+                    }
+
+                    if ($ticket) {
+                        try {
+                            $statusResult = $see->getStatus($ticket);
+                            if ($statusResult->isSuccess()) {
+                                $cdr = $statusResult->getCdrResponse();
+                                $codeError = $cdr->getCode();
+                                $messageError = $cdr->getDescription();
+                                if ((int)$cdr->getCode() === 0) {
+                                    $status = 'Aceptada';
+                                    $document->invoice_cdr = $this->util->writeCdr($invoice, $statusResult->getCdrZip());
+                                } else {
+                                    $status = 'Rechazada';
+                                }
+                                if ($cdr->getNotes()) {
+                                    $notes = json_encode($cdr->getNotes(), JSON_UNESCAPED_UNICODE);
+                                }
+                            } else {
+                                $status = 'Pendiente de Reintento';
+                                $messageError = "El archivo ya fue presentado pero no se pudo recuperar la constancia. Ticket: {$ticket}";
+                            }
+                        } catch (\Exception $e) {
+                            $status = 'Pendiente de Reintento';
+                            $messageError = "Error al consultar ticket recuperado: ".$e->getMessage();
+                        }
+                    } else {
+                        if (in_array((int)$codeError, $connectionErrorCodes) || (int)$codeError === -1 || (int)$codeError === 0) {
+                            $status = 'Error de Conexión';
+                        } else {
+                            $status = 'Rechazada';
+                        }
+                    }
+                }
+                // Otros errores
+                else {
+                    $code = (int)$codeError;
+                    if (in_array($code, $connectionErrorCodes) || $code === -1 || $code === 0) {
+                        $status = 'Error de Conexión';
+                        $messageError = "SUNAT no responde. El comprobante está en espera para reintento automático.";
+                    } else {
+                        $status = 'Rechazada';
+                    }
+                }
             }
             $document->invoice_response_code = $codeError;
             $document->invoice_response_description = $messageError;
@@ -95,11 +162,28 @@ class Factura
 
         $department = $province->department;
         $broadcast_date = new DateTime($document->invoice_broadcast_date . ' ' . Carbon::parse($document->created_at)->format('H:m:s'));
+        $due_date = new DateTime($document->invoice_due_date . ' ' . Carbon::parse($document->created_at)->format('H:m:s'));
         // Cliente
+        $clientCity = District::with('province.department')->where('id',$document->client_ubigeo_code)->first();
+
         $client = (new Client())
             ->setTipoDoc($document->client_type_doc)
             ->setNumDoc($document->client_number)
             ->setRznSocial($document->client_rzn_social);
+
+        if($clientCity ){
+            $clientAddress = (new Address())
+                ->setUbigueo($document->client_ubigeo_code)
+                ->setDepartamento($clientCity->province->department->name)
+                ->setProvincia($clientCity->province->name)
+                ->setDistrito($clientCity->name)
+                ->setUrbanizacion('-')
+                ->setDireccion($document->client_address);
+
+            $client->setAddress($clientAddress);
+        }
+
+        //dd($client);
         // Emisor
         $address = (new Address())
             ->setUbigueo($establishment->ubigeo)
@@ -120,13 +204,39 @@ class Factura
 
         // Venta
         $invoice = new Invoice();
+
+        if($document->forma_pago == 'Contado'){
+            $invoice->setFormaPago(new FormaPagoContado()); // FormaPago: Contado
+        }else{
+
+            $cuotasGreenter = [];
+            foreach ($document->quotas as $key => $quota) {
+                $dueDateStr = $quota->due_date ?? null;
+                $amount = $quota->amount ?? 0.01;
+                try {
+                    // Paso CRÍTICO: Crea un objeto DateTime a partir de la cadena de fecha
+                    $fechaPago = new DateTime($dueDateStr);
+
+                    $cuotasGreenter[] = (new Cuota())
+                        ->setMonto((float) $amount) // Asegúrate de que el monto sea float
+                        ->setFechaPago($fechaPago);
+
+                } catch (\Exception $e) {
+                    continue;
+                }
+            }
+
+            $invoice->setFormaPago(new FormaPagoCredito($document->overall_total))
+                ->setCuotas($cuotasGreenter); // FormaPago: Credito
+        }
+
         $invoice->setUblVersion($document->invoice_ubl_version)
             ->setTipoOperacion($document->invoice_type_operation)
             ->setTipoDoc($document->invoice_type_doc)
             ->setSerie($document->invoice_serie)
             ->setCorrelativo($document->invoice_correlative)
             ->setFechaEmision($broadcast_date)
-            ->setFormaPago(new FormaPagoContado()) // FormaPago: Contado
+            ->setFecVencimiento($due_date)
             ->setTipoMoneda('PEN')
             ->setCompany($company)
             ->setClient($client)
@@ -142,7 +252,7 @@ class Factura
         }
 
 
-
+        //dd($document);
         $details = $document->items;
         $items = [];
         foreach ($details as $detail) {
@@ -162,23 +272,18 @@ class Factura
                 ->setMtoValorUnitario($detail->mto_value_unit)
                 ->setMtoPrecioUnitario($detail->mto_price_unit);
 
-            $descuent = $detail->mto_discount;
+            $productTmp = SaleProduct::where('sale_id', $document->sale_id)->where('product_id', $detail->product_id)->first();
 
-            if ($descuent > 0) {
-                $item->setDescuento($descuent);
-                $json_discounts = json_decode($detail->json_discounts);
-
-                $charges = [];
-
-                foreach ($json_discounts as $k => $json_discount) {
-                    $charges[$k] = (new Charge())
-                        ->setCodTipo($json_discount->type)
-                        ->setMontoBase($json_discount->base)
-                        ->setFactor($json_discount->factor)
-                        ->setMonto($json_discount->monto);
+            if ($productTmp && $productTmp->product) {
+                $prodData = json_decode($productTmp->product);
+                if (!empty($prodData->usine)) {
+                    $item->setCodProdSunat($prodData->usine);
                 }
+            }
 
-                $item->setDescuentos($charges);
+            if ($this->hasPersistedItemDiscount($detail)) {
+                $item->setDescuento((float) $detail->mto_discount);
+                $item->setDescuentos($this->buildDiscountCharges($detail));
             }
 
             array_push($items, $item);
@@ -194,7 +299,11 @@ class Factura
             $valuePercent = 0.12; // 12% del total de la venta
             $percent = 12;
             $totalV = $document->invoice_mto_imp_sale;
-            $detMount = $totalV * $valuePercent;
+
+            $montoUnoRaw  = $totalV * $valuePercent;
+            //$detMount = round($montoUnoRaw  * 2) / 2;
+            $detMount = ceil($montoUnoRaw);
+
             $invoice->setDetraccion(
                 // MONEDA SIEMPRE EN SOLES
                 (new Detraction())
@@ -237,9 +346,9 @@ class Factura
 
             $qr_path = $generator->generateQR($cadenaqr, $dir, $invoice->getName() . '.png', 8, 2);
 
-
             $seller = User::find($document->user_id);
-            $pdf = $this->util->generatePdf($invoice, $seller, $qr_path, $format, $document->status);
+            $pdf = $this->util->generatePdf($invoice, $seller, $qr_path, $format, $document->status, $document->forma_pago);
+
             $document->invoice_pdf = $pdf;
             $document->save();
 
@@ -306,69 +415,21 @@ class Factura
     public function updateStockSale($id)
     {
         try {
-            $res = DB::transaction(function () use ($id) {
-                $document = SaleDocument::find($id);
+            $stockService = app(\Modules\Sales\Services\SaleStockService::class);
 
+            DB::transaction(function () use ($id, $stockService) {
+                $document = SaleDocument::find($id);
                 $sale = Sale::find($document->sale_id);
                 $sale->update(['status' => false]);
 
                 $products = SaleProduct::where('sale_id', $sale->id)->get();
+                $stockService->reverseSaleProducts(
+                    $products,
+                    $sale->local_id,
+                    $document->id,
+                    SaleDocument::class
+                );
 
-                foreach ($products as $item) {
-                    // solo si son productos no aplica a los servicios
-                    if (json_decode($item->saleProduct)->unit_type != 'ZZ') {
-
-                        $k = Kardex::create([
-                            'date_of_issue' => Carbon::now()->format('Y-m-d'),
-                            'motion' => 'sale',
-                            'product_id' => $item->product_id,
-                            'local_id' => $sale->local_id,
-                            'quantity' => $item->quantity,
-                            'document_id' => $document->id,
-                            'document_entity' => SaleDocument::class,
-                            'description' => 'Anulacion de Venta'
-                        ]);
-
-                        $product = Product::find($item->product_id);
-
-                        if ($product->presentations) {
-
-                            KardexSize::create([
-                                'kardex_id' => $k->id,
-                                'product_id' => $item->product_id,
-                                'local_id' => $sale->local_id,
-                                //'size'      => json_decode($produc->product)->size,
-                                'size'      => json_decode($item->saleProduct)->size,
-                                'quantity'  => $item->quantity
-                            ]);
-
-                            $tallas = json_decode($product->sizes, true);
-
-                            $n_tallas = [];
-                            foreach ($tallas as &$size) {
-                                // Si el tamaño es igual a 22
-                                if ($size["size"] == json_decode($item->saleProduct)->size) {
-
-                                    // Obtiene la cantidad actual
-                                    $currentQuantity = intval($size["quantity"]); // Convierte a entero
-
-                                    // Suma 1 a la cantidad actual
-                                    $newQuantity = $currentQuantity + $item->quantity;
-
-                                    // Actualiza la cantidad
-                                    $size["quantity"] = $newQuantity;
-                                }
-                            }
-
-                            $n_tallas = $tallas;
-
-                            $product->update([
-                                'sizes' => json_encode($n_tallas)
-                            ]);
-                        }
-                        Product::find($item->product_id)->increment('stock', $item->quantity);
-                    }
-                }
                 return $sale;
             });
 
@@ -377,4 +438,37 @@ class Factura
             return false;
         }
     }
+
+    private function hasPersistedItemDiscount(SaleDocumentItem $detail): bool
+    {
+        $jsonDiscounts = json_decode($detail->json_discounts ?? '[]');
+
+        return (float) $detail->mto_discount > 0
+            && is_array($jsonDiscounts)
+            && count($jsonDiscounts) > 0;
+    }
+
+    /**
+     * @return array<int, Charge>
+     */
+    private function buildDiscountCharges(SaleDocumentItem $detail): array
+    {
+        $jsonDiscounts = json_decode($detail->json_discounts ?? '[]');
+        $charges = [];
+
+        if (! is_array($jsonDiscounts)) {
+            return $charges;
+        }
+
+        foreach ($jsonDiscounts as $k => $jsonDiscount) {
+            $charges[$k] = (new Charge())
+                ->setCodTipo($jsonDiscount->type)
+                ->setMontoBase($jsonDiscount->base)
+                ->setFactor($jsonDiscount->factor)
+                ->setMonto($jsonDiscount->monto);
+        }
+
+        return $charges;
+    }
+
 }

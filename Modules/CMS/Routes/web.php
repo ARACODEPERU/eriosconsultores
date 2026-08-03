@@ -11,6 +11,7 @@
 |
 */
 
+use Illuminate\Support\Facades\Route;
 use Modules\CMS\Http\Controllers\CmsAdvertisingController;
 use Modules\CMS\Http\Controllers\CMSController;
 use Modules\CMS\Http\Controllers\CmsItemController;
@@ -20,8 +21,9 @@ use Modules\CMS\Http\Controllers\CmsSectionController;
 use Modules\CMS\Http\Controllers\CmsSectionItemController;
 use Modules\CMS\Http\Controllers\CmsSubscriberController;
 use Modules\CMS\Http\Controllers\CmsTestimonyController;
+use Modules\CMS\Http\Controllers\OneFreeCourseController;
 
-Route::middleware(['auth', 'verified'])->prefix('cms')->group(function () {
+Route::middleware(['auth', 'verified', 'user_activity_log'])->prefix('cms')->group(function () {
     Route::get('dashboard', [CMSController::class, 'dashboard'])->name('cms_dashboard');
     Route::get('pages', [CmsPageController::class, 'index'])->name('cms_pages_list');
     Route::get('pages/create', [CmsPageController::class, 'create'])->name('cms_pages_create');
@@ -62,6 +64,14 @@ Route::middleware(['auth', 'verified'])->prefix('cms')->group(function () {
 
     Route::get('blog-subscriber', 'CmsSubscriberController@list_subscribers')->name('blog_subscriber');
 
+    Route::middleware(['permission:cms_suscriptores_exportar_excel'])
+        ->post('export/subscribers-excel', [CmsSubscriberController::class, 'exportSubscribersExcel'])
+        ->name('cms_export_subscribers_excel');
+
+    Route::middleware(['permission:cms_suscriptores_exportar_excel'])
+        ->get('export/subscribers-excel/status/{jobId}', [CmsSubscriberController::class, 'exportSubscribersExcelStatus'])
+        ->name('cms_export_subscribers_excel_status');
+
     Route::middleware(['permission:cms_testimonios'])->get('testimonies', [CmsTestimonyController::class, 'index'])->name('cms_testimonies_list');
     Route::middleware(['permission:cms_testimonios_nuevo'])->get('testimonies/create', [CmsTestimonyController::class, 'create'])->name('cms_testimonies_create');
     Route::middleware(['permission:cms_testimonios_nuevo'])->post('testimonies/store', [CmsTestimonyController::class, 'store'])->name('cms_testimonies_store');
@@ -71,6 +81,14 @@ Route::middleware(['auth', 'verified'])->prefix('cms')->group(function () {
 
     Route::middleware(['permission:cms_publicidad'])->get('advertising', [CmsAdvertisingController::class, 'index'])->name('cms_advertising_list');
     Route::middleware(['permission:cms_publicidad'])->get('advertising/create', [CmsAdvertisingController::class, 'create'])->name('cms_advertising_create');
+
+    Route::middleware(['permission:cms_landing_curso_gratis'])
+        ->get('one/free/course/{menu_id}', [OneFreeCourseController::class, 'index'])
+        ->name('cms_landing_course_free');
+    Route::middleware(['permission:cms_landing_curso_gratis'])
+        ->post('one/free/course/store', [OneFreeCourseController::class, 'store'])
+        ->name('cms_landing_course_free_store');
+
 });
 
 

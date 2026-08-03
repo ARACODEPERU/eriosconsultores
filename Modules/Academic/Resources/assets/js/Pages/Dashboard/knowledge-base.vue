@@ -1,24 +1,23 @@
 <script setup>
     import AppLayout from "@/Layouts/Vristo/AppLayout.vue";
     import { ref, onMounted, nextTick } from "vue";
-    import VueCollapsible from 'vue-height-collapsible/vue3';
-    import { TransitionRoot, TransitionChild, Dialog, DialogPanel, DialogOverlay, TabGroup, TabList, Tab, TabPanels, TabPanel } from '@headlessui/vue';
-    import { useForm, router, Link  } from '@inertiajs/vue3';
+    import { useForm, router, Link, usePage  } from '@inertiajs/vue3';
     import IconArrowWaveLeftUp from '@/Components/vristo/icon/icon-arrow-wave-left-up.vue';
-    import IconGlobe from '@/Components/vristo/icon/icon-globe.vue';
     import IconSearch from '@/Components/vristo/icon/icon-search.vue';
-    import IconBox from '@/Components/vristo/icon/icon-box.vue';
-    import IconDollarSignCircle from '@/Components/vristo/icon/icon-dollar-sign-circle.vue';
-    import IconRouter from '@/Components/vristo/icon/icon-router.vue';
-    import IconPlusCircle from '@/Components/vristo/icon/icon-plus-circle.vue';
-    import IconMinusCircle from '@/Components/vristo/icon/icon-minus-circle.vue';
     import IconArrowForward from '@/Components/vristo/icon/icon-arrow-forward.vue';
-    import IconX from '@/Components/vristo/icon/icon-x.vue';
     import { Tour } from 'ant-design-vue';
     import LastRegisteredCourse from "../../Components/LastRegisteredCourse.vue";
+    import { Drawer } from 'ant-design-vue';
+    import { bottom } from "@popperjs/core";
 
-    defineProps({
-        interests:{
+    const userData = usePage().props.auth.user;
+
+    const props = defineProps({
+        interests: {
+            type: Object,
+            default: () => ({})
+        },
+        expiring: {
             type: Object,
             default: () => ({})
         }
@@ -40,6 +39,53 @@
 
         return texto;
     }
+
+    const messageAlert = ref(null);
+    const getExpiringItems = () => {
+        const c = props.expiring.courses ?? [];
+        const s = props.expiring.subscriptions ?? [];
+
+        if (c.length > 0 || s.length > 0) {
+
+            let message = `<p class="mb-6">¡Hola! Te recordamos que algunos de tus servicios están por vencer. No te preocupes: tus cursos de especialidad, talleres y webinars seguirán disponibles para ti en tu cuenta. ¡Queremos que sigas aprendiendo a tu ritmo!</p>`;
+
+            message += `<div class="text-justify">`;
+            if (c.length > 0) {
+                message += `<span class="font-medium text-gray-600 font-mono mb-6 dark:text-neutral-400">📘 Cursos por vencer:</span>`;
+                message += `<ol class="list-decimal list-inside text-gray-800 dark:text-white">`;
+                c.forEach(item => {
+                    message += `<li class="p-2"> ${item.course.description} — vence el ${item.date_end}
+                    (faltan <b>${item.days_left}</b> días)</li>`;
+                });
+                message += "<ol>";
+            }
+
+            if (s.length > 0) {
+                message += `<span class="font-medium text-gray-600 font-mono mb-6 dark:text-neutral-400">📗 Suscripciones por vencer:</span>`;
+                message += `<ol class="list-decimal list-inside text-gray-800 dark:text-white">`;
+                s.forEach(item => {
+                    message += `<li class="p-2">${item.subscription_id} — vence el ${item.date_end}
+                    (faltan <b>${item.days_left}</b> días)</li>`;
+                });
+                message += "<ol>";
+            }
+            message += "</div><br>";
+
+            message += "<p>Por favor comuníquese con un <b>asesor académico</b> para regularizar sus pagos.</p>";
+            messageAlert.value = message;
+            showDrawerAlert();
+        }
+    };
+
+    const openAlert = ref(false);
+
+    const showDrawerAlert = () => {
+        openAlert.value = true;
+    };
+
+    const onCloseAlert = () => {
+        openAlert.value = false;
+    };
 
     const searchArticles = () => {
         articlesLoading.value = true;
@@ -68,14 +114,20 @@
     const h3CoursesPopulares = ref(null);
     const h3ArticlesPopulares = ref(null);
 
+    const isDesktop = ref(typeof window !== 'undefined' && window.innerWidth >= 1024);
+
     onMounted(() => {
         nextTick(() => {
             btnMenuMycourses.value = document.getElementById("btnMenuMycourses");
             btnHeaderPerfilUser.value = document.getElementById("btnHeaderPerfilUser");
         });
-        if (!localStorage.getItem('tourShown')) {
+        //console.log(userData.tour_completed)
+        // Solo mostrar el tour en desktop (>= 1024px), nunca en tablets o móviles
+        if (isDesktop.value && !localStorage.getItem('tourShown') && !userData.tour_completed) {
             open.value = true; // Mostrar el tour por primera vez
         }
+
+        getExpiringItems();
     });
 
     const steps = [
@@ -118,9 +170,21 @@
         open.value = val;
         if (!val) {
             // Guardar en localStorage que el tour ya se mostró
-            localStorage.setItem('tourShown', 'true');
+            updateTourUser();
         }
     };
+
+    const updateTourUser = () => {
+        localStorage.setItem('tourShown', 'true');
+        axios({
+            method: "POST",
+            url: route('update_tour_user')
+        }).then(() => {
+            // Tour completado correctamente en backend
+        }).catch(() => {
+            // Si falla la llamada al backend, al menos ya se guardó en localStorage
+        });
+    }
 </script>
 <template>
     <AppLayout title="Dashboard">
@@ -367,6 +431,22 @@
                 </div>
             </div>
         </div>
+        <Drawer
+            :width="'100%'"
+            :height="'auto'"
+            title="⚠️ Aviso Importante"
+            :placement="bottom"
+            :open="openAlert"
+            :closable="false"
+            class="text-center"
+        >
+            <template #extra>
+                <button class="btn btn-danger btn-sm uppercase" @click="onCloseAlert">Entendido</button>
+            </template>
+            <div class="w-[40%] mx-auto text-justify">
+                <div v-html="messageAlert"></div>
+            </div>
+        </Drawer>
     </AppLayout>
 </template>
 

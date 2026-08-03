@@ -26,9 +26,10 @@ const props = defineProps({
 
 const form = useForm({
     title: props.subscription.title,
+    usine: props.subscription.usine || '',
     description: props.subscription.description,
-    details: JSON.parse(props.subscription.details),
-    prices: JSON.parse(props.subscription.prices),
+    details: props.subscription.details,
+    prices: props.subscription.prices,
     status: props.subscription.status == 1 ? true : false,
     period: props.subscription.period,
     order_number: props.subscription.order_number ?? 1
@@ -93,13 +94,24 @@ const removePrice = (indexToRemove) => {
                     id="title"
                     v-model="form.title"
                     type="text"
-                    
+
                 />
                 <InputError :message="form.errors.title" class="mt-2" />
             </div>
             <div class="col-span-6 sm:col-span-3">
+                <InputLabel for="usine" value="Código SUNAT" />
+                <TextInput
+                    id="usine"
+                    v-model="form.usine"
+                    type="text"
+                    placeholder="Según catálogo de SUNAT"
+                />
+                <p class="text-xs text-gray-500 mt-1">Código UCE. Consulte el catálogo de SUNAT Peru</p>
+                <InputError :message="form.errors.usine" class="mt-2" />
+            </div>
+            <div class="col-span-6 sm:col-span-3">
                 <InputLabel for="period" value="Periodo *" />
-                <select v-model="form.period" class="form-select text-white-dark">
+                <select v-model="form.period" id="period" class="form-select text-white-dark">
                     <template v-for="period in periods">
                         <option :value="period">{{ period }}</option>
                     </template>
@@ -135,7 +147,7 @@ const removePrice = (indexToRemove) => {
                 />
                 <InputError :message="form.errors.description" class="mt-2" />
             </div>
-            
+
             <div class="col-span-6">
                 <label class="inline-flex">
                     <input v-model="form.status" type="checkbox" class="form-checkbox rounded-full" />
@@ -190,7 +202,7 @@ const removePrice = (indexToRemove) => {
                             </div>
                             <InputError :message="form.errors[`prices.${isdex}.amount`]" class="mt-2" />
                             <InputError :message="form.errors[`prices.${isdex}.detail`]" class="mt-2" />
-                            
+
                         </template>
                     </div>
                 </div>
@@ -198,7 +210,7 @@ const removePrice = (indexToRemove) => {
         </template>
 
         <template #actions>
-            
+
             <Keypad>
                 <template #botones>
                     <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">

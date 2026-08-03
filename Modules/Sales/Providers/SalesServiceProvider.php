@@ -4,6 +4,9 @@ namespace Modules\Sales\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Database\Eloquent\Factory;
+use Modules\Sales\Console\DailySalesTasks;
+use Modules\Sales\Console\ImportFacturador3Command;
+use Modules\Sales\Console\VerifyFacturador3ImportCommand;
 
 class SalesServiceProvider extends ServiceProvider
 {
@@ -28,6 +31,15 @@ class SalesServiceProvider extends ServiceProvider
         $this->registerConfig();
         $this->registerViews();
         $this->loadMigrationsFrom(module_path($this->moduleName, 'Database/Migrations'));
+
+        // Asegúrate de que esta sección exista y esté correcta:
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                DailySalesTasks::class,
+                ImportFacturador3Command::class,
+                VerifyFacturador3ImportCommand::class,
+            ]);
+        }
     }
 
     /**

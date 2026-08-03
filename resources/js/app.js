@@ -20,6 +20,8 @@ import { PerfectScrollbarPlugin } from 'vue3-perfect-scrollbar';
 import HeightTransition from '@/Components/vristo/transitions/HeightTransition.vue';
 import Popper from 'vue3-popper';
 import * as Maska from 'maska';
+import VueKonva from 'vue-konva';
+import { setCsrfToken } from '@/utils/csrf';
 
 const appName =
     window.document.getElementsByTagName("title")[0]?.innerText || "Laravel";
@@ -27,8 +29,27 @@ const appName =
 const pinia = createPinia();
 const head = createHead();
 
+const authPaths = [
+    "/login",
+    "/logout",
+    "/forgot-password",
+    "/reset-password",
+    "/verify-email",
+];
+
+const buildLoginRedirectUrl = () => {
+    const currentLocation = `${window.location.pathname}${window.location.search}`;
+
+    if (authPaths.some((path) => window.location.pathname.startsWith(path))) {
+        return "/login";
+    }
+
+    return `/login?redirect_to=${encodeURIComponent(currentLocation)}`;
+};
+
 createInertiaApp({
-    title: (title) => `${title} - ${appName}`,
+    //title: (title) => `${title} - ${appName}`,
+    title: (title) => `${appName} - ${title}`,
     resolve: (name) => {
         let parts = name.split("::");
         if (parts.length > 1) {
@@ -51,13 +72,14 @@ createInertiaApp({
             .use(ZiggyVue, Ziggy)
             .use(VueTheMask)
             .use(VueGates)
-            .use(Permissions)
+            .use(Permissions, props.initialPage?.props)
             .use(pinia)
             .use(i18n)
             .use(head)
             .use(TippyPlugin)
             .use(Maska)
             .use(PerfectScrollbarPlugin)
+            .use(VueKonva)
             .component('Popper', Popper)
             .component('HeightTransition', HeightTransition)
             .component("font-awesome-icon", FontAwesomeIcon);
@@ -67,33 +89,34 @@ createInertiaApp({
         app.mixin({
             mounted() {
                 router.on("error", (error) => {
-                    //console.log(error);
                     if (error.response && error.response.status === 401) {
-                        // Redirigir al inicio de sesión cuando la sesión ha caducado
-                        router.visit("/login", { replace: true });
-                    }
-                    if (error.response && error.response.status === 419) {
-                        // Redirigir al inicio de sesión cuando la sesión ha caducado
-                        router.visit("/login", { replace: true });
+                        router.visit(buildLoginRedirectUrl(), { replace: true });
                     }
                 });
             },
         });
         appSetting.init();
+
+        router.on('success', (event) => {
+            const token = event.detail?.page?.props?.csrf_token ?? event.page?.props?.csrf_token;
+            setCsrfToken(token);
+        });
+
+        setCsrfToken(props.initialPage?.props?.csrf_token);
+
         return app.mount(el);
     },
     progress: {
-        // The delay after which the progress bar will appear, in milliseconds...
-        delay: 250,
+        // The delay after which progress bar will appear, in milliseconds...
+        delay: 100, // Reducido para mejor UX
 
         // The color of the progress bar...
         color: "#4B5563",
 
-        // Whether to include the default NProgress styles...
+        // Whether to include default NProgress styles...
         includeCSS: true,
 
-        // Whether the NProgress spinner will be shown...
+        // Whether NProgress spinner will be shown...
         showSpinner: false,
     },
 });
-

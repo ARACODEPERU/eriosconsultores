@@ -8,17 +8,19 @@ import TextInput from '@/Components/TextInput.vue';
 import Keypad from '@/Components/Keypad.vue';
 import Swal2 from 'sweetalert2';
 import { ref, watch, onMounted } from 'vue';
-import Editor from '@tinymce/tinymce-vue'
-import { 
+import EditorAracode from '@/Components/EditorAracode.vue'
+
+const editorImageUploadUrl = route('even_editor_upload_image')
+import {
     ConfigProvider,
-    Select, 
+    Select,
     SelectOption,
     InputNumber,
     Textarea,
     DatePicker,
     RangePicker,
-    Switch, 
-    Input, 
+    Switch,
+    Input,
     Upload,
     Button
 } from 'ant-design-vue';
@@ -39,10 +41,6 @@ const props = defineProps({
     locales: {
         type: Object,
         default: () => ({}),
-    },
-    tiny_api_key: {
-        type: String,
-        default: null,
     },
     socialevent:{
         type: Object,
@@ -83,9 +81,25 @@ const form = useForm({
     exhibitors: props.eventExhibitors
 });
 
+const showFormErrors = (errors) => {
+    const bag = errors && typeof errors === 'object' ? errors : form.errors;
+    const messages = Object.values(bag)
+        .flat()
+        .filter(Boolean);
+
+    Swal2.fire({
+        title: 'Error',
+        html: messages.length
+            ? messages.join('<br>')
+            : 'No se pudo actualizar el evento. Verifique su conexión o reduzca el tamaño de la imagen.',
+        icon: 'error',
+    });
+};
+
 const updateNow = () => {
-    form.post(route('even_eventos_update'), {
-        forceFormData: true,
+    form.date = value4.value;
+
+    const options = {
         errorBag: 'updateNow',
         preserveScroll: true,
         onSuccess: () => {
@@ -95,8 +109,26 @@ const updateNow = () => {
                 icon: 'success',
             });
         },
-    });
-}
+        onError: (errors) => {
+            showFormErrors(errors);
+        },
+        onFinish: () => {
+            if (!form.wasSuccessful && Object.keys(form.errors).length === 0) {
+                Swal2.fire({
+                    title: 'Error',
+                    text: 'Tiempo de espera agotado o error de conexión al guardar.',
+                    icon: 'error',
+                });
+            }
+        },
+    };
+
+    if (form.image1) {
+        options.forceFormData = true;
+    }
+
+    form.post(route('even_eventos_update'), options);
+};
 
 const cropImageAndSave = (res) => {
     form.image1 = res;
@@ -118,9 +150,9 @@ const cropImageAndSave = (res) => {
             <ConfigProvider :locale="esES">
                 <div class="col-span-6 sm:col-span-2">
                     <InputLabel for="category_id" value="Categoría *" class="mb-1" />
-                    <Select 
+                    <Select
                         style="width: 100%;"
-                        v-model:value="form.category_id" 
+                        v-model:value="form.category_id"
                         id="category_id"
                         :options="categories.map((obj) => ({value:obj.id,label:obj.description}))"
                     />
@@ -138,13 +170,11 @@ const cropImageAndSave = (res) => {
                 </div>
                 <div class="col-span-6">
                     <InputLabel for="description" value="Descripción *" class="mb-1" />
-                    <Editor
-                        :api-key="tiny_api_key"
+                    <EditorAracode
                         v-model="form.description"
-                        :init="{
-                            plugins: 'anchor autolink charmap codesample emoticons link lists media searchreplace table visualblocks wordcount',
-                            language: 'es',
-                        }"
+                        minHeight="320px"
+                        placeholder="Descripción del evento..."
+                        :imageUploadUrl="editorImageUploadUrl"
                     />
                     <InputError :message="form.errors.description" class="mt-2" />
                 </div>
@@ -166,11 +196,11 @@ const cropImageAndSave = (res) => {
                     <InputError :message="form.errors.iframe_transmission" class="mt-2" />
                 </div>
 
-                
+
                 <div class="col-span-6">
                     <InputLabel for="file_input" value="Imagen *" />
                     <CropperImage
-                        :aspectRatio="1920 / 500"
+                        :aspectRatio="1920 / 809"
                         :viewMode="1"
                         :imgDefault="iimg"
                         ref="cropper"
@@ -183,7 +213,7 @@ const cropImageAndSave = (res) => {
                     <Select
                         id="exhibitors"
                         v-model:value="form.exhibitors"
-                        :options="instructors.map((obj) => ({value: obj.person.id,label:obj.person.full_name}))"
+                        :options="instructors.map((obj) => ({value: obj.id,label:obj.full_name}))"
                         style="width: 100%;"
                         mode="multiple"
                     />

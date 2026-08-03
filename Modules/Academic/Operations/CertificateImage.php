@@ -2,353 +2,920 @@
 
 namespace Modules\Academic\Operations;
 
-use Modules\Academic\Entities\AcaCapRegistration;
-use Modules\Academic\Entities\AcaCertificateParameter;
-use Modules\Academic\Entities\AcaCertificate;
-use Modules\Academic\Entities\AcaCourse;
-use Modules\Academic\Entities\AcaStudent;
-use Intervention\Image\Facades\Image;
-use Illuminate\Support\Facades\Response;
 use App\Helpers\Invoice\QrCodeGenerator;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
-use Carbon\Carbon;
+use Intervention\Image\Facades\Image;
+use Modules\Academic\Entities\AcaCapRegistration;
+use Modules\Academic\Entities\AcaCertificateGradeConfig;
+use Modules\Academic\Entities\AcaCertificateParameter;
+use Modules\Academic\Entities\AcaCourse;
+use Modules\Academic\Entities\AcaExam;
+use Modules\Academic\Entities\AcaModule;
+use Modules\Academic\Entities\AcaStudent;
+use Modules\Academic\Entities\AcaStudentExam;
 
 class CertificateImage
 {
     public $certificates_param;
 
-    public function generate($certificate_id, $student_id = null, $course_id = null)
+    public $type = 'front'; // 'front' o 'back'
+
+    public $module_id = null; // ID del módulo para datos reales
+
+    public $student_id = null; // ID del estudiante para datos reales
+
+    public $course_id = null; // ID del curso
+
+    public $showGrade = true; // Mostrar nota del examen en el certificado
+
+    /**
+     * Genera la imagen del certificado
+     *
+     * @param  int  $certificate_id  ID del certificado (aca_certificate_parameters)
+     * @param  string  $type  Tipo de certificado: 'front' (anverso) o 'back' (reverso)
+     * @param  int|null  $student_id  ID del estudiante (para datos reales)
+     * @param  int|null  $course_id  ID del curso (para datos reales)
+     * @param  int|null  $module_id  ID del módulo (para certificados de módulo)
+     * @return string|null Contenido de la imagen en binario
+     */
+    public function generate($certificate_id, $type = 'front', $student_id = null, $course_id = null, $module_id = null, $showGrade = true)
     {
-        if ($student_id == null && $course_id == null) {
-            //si no llega datos de curso ni alumno es porque quiere generar vista previa, por ende debe generar certificado sin datos
-            $this->certificates_param = AcaCertificateParameter::find($certificate_id);
+        // Inicializar propiedades
+        //dd($course_id);
+        $this->type = $type;
+        $this->module_id = $module_id;
+        $this->student_id = $student_id;
+        $this->course_id = $course_id;
+        $this->showGrade = $showGrade;
 
-            $img = Image::make(public_path('storage' . DIRECTORY_SEPARATOR . $this->certificates_param->certificate_img));
+        // Cargar configuración del certificado con la relación moduleConfig
+        $this->certificates_param = AcaCertificateParameter::with(['moduleConfig'])->find($certificate_id);
 
-            $fecha = date('d-m-Y');
+        // Texto de ejemplo para vista previa (cuando no hay datos reales)
+        $textDefault = 'Curso de Desarrollo Web Avanzado con Laravel y Vue.js - 120 horas académicas. Temas tratados: Fundamentos de Laravel, APIs RESTful, integración de Vue.js, autenticación con JWT, optimización de bases de datos, despliegue en la nube y buenas prácticas de desarrollo. Fecha: Del 15 de marzo al 30 de mayo de 2023. Instructor: Juan Pérez.';
 
-            if ($this->certificates_param->position_date_x && $this->certificates_param->position_date_y && $this->certificates_param->fontfamily_date) {
-                if ($this->certificates_param->visible_date) {
-                    $img->text("Lima, " . $fecha, $this->certificates_param->position_date_x, $this->certificates_param->position_date_y, function ($font) {
-                        $font->file(public_path('fonts' . DIRECTORY_SEPARATOR . $this->certificates_param->fontfamily_date));
-                        $font->size($this->certificates_param->font_size_date);
-                        $font->color($this->certificates_param->color_date);
-                        $font->align($this->certificates_param->font_align_date);
-                        $font->valign($this->certificates_param->font_vertical_align_date);
-                        $font->angle(0);
-                    });
+        // Seleccionar imagen base según el tipo
+        if ($type === 'back') {
+            $img = Image::make(public_path('storage'.DIRECTORY_SEPARATOR.$this->certificates_param->back_certificate_img));
+            $textDefault = $this->certificates_param->back_description;
+        } else {
+            $img = Image::make(public_path('storage'.DIRECTORY_SEPARATOR.$this->certificates_param->certificate_img));
+        }
+
+        // Obtener fecha: si hay estudiante, usar fecha real del registro
+        $fecha = $this->getRealDate();
+
+        // Fecha
+        $this->addTextToImage($img,
+            'Lima, '.$fecha,
+            $this->getField('position_date_x'),
+            $this->getField('position_date_y'),
+            $this->getField('fontfamily_date'),
+            $this->getField('font_size_date'),
+            $this->getField('color_date'),
+            $this->getField('font_align_date'),
+            $this->getField('font_vertical_align_date'),
+            $this->getField('visible_date')
+        );
+
+        // Nombre del estudiante: si hay student_id, usar nombre real
+        $studentName = $this->getRealStudentName();
+
+        // Nombre estudiante
+        $this->addTextToImage($img,
+            $studentName,
+            $this->getField('position_names_x'),
+            $this->getField('position_names_y'),
+            $this->getField('fontfamily_names'),
+            $this->getField('font_size_names'),
+            $this->getField('color_names'),
+            $this->getField('font_align_names'),
+            $this->getField('font_vertical_align_names'),
+            $this->getField('visible_names')
+        );
+
+        // Título del curso: si hay module_id, usar título real del curso + módulo
+        $courseTitle = $this->getRealCourseTitle();
+        $maxWidthTitle = $this->getField('max_width_title') ?? 800;
+
+        // Título del curso
+        $this->addTextToImage($img,
+            $this->wrapText($courseTitle, $maxWidthTitle),
+            $this->getField('position_title_x'),
+            $this->getField('position_title_y'),
+            $this->getField('fontfamily_title'),
+            $this->getField('font_size_title'),
+            $this->getField('color_title'),
+            $this->getField('font_align_title'),
+            $this->getField('font_vertical_align_title'),
+            $this->getField('visible_title')
+        );
+
+        // Descripción
+        if ($type === 'back') {
+            // Para el reverso, usar generación HTML
+            $descriptionText = $this->certificates_param->back_description ?? '';
+
+            if ($descriptionText && $this->getField('visible_description')) {
+                $htmlGenerator = new CertificateGeneratorHtml;
+
+                // Dimensiones
+                $descContentWidth = (int) ($this->getField('max_width_description') ?? 800);
+                $descContentHeight = $this->certificates_param->back_certificate_img_height ?? 1550;
+
+                // Configuración de la vista
+                $viewData = [
+                    'text' => $descriptionText,
+                    'canvasWidth' => $descContentWidth,
+                    'canvasHeight' => $descContentHeight,
+                    'posX' => 10,
+                    'posY' => 10,
+                    'maxWidth' => $descContentWidth,
+                    'fontFamily' => $this->getField('fontfamily_description') ?? 'arial.ttf',
+                    'fontSize' => (int) ($this->getField('font_size_description') ?? 14),
+                    'color' => $this->getField('color_description') ?? '#000000',
+                    'lineHeight' => (int) ($this->getField('font_size_description') ?? 14) + ((int) ($this->getField('interspace_description') ?? 4)),
+                    'textAlign' => $this->getField('text_align_description') ?? 'left',
+                ];
+
+                $htmlPath = $htmlGenerator->generateFromView('text-description-back', $viewData, $descContentWidth, $descContentHeight);
+
+                if ($htmlPath && File::exists($htmlPath)) {
+                    $htmlImage = Image::make($htmlPath);
+                    $img->insert($htmlImage, 'top-left',
+                        (int) ($this->getField('position_description_x') ?? 50),
+                        (int) ($this->getField('position_description_y') ?? 300)
+                    );
+                    File::delete($htmlPath);
                 }
             }
-            //nombre estudiante
-            if ($this->certificates_param->fontfamily_names && $this->certificates_param->font_size_names) {
-                if ($this->certificates_param->visible_names) {
-                    $img->text("Nombres del Estudiante o alumno", $this->certificates_param->position_names_x, $this->certificates_param->position_names_y, function ($font) {
-                        $font->file(public_path('fonts' . DIRECTORY_SEPARATOR . $this->certificates_param->fontfamily_names));
-                        $font->size($this->certificates_param->font_size_names);
-                        $font->color($this->certificates_param->color_names);
-                        $font->align($this->certificates_param->font_align_names);
-                        $font->valign($this->certificates_param->font_vertical_align_names);
-                        $font->angle(0);
-                    });
+        } else {
+            // Para el anverso, usar generación HTML
+            $course = AcaCourse::find($this->course_id ?: $this->certificates_param->course_id);
+            $descriptionText = $course->certificate_description ?? $textDefault;
+            $frontContentType = $this->getField('content_type') ?? 'description';
+
+            if ($this->getField('visible_description') && $frontContentType === 'table') {
+                $htmlGenerator = new CertificateGeneratorHtml;
+
+                $descContentWidth = (int) ($this->getField('max_width_description') ?? 800);
+                $descContentHeight = $this->certificates_param->certificate_img_height ?? 1550;
+                $contentData = $course
+                    ? $htmlGenerator->prepareCourseContent($course, false)
+                    : $htmlGenerator->getExampleData('table');
+
+                $viewData = array_merge($contentData, [
+                    'canvasWidth' => $descContentWidth,
+                    'canvasHeight' => $descContentHeight,
+                    'posX' => 10,
+                    'posY' => 10,
+                    'maxWidth' => $descContentWidth,
+                    'fontFamily' => $this->getField('fontfamily_description') ?? 'arial.ttf',
+                    'fontSize' => (int) ($this->getField('font_size_description') ?? 14),
+                    'color' => $this->getField('color_description') ?? '#000000',
+                    'lineHeight' => (int) ($this->getField('font_size_description') ?? 14) + ((int) ($this->getField('interspace_description') ?? 4)),
+                    'textAlign' => $this->getField('text_align_description') ?? 'left',
+                    'showCourseContent' => true,
+                    'showModuleContent' => false,
+                    'moduleName' => '',
+                    'showExamGrade' => false,
+                    'showThemes' => true,
+                    'examGrade' => [],
+                    'examFontFamily' => 'arial.ttf',
+                    'examFontSize' => (int) ($this->getField('font_size_description') ?? 14),
+                    'examColor' => $this->getField('color_description') ?? '#000000',
+                ]);
+
+                $htmlPath = $htmlGenerator->generateFromView('content-table', $viewData, $descContentWidth, $descContentHeight);
+
+                if ($htmlPath && File::exists($htmlPath)) {
+                    $htmlImage = Image::make($htmlPath);
+                    $img->insert($htmlImage, 'top-left',
+                        (int) ($this->getField('position_description_x') ?? 50),
+                        (int) ($this->getField('position_description_y') ?? 300)
+                    );
+                    File::delete($htmlPath);
+                }
+            } elseif ($descriptionText && $this->getField('visible_description')) {
+                $htmlGenerator = new CertificateGeneratorHtml;
+
+                // Dimensiones
+                $descContentWidth = (int) ($this->getField('max_width_description') ?? 800);
+                $descContentHeight = $this->certificates_param->certificate_img_height ?? 1550;
+
+                // Configuración de la vista
+                $viewData = [
+                    'text' => $descriptionText,
+                    'canvasWidth' => $descContentWidth,
+                    'canvasHeight' => $descContentHeight,
+                    'posX' => 10,
+                    'posY' => 10,
+                    'maxWidth' => $descContentWidth,
+                    'fontFamily' => $this->getField('fontfamily_description') ?? 'arial.ttf',
+                    'fontSize' => (int) ($this->getField('font_size_description') ?? 14),
+                    'color' => $this->getField('color_description') ?? '#000000',
+                    'lineHeight' => (int) ($this->getField('font_size_description') ?? 14) + ((int) ($this->getField('interspace_description') ?? 4)),
+                    'textAlign' => $this->getField('text_align_description') ?? 'left',
+                ];
+
+                $htmlPath = $htmlGenerator->generateFromView('text-description-front', $viewData, $descContentWidth, $descContentHeight);
+
+                if ($htmlPath && File::exists($htmlPath)) {
+                    $htmlImage = Image::make($htmlPath);
+                    $img->insert($htmlImage, 'top-left',
+                        (int) ($this->getField('position_description_x') ?? 50),
+                        (int) ($this->getField('position_description_y') ?? 300)
+                    );
+                    File::delete($htmlPath);
                 }
             }
-            //titulo del curso
-            if ($this->certificates_param->fontfamily_title && $this->certificates_param->font_align_title && $this->certificates_param->font_vertical_align_title && $this->certificates_param->position_title_y) {
-                $max_width = $this->certificates_param->max_width_title;
-                if ($this->certificates_param->visible_title) {
-                    $img->text($this->wrapText("Título del Curso 3025 - II", $max_width), $this->certificates_param->position_title_x, $this->certificates_param->position_title_y, function ($font) {
-                        $font->file(public_path('fonts' . DIRECTORY_SEPARATOR . $this->certificates_param->fontfamily_title));
-                        $font->size($this->certificates_param->font_size_title);
-                        $font->color($this->certificates_param->color_title);
-                        $font->align($this->certificates_param->font_align_title);
-                        $font->valign($this->certificates_param->font_vertical_align_title);
-                        $font->angle(0);
-                    });
+
+            // 3. RENDERIZAR DESCRIPCIÓN DEL MÓDULO (solo si for_module = true)
+            // Obtener configuración de la tabla separada aca_certificates_module_config
+            $moduleConfig = $this->certificates_param->moduleConfig ?? null;
+            
+            // Verificar si debe mostrar la descripción del módulo
+            $isForModule = $this->certificates_param->for_module ?? false;
+            $isModuleDescriptionVisible = $moduleConfig ? ($moduleConfig->visible_module_description ?? false) : true;
+            
+            if ($isForModule && $isModuleDescriptionVisible) {
+                $moduleDescriptionText = null;
+                
+                // Buscar en aca_modules la descripción del módulo específico
+                if ($this->module_id) {
+                    $module = AcaModule::find($this->module_id);
+                    $moduleDescriptionText = $module->certificate_description ?? null;
+                } else {
+                    // Para preview sin module_id, usar texto de ejemplo
+                    $moduleDescriptionText = 'Esta es la descripción personalizada del módulo. Se mostrará cuando el estudiante descargue su certificado desde el módulo específico.';
                 }
-            }
-            // //descripcion del certificado
-
-            // if ($this->certificates_param->position_description_x && $this->certificates_param->position_description_y) {
-            //     $max_width = $this->certificates_param->max_width_description;
-
-            //     $img->text($this->wrapText("Descripción del curso, donde aparece horas académicas, fecha e información de lo llevado a cabo en el curso o diplomado y más, en este ejemplo se puso texto de más porque es necesario ver como quedará...",
-            //     $max_width, $this->certificates_param->interspace_description), $this->certificates_param->position_description_x, $this->certificates_param->position_description_y, function ($font) {
-            //         $font->file(public_path('fonts' . DIRECTORY_SEPARATOR . $this->certificates_param->fontfamily_description));
-            //         $font->size($this->certificates_param->font_size_description);
-            //         $font->color('#0d0603');
-            //         $font->align($this->certificates_param->font_align_description);
-            //         $font->valign($this->certificates_param->font_vertical_align_description);
-            //         $font->angle(0);
-            //     });
-            // }
-
-            if ($this->certificates_param->position_description_x && $this->certificates_param->position_description_y) {
-                if ($this->certificates_param->visible_description) {
-                    // Descripción del certificado
-                    $max_width = $this->certificates_param->max_width_description * 10; // Ancho máximo en píxeles
-                    $text = "Curso de Desarrollo Web Avanzado con Laravel y Vue.js - 120 horas académicas. Temas tratados: Fundamentos de Laravel, APIs RESTful, integración de Vue.js, autenticación con JWT, optimización de bases de datos, despliegue en la nube y buenas prácticas de desarrollo. Fecha: Del 15 de marzo al 30 de mayo de 2023. Instructor: Juan Pérez.";
-                    $interlineado_px = $this->certificates_param->interspace_description; // Interlineado en píxeles
-
-                    // Obtener el ancho de un solo carácter (aproximado)
-                    $fontSize = $this->certificates_param->font_size_description;
-                    $charWidth = $this->estimateCharWidth($fontSize); // Función para estimar el ancho de un carácter
-
-                    // Dividir el texto en líneas según el ancho máximo en píxeles
-                    $lines = $this->splitTextByPixelWidth($text, $max_width, $charWidth);
-
-                    // Posición inicial Y para la primera línea
-                    $currentY = $this->certificates_param->position_description_y;
-                    //dd($fontSize, $charWidth, $lines, $currentY);
-
-                    // Dibujar cada línea en la imagen
-                    foreach ($lines as $line) {
-                        $img->text($line, $this->certificates_param->position_description_x, $currentY, function ($font) {
-                            $font->file(public_path('fonts' . DIRECTORY_SEPARATOR . $this->certificates_param->fontfamily_description));
-                            $font->size($this->certificates_param->font_size_description);
-                            $font->color($this->certificates_param->color_description);
-                            $font->align($this->certificates_param->font_align_description);
-                            $font->valign($this->certificates_param->font_vertical_align_description);
-                            $font->angle(0);
-                        });
-
-                        // Aumentar la posición Y para la siguiente línea, sumando el interlineado
-                        $currentY += $interlineado_px;
+                
+                // Solo renderizar si hay descripción disponible en el módulo
+                if ($moduleDescriptionText) {
+                    // Asegurar que htmlGenerator esté disponible
+                    $htmlGenerator = new CertificateGeneratorHtml;
+                    
+                    $moduleDescContentWidth = (int) ($moduleConfig ? ($moduleConfig->max_width_module_description ?? 800) : 800);
+                    $moduleDescContentHeight = $this->certificates_param->certificate_img_height ?? 1550;
+                    
+                    $moduleDescViewData = [
+                        'text' => $moduleDescriptionText,
+                        'canvasWidth' => $moduleDescContentWidth,
+                        'canvasHeight' => $moduleDescContentHeight,
+                        'posX' => 10,
+                        'posY' => 10,
+                        'maxWidth' => $moduleDescContentWidth,
+                        'fontFamily' => $moduleConfig ? ($moduleConfig->fontfamily_module_description ?? 'Arial') : 'Arial',
+                        'fontSize' => (int) ($moduleConfig ? ($moduleConfig->font_size_module_description ?? 14) : 14),
+                        'color' => $moduleConfig ? ($moduleConfig->color_module_description ?? '#1a1c2d') : '#1a1c2d',
+                        'lineHeight' => (int) ($moduleConfig ? ($moduleConfig->font_size_module_description ?? 14) : 14) + 4,
+                        'textAlign' => $moduleConfig ? ($moduleConfig->text_align_module_description ?? 'left') : 'left',
+                    ];
+                    
+                    $moduleDescHtmlPath = $htmlGenerator->generateFromView('text-description-front', $moduleDescViewData, $moduleDescContentWidth, $moduleDescContentHeight);
+                    
+                    if ($moduleDescHtmlPath && File::exists($moduleDescHtmlPath)) {
+                        $moduleDescHtmlImage = Image::make($moduleDescHtmlPath);
+                        $img->insert($moduleDescHtmlImage, 'top-left',
+                            (int) ($moduleConfig ? ($moduleConfig->position_module_description_x ?? 425) : 425),
+                            (int) ($moduleConfig ? ($moduleConfig->position_module_description_y ?? 350) : 350)
+                        );
+                        File::delete($moduleDescHtmlPath);
                     }
                 }
             }
-            // //QR GENERATOR
-            $certificate = AcaCertificate::where('course_id', $course_id)
-                ->where('student_id', $student_id)
-                ->first();
+        }
 
-            $certificate_id = $certificate ? $certificate->id : "1"; // Si $certificate es null, asigna 1 por defecto
+        // Generador de contenido HTML
+        $htmlGenerator = new CertificateGeneratorHtml;
+
+        // Solo procesamos contenido para el reverso
+        if ($type === 'back') {
+            // Obtener dimensiones de la imagen del reverso
+            $canvasWidth = $this->certificates_param->back_certificate_img_width ?? 1550;
+            $canvasHeight = $this->certificates_param->back_certificate_img_height ?? 1550;
+
+            // Usar un tamaño más pequeño para el contenido HTML
+            $contentWidth = 800;
+            $contentHeight = 600;
+
+            // Determinar si es certificado por módulo
+            $isForModule = $this->certificates_param->for_module ?? false;
+
+            // 1. INSERTAR CONTENIDO DEL CURSO (SI ES VISIBLE Y NO ES PARA MÓDULOS)
+            if ($this->getField('visible_course') && ! $isForModule) {
+
+                $contentType = $this->getField('content_type') ?? 'list';
+                $viewName = $contentType === 'table' ? 'content-table' : 'content-list';
+
+                // Determinar si es preview (sin datos reales)
+                $isPreview = ! $this->student_id && ! $this->course_id;
+
+                // Datos: si es preview sin estudiante, usar datos de ejemplo
+                // Si hay datos reales del curso, obtenerlos pero también incluir datos de ejemplo para las notas
+                if ($isPreview) {
+                    // Modo preview sin datos reales - usar datos de ejemplo completos
+                    $contentData = $htmlGenerator->getExampleData($contentType);
+                } elseif ($this->module_id) {
+                    $course = AcaCourse::find($this->course_id);
+                    $contentData = $htmlGenerator->prepareCourseContent($course, false);
+                    // Agregar datos de ejemplo para las notas
+                    $contentData['examGrade'] = ['14.3', '16.5', '12.0'];
+                } elseif ($this->certificates_param->course_id) {
+                    $course = AcaCourse::find($this->certificates_param->course_id);
+                    $contentData = $htmlGenerator->prepareCourseContent($course, false);
+                    // Agregar datos de ejemplo para las notas
+                    $contentData['examGrade'] = ['14.3', '16.5', '12.0'];
+                } else {
+                    $contentData = $htmlGenerator->getExampleData($contentType);
+                }
+
+                // Obtener configuración de exam grades y themes desde grade_config
+                $showExamGrade = $this->showGrade && ($this->getField('back_show_exam_grade') ?? false);
+                $showThemes = $this->getField('back_show_themes') ?? true;
+
+                // Obtener notas reales si hay estudiante
+                $examGradeData = [];
+                if ($this->student_id && $this->course_id) {
+                    $examGradeData = $this->getExamGrades();
+                }
+
+                // Si no hay datos reales (preview), forzar usar datos de ejemplo
+                if (empty($examGradeData) && isset($contentData['examGrade'])) {
+                    $examGradeData = $contentData['examGrade'];
+                }
+
+                // En preview (sin student_id), usar valores de ejemplo solo si el check está activo
+                // Respetar la configuración del usuario cuando existe
+                if ($isPreview && ($showExamGrade !== false)) {
+                    $showExamGrade = true;
+                }
+
+                // Configuración de la vista
+                $viewData = array_merge($contentData, [
+                    'canvasWidth' => $contentWidth,
+                    'canvasHeight' => $contentHeight,
+                    'posX' => 10,
+                    'posY' => 10,
+                    'maxWidth' => (int) ($this->getField('max_width_course') ?? 750),
+                    'fontFamily' => $this->getField('fontfamily_course') ?? 'arial.ttf',
+                    'fontSize' => (int) ($this->getField('font_size_course') ?? 14),
+                    'color' => $this->getField('color_course') ?? '#000000',
+                    'lineHeight' => (int) ($this->getField('font_size_course') ?? 14) + 4,
+                    'showCourseContent' => true,
+                    'showModuleContent' => false,
+                    'moduleName' => '',
+                    'showExamGrade' => $showExamGrade,
+                    'showThemes' => $showThemes,
+                    'examGrade' => $examGradeData,
+                    'examFontFamily' => $this->getField('back_exam_fontfamily') ?? 'arial.ttf',
+                    'examFontSize' => (int) ($this->getField('back_exam_font_size') ?? 14),
+                    'examColor' => $this->getField('back_exam_color') ?? '#000000',
+                ]);
+
+                $htmlPath = $htmlGenerator->generateFromView($viewName, $viewData, $contentWidth, $contentHeight);
+
+                if ($htmlPath && File::exists($htmlPath)) {
+                    $htmlImage = Image::make($htmlPath);
+
+                    $img->insert($htmlImage, 'top-left',
+                        (int) ($this->getField('position_course_x') ?? 50),
+                        (int) ($this->getField('position_course_y') ?? 300)
+                    );
+                    File::delete($htmlPath);
+                }
+            }
+
+            // 2. INSERTAR CONTENIDO DEL MÓDULO (SI ES VISIBLE Y ES PARA MÓDULOS)
+            if ($this->getField('visible_module') && $isForModule) {
+                $contentTypeModule = $this->getField('content_type_module') ?? 'list';
+                $viewName = $contentTypeModule === 'table' ? 'content-table' : 'content-list';
+
+                // Determinar el nombre del módulo y los datos a usar
+                $moduleName = 'Módulo 1: Nombre del Módulo'; // Default para preview
+
+                // Si hay module_id específico, usar datos reales de ese módulo
+                if ($this->module_id) {
+                    $course = AcaCourse::find($this->course_id);
+                    // Usar el módulo específico
+                    $contentData = $htmlGenerator->prepareCourseContent($course, true, $this->module_id);
+
+                    // Obtener el nombre del módulo específico
+                    $module = AcaModule::find($this->module_id);
+                    $moduleName = $module ? ($module->description ?? 'Módulo') : 'Módulo';
+                } elseif ($this->certificates_param->course_id) {
+                    // Preview: usar primer módulo del curso
+                    $course = AcaCourse::find($this->certificates_param->course_id);
+                    $contentData = $htmlGenerator->prepareCourseContent($course, true, null);
+
+                    if ($course->modules()->count() > 0) {
+                        $firstModule = $course->modules()->first();
+                        $moduleName = $firstModule->description ?? 'Módulo';
+                    }
+
+                    // Agregar datos de ejemplo para las notas en preview
+                    $contentData['examGrade'] = ['14.3'];
+                    $contentData['showExamGrade'] = true;
+                    $contentData['showThemes'] = true;
+                } else {
+                    // Datos de ejemplo
+                    $contentData = $htmlGenerator->getExampleData($contentTypeModule);
+                }
+
+                // Determinar si es preview
+                $isPreview = ! $this->student_id && ! $this->course_id;
+
+                // Obtener configuración de exam grades y themes desde grade_config
+                $showExamGrade = $this->showGrade && ($this->getField('back_show_exam_grade') ?? false);
+                $showThemes = $this->getField('back_show_themes') ?? true;
+
+                // Obtener notas reales si hay estudiante
+                $examGradeData = [];
+                if ($this->student_id && $this->course_id) {
+                    $examGradeData = $this->getExamGrades();
+                }
+
+                // Si no hay datos reales (preview), forzar usar datos de ejemplo
+                if (empty($examGradeData) && isset($contentData['examGrade'])) {
+                    $examGradeData = $contentData['examGrade'];
+                }
+
+                // En preview (sin student_id), usar valores de ejemplo solo si el check está activo
+                // Respetar la configuración del usuario cuando existe
+                if ($isPreview && ($showExamGrade !== false)) {
+                    $showExamGrade = true;
+                }
+
+                // Configuración de la vista
+                $viewData = array_merge($contentData, [
+                    'canvasWidth' => $contentWidth,
+                    'canvasHeight' => $contentHeight,
+                    'posX' => 10,
+                    'posY' => 10,
+                    'maxWidth' => (int) ($this->getField('max_width_module') ?? 750),
+                    'fontFamily' => $this->getField('fontfamily_module') ?? 'arial.ttf',
+                    'fontSize' => (int) ($this->getField('font_size_module') ?? 14),
+                    'color' => $this->getField('color_module') ?? '#000000',
+                    'lineHeight' => (int) ($this->getField('font_size_module') ?? 14) + 4,
+                    'showCourseContent' => false,
+                    'showModuleContent' => true,
+                    'moduleName' => $moduleName,
+                    'showExamGrade' => $showExamGrade,
+                    'showThemes' => $showThemes,
+                    'examGrade' => $examGradeData,
+                    'examFontFamily' => $this->getField('back_exam_fontfamily') ?? 'arial.ttf',
+                    'examFontSize' => (int) ($this->getField('back_exam_font_size') ?? 14),
+                    'examColor' => $this->getField('back_exam_color') ?? '#000000',
+                ]);
+
+                $htmlPath = $htmlGenerator->generateFromView($viewName, $viewData, $contentWidth, $contentHeight);
+
+                if ($htmlPath && File::exists($htmlPath)) {
+                    $htmlImage = Image::make($htmlPath);
+                    $img->insert($htmlImage, 'top-left',
+                        (int) ($this->getField('position_module_x') ?? 50),
+                        (int) ($this->getField('position_module_y') ?? 300)
+                    );
+                    File::delete($htmlPath);
+                }
+            }
+        }
+
+        // QR solo para anverso
+        if ($type === 'front') {
             $generator = new QrCodeGenerator(300);
-            $dir = public_path() . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'tmp_qr';
-            $cadenaqr = route('aca_image_download', ['id' => $certificate_id]);
+            $dir = public_path().DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'tmp_qr';
+            $cadenaqr = $this->certificateValidationUrl($student_id, $course_id);
 
-            $qr_path = $generator->generateQR($cadenaqr, $dir, Str::random(10) . '.png', 8, 2);
-
+            $qr_path = $generator->generateQR($cadenaqr, $dir, Str::random(10).'.png', 8, 2);
             $qr = Image::make($qr_path);
 
-            if ($this->certificates_param->size_qr) {
-                if ($this->certificates_param->visible_image_qr) {
-                    $qr->fit($this->certificates_param->size_qr, $this->certificates_param->size_qr); //ajustar tamaño del qr
-                    $img->insert($qr, $this->certificates_param->font_align_qr, $this->certificates_param->position_qr_x, $this->certificates_param->position_qr_y); //insertar qr en la imagen
+            if ($this->getField('size_qr')) {
+                if ($this->getField('visible_image_qr')) {
+                    $qr->fit($this->getField('size_qr'), $this->getField('size_qr'));
+                    $img->insert($qr, $this->getField('font_align_qr'), $this->getField('position_qr_x'), $this->getField('position_qr_y'));
                 }
             }
 
-            // Ejemplo de Redimensionar la imagen manteniendo la proporción para avatares y similares
-            // Establecer el ancho máximo y la altura máxima deseados
-            $maxWidth = 1550;
-            $maxHeight = 1550;
-            $img->resize($maxWidth, $maxHeight, function ($constraint) {
-                $constraint->aspectRatio();
-                $constraint->upsize();
-            });
+            if (File::exists($qr_path)) {
+                File::delete($qr_path);
+            }
 
+        }
 
+        // QR del reverso (cuando type es back)
+        if ($this->type === 'back' && $this->getField('back_visible_qr')) {
+            $generator = new QrCodeGenerator(300);
+            $dir = public_path().DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'tmp_qr';
+            $cadenaqr = $this->certificateValidationUrl($student_id, $course_id);
 
-            // Obtener el contenido binario de la imagen
-            $imageContent = $img->encode('png');
+            $qr_path = $generator->generateQR($cadenaqr, $dir, Str::random(10).'.png', 8, 2);
+            $qr = Image::make($qr_path);
 
-            //ELIMINAR el EL ARCHIVO QR generado
-            if (File::exists($qr_path)) File::delete($qr_path);
+            if ($this->getField('back_size_qr')) {
+                $qr->fit($this->getField('back_size_qr'), $this->getField('back_size_qr'));
+                $img->insert($qr, 'top-left', $this->getField('back_position_qr_x'), $this->getField('back_position_qr_y'));
+            }
 
-            //Retornar la respuesta
-            return $imageContent;
-        } else {
-            $register = AcaCapRegistration::where('student_id', $student_id)
-                ->where('course_id', $course_id)
+            if (File::exists($qr_path)) {
+                File::delete($qr_path);
+            }
+        }
+
+        // Nota Final (PROMEDIO FINAL) del reverso
+        if ($this->type === 'back' && $this->getField('back_visible_grade')) {
+            $this->addGradeToImage($img);
+        }
+
+        // Redimensionar imagen
+        $maxWidth = 1550;
+        $maxHeight = 1550;
+        $img->resize($maxWidth, $maxHeight, function ($constraint) {
+            $constraint->aspectRatio();
+            $constraint->upsize();
+        });
+
+        $imageContent = $img->encode('png');
+
+        return $imageContent;
+    }
+
+    /**
+     * Obtiene el valor de un campo según el tipo (front/back)
+     */
+    private function getField($field)
+    {
+        // Campos de configuración en tabla relacionada (aca_certificates_grade_config)
+        $gradeConfigFields = [
+            'back_fontfamily_grade', 'back_font_size_grade', 'back_color_grade',
+            'back_position_grade_x', 'back_position_grade_y', 'back_visible_grade',
+            'back_rectangle_width', 'back_rectangle_height', 'back_rectangle_color',
+            'back_show_exam_grade', 'back_show_themes',
+            'back_exam_fontfamily', 'back_exam_font_size', 'back_exam_color',
+        ];
+
+        if (in_array($field, $gradeConfigFields)) {
+            $gradeConfig = AcaCertificateGradeConfig::where('certificate_id', $this->certificates_param->id)->first();
+
+            if ($gradeConfig && $gradeConfig->{$field} !== null) {
+                return $gradeConfig->{$field};
+            }
+
+            // Valores por defecto cuando no existe configuración
+            $defaults = [
+                'back_show_exam_grade' => false,
+                'back_show_themes' => true,
+                'back_exam_fontfamily' => 'arial.ttf',
+                'back_exam_font_size' => 14,
+                'back_exam_color' => '#000000',
+            ];
+
+            return $defaults[$field] ?? null;
+        }
+
+        if ($this->type === 'back') {
+            $backField = (str_starts_with($field, 'back_')) ? $field : 'back_'.$field;
+
+            return $this->certificates_param->{$backField} ?? null;
+        }
+
+        return $this->certificates_param->{$field} ?? null;
+    }
+
+    private function certificateValidationUrl($student_id, $course_id): string
+    {
+        $dni = 0;
+
+        if ($student_id) {
+            $student = AcaStudent::with('person')->find($student_id);
+            $dni = $student?->person?->number ?: 0;
+        }
+
+        return route('certificado_validar', [
+            'dni' => $dni,
+            'course_id' => $course_id ?: 0,
+        ]);
+    }
+
+    /**
+     * Obtiene las notas de examen por módulo para el estudiante
+     *
+     * @return array Array indexado numéricamente por posición del módulo
+     */
+    private function getExamGrades()
+    {
+        $examGrades = [];
+
+        if (! $this->student_id || ! $this->course_id) {
+            return $examGrades;
+        }
+
+        $modules = AcaModule::where('course_id', $this->course_id)->orderBy('position')->get();
+        $index = 0;
+
+        foreach ($modules as $module) {
+            // Solo exámenes regulares (no simulacros)
+            $exam = AcaExam::where('module_id', $module->id)
+                ->where('is_mock', false)
+                ->first();
+            if ($exam) {
+                $studentExam = AcaStudentExam::where('exam_id', $exam->id)
+                    ->where('student_id', $this->student_id)
+                    ->first();
+                if ($studentExam && $studentExam->punctuation !== null) {
+                    $examGrades[$index] = number_format($studentExam->punctuation, 1);
+                }
+            }
+            $index++;
+        }
+
+        return $examGrades;
+    }
+
+    /**
+     * Obtiene la fecha real del certificado
+     * Si hay student_id, obtiene la fecha del registro del estudiante
+     * Si no, usa la fecha actual
+     *
+     * @return string
+     */
+    private function getRealDate()
+    {
+        // Si no hay estudiante o curso, usar fecha actual
+        if (! $this->student_id || ! $this->course_id) {
+            return Carbon::now()->locale('es')->isoFormat('D [de] MMMM [de] YYYY');
+        }
+
+        // Buscar el registro del estudiante en el curso
+        $register = AcaCapRegistration::where('student_id', $this->student_id)
+            ->where('course_id', $this->course_id)
+            ->first();
+
+        if ($register && $register->certificate_date) {
+            return Carbon::parse($register->certificate_date)
+                ->locale('es')
+                ->isoFormat('D [de] MMMM [de] YYYY');
+        }
+
+        // Fallback: fecha actual formateada
+        return Carbon::now()->locale('es')->isoFormat('D [de] MMMM [de] YYYY');
+    }
+
+    /**
+     * Obtiene el nombre real del estudiante
+     * Si hay student_id, obtiene el nombre de la persona asociada
+     * Si no, usa el texto de ejemplo
+     *
+     * @return string
+     */
+    private function getRealStudentName()
+    {
+        // Si no hay estudiante, usar texto de ejemplo
+        if (! $this->student_id) {
+            return 'Nombres del Estudiante o alumnos';
+        }
+
+        // Buscar el estudiante con su persona
+        $student = AcaStudent::with('person')->find($this->student_id);
+
+        if ($student && $student->person) {
+            return $student->person->full_name;
+        }
+
+        return 'Nombres del Estudiante o alumnos';
+    }
+
+    /**
+     * Agrega la Nota Final (PROMEDIO FINAL) a la imagen del reverso usando vista HTML
+     */
+    private function addGradeToImage($img)
+    {
+        $visible = $this->getField('back_visible_grade');
+        if (! $visible) {
+            return;
+        }
+
+        $gradeValue = '18';
+        $textColor = $this->getField('back_color_grade') ?? '#000000';
+        $isPreview = true;
+
+        if ($this->student_id && $this->course_id) {
+            $register = AcaCapRegistration::where('student_id', $this->student_id)
+                ->where('course_id', $this->course_id)
                 ->first();
 
-            if (!$register) {
-                $register = AcaCapRegistration::first();
-                $student_id = $register->student_id;
-                $course_id = $register->course_id;
-            }
-
             if ($register) {
-                if ($register->certificate_date != null) {
+                $studentGrade = \Modules\Academic\Entities\AcaStudentGrade::where('registration_id', $register->id)->first();
 
-                    $student = AcaStudent::with('person')->find($student_id);
+                if ($studentGrade && $studentGrade->final_average !== null) {
+                    $gradeValue = number_format($studentGrade->final_average, 2);
+                    $isPreview = false;
 
-                    $this->certificates_param = AcaCertificateParameter::find($certificate_id);
-
-                    $course = AcaCourse::find($course_id);
-
-                    //dd(public_path('storage' . DIRECTORY_SEPARATOR . $this->certificates_param->certificate_img));
-                    //dd($this->certificates_param);
-                    // create Image from file
-                    $img = Image::make(public_path('storage' . DIRECTORY_SEPARATOR . $this->certificates_param->certificate_img));
-
-                    $fecha = $register->certificate_date; //Esta fecha debe obtenerse del registro de la matricula del estudiante al curso respectivo donde se obtiene la fecha de entrega del certificado si es null entonces no tiene certificado
-
-                    if ($register->certificate_date) {
-                        $fecha = Carbon::parse($register->certificate_date)->format('d-m-Y');
-                    } else {
-                        $fecha = 'Sin certificado';
+                    if ($studentGrade->final_average < 11) {
+                        $textColor = '#FF0000';
                     }
-                    //las fuentes deben estar en la carpeta public/fonts y en la base de datos debe registrarse el nombre de la fuente y su extensión
-                    //recomiendo usar fuentes de google fonts porque son gratis y puedes descargarlas
-                    //dd(public_path('fonts' . DIRECTORY_SEPARATOR . $this->certificates_param->fontfamily_date));
-                    if ($this->certificates_param->position_date_x && $this->certificates_param->position_date_y && $this->certificates_param->fontfamily_date) {
-                        $img->text("Lima, " . $fecha, $this->certificates_param->position_date_x, $this->certificates_param->position_date_y, function ($font) {
-                            $font->file(public_path('fonts' . DIRECTORY_SEPARATOR . $this->certificates_param->fontfamily_date));
-                            $font->size($this->certificates_param->font_size_date);
-                            $font->color($this->certificates_param->color_date);
-                            $font->align($this->certificates_param->font_align_date);
-                            $font->valign($this->certificates_param->font_vertical_align_date);
-                            $font->angle(0);
-                        });
-                    }
-                    //nombre estudiante
-                    if ($this->certificates_param->fontfamily_names && $student->person->full_name && $this->certificates_param->font_size_names) {
-                        $img->text($student->person->full_name, $this->certificates_param->position_names_x, $this->certificates_param->position_names_y, function ($font) {
-                            $font->file(public_path('fonts' . DIRECTORY_SEPARATOR . $this->certificates_param->fontfamily_names));
-                            $font->size($this->certificates_param->font_size_names);
-                            $font->color($this->certificates_param->color_names);
-                            $font->align($this->certificates_param->font_align_names);
-                            $font->valign($this->certificates_param->font_vertical_align_names);
-                            $font->angle(0);
-                        });
-                    }
-                    //titulo del curso
-                    if ($this->certificates_param->fontfamily_title && $this->certificates_param->font_align_title && $this->certificates_param->font_vertical_align_title && $this->certificates_param->position_title_y) {
-                        $max_width = $this->certificates_param->max_width_title;
-                        $img->text($this->wrapText($course->description, $max_width), $this->certificates_param->position_title_x, $this->certificates_param->position_title_y, function ($font) {
-                            $font->file(public_path('fonts' . DIRECTORY_SEPARATOR . $this->certificates_param->fontfamily_title));
-                            $font->size($this->certificates_param->font_size_title);
-                            $font->color($this->certificates_param->color_title);
-                            $font->align($this->certificates_param->font_align_title);
-                            $font->valign($this->certificates_param->font_vertical_align_title);
-                            $font->angle(0);
-                        });
-                    }
-                    // //descripcion del certificado
-
-                    // if ($course->certificate_description && $this->certificates_param->position_description_x && $this->certificates_param->position_description_y) {
-                    //     $max_width = $this->certificates_param->max_width_description;
-
-                    //     $img->text($this->wrapText($course->certificate_description, $max_width, $this->certificates_param->interspace_description), $this->certificates_param->position_description_x, $this->certificates_param->position_description_y, function ($font) {
-                    //         $font->file(public_path('fonts' . DIRECTORY_SEPARATOR . $this->certificates_param->fontfamily_description));
-                    //         $font->size($this->certificates_param->font_size_description);
-                    //         $font->color('#0d0603');
-                    //         $font->align($this->certificates_param->font_align_description);
-                    //         $font->valign($this->certificates_param->font_vertical_align_description);
-                    //         $font->angle(0);
-                    //     });
-                    // }
-
-                    if ($this->certificates_param->position_description_x && $this->certificates_param->position_description_y) {
-                        // Descripción del certificado
-                        $max_width = $this->certificates_param->max_width_description * 10; // Ancho máximo en píxeles
-                        $text = $course->certificate_description;
-                        $interlineado_px = $this->certificates_param->interspace_description; // Interlineado en píxeles
-
-                        // Obtener el ancho de un solo carácter (aproximado)
-                        $fontSize = $this->certificates_param->font_size_description;
-                        $charWidth = $this->estimateCharWidth($fontSize); // Función para estimar el ancho de un carácter
-
-                        // Dividir el texto en líneas según el ancho máximo en píxeles
-                        $lines = $this->splitTextByPixelWidth($text, $max_width, $charWidth);
-
-                        // Posición inicial Y para la primera línea
-                        $currentY = $this->certificates_param->position_description_y;
-                        //dd($fontSize, $charWidth, $lines, $currentY);
-
-                        // Dibujar cada línea en la imagen
-                        foreach ($lines as $line) {
-                            $img->text($line, $this->certificates_param->position_description_x, $currentY, function ($font) {
-                                $font->file(public_path('fonts' . DIRECTORY_SEPARATOR . $this->certificates_param->fontfamily_description));
-                                $font->size($this->certificates_param->font_size_description);
-                                $font->color($this->certificates_param->color_description);
-                                $font->align($this->certificates_param->font_align_description);
-                                $font->valign($this->certificates_param->font_vertical_align_description);
-                                $font->angle(0);
-                            });
-
-                            // Aumentar la posición Y para la siguiente línea, sumando el interlineado
-                            $currentY += $interlineado_px;
-                        }
-                    }
-                    // //QR GENERATOR
-                    $certificate = AcaCertificate::where('course_id', $course_id)
-                        ->where('student_id', $student_id)
-                        ->first();
-
-                    $certificate_id = $certificate ? $certificate->id : "1"; // Si $certificate es null, asigna 1 por defecto
-                    $generator = new QrCodeGenerator(300);
-                    $dir = public_path() . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'tmp_qr';
-                    $cadenaqr = route('aca_image_download', ['id' => $certificate_id]);
-
-
-                    $qr_path = $generator->generateQR($cadenaqr, $dir, Str::random(10) . '.png', 8, 2);
-
-                    $qr = Image::make($qr_path);
-                    //$qr = Image::make('https://borealtech.com/wp-content/uploads/2018/10/codigo-qr-1024x1024-1.jpg');
-                    if ($this->certificates_param->size_qr) {
-                        $qr->fit($this->certificates_param->size_qr, $this->certificates_param->size_qr); //ajustar tamaño del qr
-                        $img->insert($qr, $this->certificates_param->font_align_qr, $this->certificates_param->position_qr_x, $this->certificates_param->position_qr_y); //insertar qr en la imagen
-                    }
-
-                    // Ejemplo de Redimensionar la imagen manteniendo la proporción para avatares y similares
-                    // Establecer el ancho máximo y la altura máxima deseados
-                    $maxWidth = 1550;
-                    $maxHeight = 1550;
-                    $img->resize($maxWidth, $maxHeight, function ($constraint) {
-                        $constraint->aspectRatio();
-                        $constraint->upsize();
-                    });
-
-
-
-                    // Obtener el contenido binario de la imagen
-                    $imageContent = $img->encode('png');
-
-                    //ELIMINAR el EL ARCHIVO QR generado
-                    if (File::exists($qr_path)) File::delete($qr_path);
-
-                    //Retornar la respuesta
-                    return $imageContent;
                 } else {
-                    echo 'El estudiante fue registrado en el ' . $register->Course->description . 'pero no se le ha entregado el certificado aún';
+                    return;
                 }
             } else {
-                echo "No se encontraron registros";
+                return;
+            }
+        }
+
+        $rectWidth = (int) ($this->getField('back_rectangle_width') ?? 100);
+        $rectHeight = (int) ($this->getField('back_rectangle_height') ?? 60);
+        $rectColor = $textColor;
+        $fontSize = (int) ($this->getField('back_font_size_grade') ?? 14);
+
+        $posX = (int) ($this->getField('back_position_grade_x') ?? 0);
+        $posY = (int) ($this->getField('back_position_grade_y') ?? 0);
+
+        $tableWidth = 200 + $rectWidth;
+        $tableHeight = max($rectHeight, $fontSize * 4);
+
+        $htmlGenerator = new CertificateGeneratorHtml;
+
+        $viewData = [
+            'canvasWidth' => $tableWidth,
+            'canvasHeight' => $tableHeight,
+            'posX' => 0,
+            'posY' => 0,
+            'fontFamily' => $this->getField('back_fontfamily_grade') ?? 'arial.ttf',
+            'fontSize' => $fontSize,
+            'color' => $rectColor,
+            'rectWidth' => $rectWidth,
+            'rectHeight' => $rectHeight,
+            'gradeValue' => $gradeValue,
+        ];
+
+        $htmlPath = $htmlGenerator->generateFromView('grade-table', $viewData, $tableWidth, $tableHeight);
+
+        if ($htmlPath && File::exists($htmlPath)) {
+            $htmlImage = Image::make($htmlPath);
+            $img->insert($htmlImage, 'top-left', $posX, $posY);
+            File::delete($htmlPath);
+        }
+    }
+
+    /**
+     * Obtiene el título real del curso
+     * Si hay module_id, muestra: "Curso: [nombre del curso]" + "Módulo: [nombre del módulo]"
+     * Si solo hay course_id, muestra el nombre del curso
+     * Si no hay datos reales, usa el texto de ejemplo
+     *
+     * @return string
+     */
+    private function getRealCourseTitle()
+    {
+        // Texto de ejemplo por defecto
+        $defaultTitle = 'Título del Curso 3025 - II';
+
+        // Si hay módulo específico
+        if ($this->module_id) {
+            $module = AcaModule::with('course')->find($this->module_id);
+
+            if ($module) {
+                // Si el módulo tiene certificate_title personalizado, usarlo
+                if (!empty($module->certificate_title)) {
+                    return $module->certificate_title;
+                }
+                // Si no, usar el formato anterior: título del curso + nombre del módulo
+                if ($module->course) {
+                    $courseName = $module->course->certificate_title ?? 'Curso';
+                    $moduleName = $module->description ?? 'Módulo';
+                    return "{$courseName} - Módulo: {$moduleName}";
+                }
+            }
+        }
+
+        // Si hay curso pero no módulo (certificado de curso regular)
+        if ($this->course_id) {
+            $course = AcaCourse::find($this->course_id);
+            if ($course) {
+                return $course->certificate_title ?? $defaultTitle;
+            }
+        }
+
+        return $defaultTitle;
+    }
+
+    /**
+     * Agrega texto a la imagen con configuración de fuente
+     */
+    private function addTextToImage($img, $text, $posX, $posY, $fontFamily, $fontSize, $color, $align, $valign, $visible)
+    {
+        if ($posX && $posY && $fontFamily) {
+            if ($visible) {
+
+                $img->text($text, $posX, $posY, function ($font) use ($fontFamily, $fontSize, $color, $align, $valign) {
+                    $font->file(public_path('fonts'.DIRECTORY_SEPARATOR.$fontFamily));
+                    $font->size($fontSize);
+                    $font->color($color);
+                    $font->align($align);
+                    $font->valign($valign);
+                    $font->angle(0);
+                });
+            }
+        }
+    }
+
+    /**
+     * Agrega descripción multilínea a la imagen
+     */
+    private function addDescriptionToImage($img, $text, $posX, $posY, $fontFamily, $fontSize, $color, $align, $valign, $visible, $maxWidth = null, $interspace = null)
+    {
+        if ($posX && $posY && $visible) {
+            $maxWidthPx = $maxWidth ?? 800;
+            $fontSize = $fontSize ?? 12;
+            $interlineado_px = $interspace ?? ($fontSize * 0.2);
+            $xColor = $color ?? '#0d0603';
+            $fontPath = public_path('fonts'.DIRECTORY_SEPARATOR.$fontFamily);
+
+            // Mejoramos la estimación para que el wrap sea más ajustado
+            $charWidth = $this->estimateCharWidth($fontSize);
+            $lines = $this->splitTextByPixelWidth($text, $maxWidthPx, $charWidth);
+
+            $currentY = $posY;
+            $numLines = count($lines);
+
+            foreach ($lines as $index => $line) {
+                $lineText = trim($line);
+                $words = explode(' ', $lineText);
+                $numWords = count($words);
+
+                // Calculamos el ancho real de las palabras juntas para medir la "densidad"
+                $wordsOnlyWidth = 0;
+                foreach ($words as $word) {
+                    $wordsOnlyWidth += strlen($word) * $charWidth;
+                }
+
+                $isLastLine = ($index === $numLines - 1);
+
+                // CRITERIO DE JUSTIFICACIÓN:
+                // 1. No es la última línea.
+                // 2. Tiene más de 2 palabras.
+                // 3. El contenido ocupa al menos el 65% del ancho (evita espacios gigantes).
+                if (! $isLastLine && $numWords > 2 && ($wordsOnlyWidth > $maxWidthPx * 0.65)) {
+
+                    $totalSpaceToDistribute = $maxWidthPx - $wordsOnlyWidth;
+                    $spacing = $totalSpaceToDistribute / ($numWords - 1);
+
+                    $currentX = $posX;
+
+                    // Si el alineamiento general es centrado, ajustamos el inicio del bloque justificado
+                    if ($align === 'center') {
+                        $currentX = $posX - ($maxWidthPx / 2);
+                    }
+
+                    foreach ($words as $word) {
+                        $img->text($word, (int) $currentX, (int) $currentY, function ($font) use ($fontPath, $fontSize, $xColor, $valign) {
+                            $font->file($fontPath);
+                            $font->size($fontSize);
+                            $font->color($xColor);
+                            $font->align('left');
+                            $font->valign($valign);
+                        });
+                        $currentX += (strlen($word) * $charWidth) + $spacing;
+                    }
+                } else {
+                    // ALINEACIÓN NORMAL PARA ÚLTIMA LÍNEA O LÍNEAS POBRES
+                    // Esto soluciona que la última línea se vaya a la izquierda
+                    $img->text($lineText, (int) $posX, (int) $currentY, function ($font) use ($fontPath, $fontSize, $xColor, $align, $valign) {
+                        $font->file($fontPath);
+                        $font->size($fontSize);
+                        $font->color($xColor);
+                        $font->align($align); // Usa 'center' si así está en BD
+                        $font->valign($valign);
+                    });
+                }
+
+                $currentY += ($fontSize + $interlineado_px);
             }
         }
     }
 
     /**
      * Divide el texto en líneas según un ancho máximo en píxeles.
-     *
-     * @param string $text Texto a dividir.
-     * @param int $maxWidthPx Ancho máximo en píxeles.
-     * @param float $charWidth Ancho aproximado de un carácter en píxeles.
-     * @return array Líneas de texto.
      */
     public function splitTextByPixelWidth($text, $maxWidthPx, $charWidth)
     {
-        $words = explode(' ', $text); // Dividir el texto en palabras
+        $words = explode(' ', $text);
         $lines = [];
         $currentLine = '';
 
         foreach ($words as $word) {
-            // Calcular el ancho de la línea actual más la nueva palabra
-            $lineWidth = strlen($currentLine . ' ' . $word) * $charWidth;
-
-            // Si la línea supera el ancho máximo, guardar la línea actual y empezar una nueva
+            $lineWidth = strlen($currentLine.' '.$word) * $charWidth;
             if ($lineWidth > $maxWidthPx) {
                 $lines[] = trim($currentLine);
                 $currentLine = $word;
             } else {
-                $currentLine .= ' ' . $word;
+                $currentLine .= ' '.$word;
             }
         }
 
-        // Agregar la última línea
-        if (!empty($currentLine)) {
+        if (! empty($currentLine)) {
             $lines[] = trim($currentLine);
         }
 
@@ -357,23 +924,18 @@ class CertificateImage
 
     /**
      * Estima el ancho de un carácter en píxeles según el tamaño de la fuente.
-     *
-     * @param int $fontSize Tamaño de la fuente.
-     * @return float Ancho aproximado de un carácter en píxeles.
      */
     public function estimateCharWidth($fontSize)
     {
-        // Esta es una estimación basada en la relación entre el tamaño de la fuente y el ancho de un carácter.
-        // Puedes ajustar este valor según la fuente que estés utilizando.
-        return $fontSize * 0.6; // Por ejemplo, 0.6 es un factor de escala común para fuentes proporcionales.
+        // Para fuentes manuscritas/cursivas, un factor de 0.7 o 0.8 es más seguro
+        // para evitar que el texto roce los bordes.
+        return $fontSize * 0.75;
     }
 
     public function wrapText($text, $maxWidth, $lineSpacing = 2.3)
     {
-        // Envolver el texto
-        //dd($text);
-        $wrappedText = wordwrap($text, $maxWidth, PHP_EOL, true);
 
+        $wrappedText = wordwrap($text, $maxWidth, PHP_EOL, true);
         // Dividir el texto envuelto en líneas
         $lines = explode(PHP_EOL, $wrappedText);
 
@@ -383,7 +945,8 @@ class CertificateImage
         // Centrar horizontalmente las líneas
         $centeredLines = array_map(function ($line) use ($maxLineLength) {
             $spacesToAdd = max(0, ($maxLineLength - strlen($line)) / 2);
-            $centeredLine = str_repeat(' ', $spacesToAdd) . $line;
+            $centeredLine = str_repeat(' ', $spacesToAdd).$line;
+
             return $centeredLine;
         }, $lines);
 

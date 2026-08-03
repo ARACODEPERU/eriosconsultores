@@ -27,6 +27,7 @@ use Modules\Onlineshop\Entities\OnliSaleDetail;
 use Illuminate\Support\Facades\Mail;
 use Modules\Academic\Emails\StudentElectronicTicket;
 use App\Helpers\Invoice\Documents\Boleta;
+use App\Helpers\Invoice\Documents\Factura;
 use Modules\Academic\Entities\AcaCourse;
 use Modules\Academic\Entities\AcaSubscriptionType;
 use Modules\Academic\Jobs\SendBoletaJob;
@@ -350,9 +351,6 @@ class AcaSaleDocumentController extends Controller
     public function sendEmailBoleta(Request $request)
     {
 
-
-        $P000013 = Parameter::where('parameter_code', 'P000013')->value('value_default');
-
         $person_email = $request->get('person_email');
         $person_name = $request->get('person_name');
         $document_id = $request->get('document_id');
@@ -363,19 +361,22 @@ class AcaSaleDocumentController extends Controller
 
         $dataFile = $this->generateBoletaPDF($document_id);
 
+
         $data = [
-            'from_mail' => env('MAIL_FROM_ADDRESS'),
-            'from_name' => env('MAIL_FROM_NAME'),
+            'from_mail' => env('MAIL_FROM_ADDRESS', "informes@globalcpaperu.com"),
+            'from_name' => env('MAIL_FROM_NAME', "CPA Academy"),
             'title' => 'Hola! Llegó tu comprobante electrónico',
             'for_mail' => $person_email,
             'for_name' => $person_name,
-            'file_path' => $dataFile['filePath'],
-            'file_name' => $dataFile['fileName']
+            'file_path' => $dataFile["pdf"]['filePath'],
+            'file_name' => $dataFile["pdf"]['fileName'],
+            'xml_file_path' => $dataFile["xml"] ? $dataFile["xml"]['filePath'] : null,
+            'xml_file_name' => $dataFile["xml"] ? $dataFile["xml"]['fileName'] : null,
+            'document_id'   => $document_id,
         ];
 
         try {
 
-            //dd($data);
             Mail::to(trim($person_email))->send(new StudentElectronicTicket($data));
 
             $success = true;
@@ -417,18 +418,31 @@ class AcaSaleDocumentController extends Controller
         }
 
         try {
+
             $format = 'A4';
-            $boleta = new Boleta();
 
-            // Intentar obtener la boleta
-            $res = $boleta->getBoletatDomPdf($id, $format);
-
-            // Verificar si se obtuvo un resultado válido
-            if (!$res) {
-                throw new \Exception("No se pudo generar la boleta.");
+            $document = SaleDocument::find($id);
+            $resF = array();
+            if($document->invoice_type_doc == '01'){
+                $factura = new Factura();
+                $resb = $factura->getFacturaDomPdf($id, $format); //metodo para generar pdf
+                $resF = $factura->getFacturaXML($id);
+            }elseif($document->invoice_type_doc == '03'){
+                $boleta = new Boleta();
+                $resb = $boleta->getBoletatDomPdf($id, $format);
             }
 
-            return $res;
+            // Intentar obtener la boleta
+            // para generar el xml
+            // Verificar si se obtuvo un resultado válido
+            if (!$resb) {
+                throw new \Exception("No se pudo generar la documento de venta.");
+            }
+
+            return array(
+                "pdf" => $resb,
+                "xml" => $resF
+            );
         } catch (\Exception $e) {
             // Lanzar una excepción con un mensaje descriptivo
             throw new \Exception("Error al generar la boleta: " . $e->getMessage());

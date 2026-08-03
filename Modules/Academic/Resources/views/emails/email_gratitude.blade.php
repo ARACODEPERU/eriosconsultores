@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Global CPA - Business School</title>
+    <title>CPA Academy - Business School</title>
 
     <!--Google Fonts-->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
@@ -168,7 +168,7 @@
         <h1>
             <img style="width: 25px;" data-emoji="🎉" class="an1" alt="🎉" aria-label="🎉" draggable="false"
                 src="https://fonts.gstatic.com/s/e/notoemoji/16.0/1f389/32.png" loading="lazy">
-            &nbsp; ¡Bienvenido(a) a Global CPA Business School! &nbsp;
+            &nbsp; ¡Bienvenido(a) a CPA Academy! &nbsp;
             <img style="width: 25px;" data-emoji="🎉" class="an1" alt="🎉" aria-label="🎉" draggable="false"
                 src="https://fonts.gstatic.com/s/e/notoemoji/16.0/1f389/32.png" loading="lazy">
         </h1>
@@ -185,9 +185,9 @@
                 <div class="card">
                     <img width="100%" src="{{ $course->image }}" alt="product" />
                     <h4 style="margin-top: 5px;">{{ $course->description }}</h4>
-                    <p style="color: #4f46e5; font-size: 16px; font-weight: 700; margin-top: -10px;">
+                    {{-- <p style="color: #4f46e5; font-size: 16px; font-weight: 700; margin-top: -10px;">
                         S/. {{ $course->price }}
-                    </p>
+                    </p> --}}
                 </div>
             @endforeach
             {{-- <div class="card">
@@ -228,10 +228,10 @@
         </p>
         <p>
             <b>Atentamente,</b><br>
-            Equipo de GLOBAL CPA BUSINESS SCHOOL
+            Equipo de CPA Academy
         </p>
         <p style="text-align: center; font-size: 14px;">
-            GLOBAL CPA BUSINESS SCHOOL, Jirón Pedro Conde Nro. 514, Oficina 203., Distrito de Lince, Provincia de Lima,
+            CPA Academy, Jirón Pedro Conde Nro. 514, Oficina 203., Distrito de Lince, Provincia de Lima,
             Perú, +51 967052506
         </p>
         <br>

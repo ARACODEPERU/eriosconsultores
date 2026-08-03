@@ -25,7 +25,8 @@ use App\Models\Sale;
 use App\Models\SaleDocumentItem;
 use App\Models\SaleProduct;
 use Illuminate\Support\Facades\DB;
-
+use Greenter\Model\Sale\FormaPagos\FormaPagoContado;
+use Greenter\Model\Sale\FormaPagos\FormaPagoCredito;
 class Boleta
 {
     protected $see;
@@ -114,6 +115,12 @@ class Boleta
 
         $invoice = new Invoice();
 
+        if($document->forma_pago == 'Contado'){
+            $invoice->setFormaPago(new FormaPagoContado()); // FormaPago: Contado
+        }else{
+            $invoice->setFormaPago(new FormaPagoCredito($document->overall_total)); // FormaPago: Credito
+        }
+
         $invoice->setUblVersion($document->invoice_ubl_version)
             ->setTipoOperacion($document->invoice_type_operation)
             ->setTipoDoc($document->invoice_type_doc)
@@ -152,25 +159,18 @@ class Boleta
                 ->setMtoValorUnitario($detail->mto_value_unit)
                 ->setMtoPrecioUnitario($detail->mto_price_unit);
 
-            $descuent = $detail->mto_discount;
+            $productTmp = SaleProduct::where('sale_id', $document->sale_id)->where('product_id', $detail->product_id)->first();
 
-            if ($descuent > 0) {
-
-                $item->setDescuento($descuent);
-
-                $json_discounts = json_decode($detail->json_discounts);
-
-                $charges = [];
-
-                foreach ($json_discounts as $k => $json_discount) {
-                    $charges[$k] = (new Charge())
-                        ->setCodTipo($json_discount->type)
-                        ->setMontoBase($json_discount->base)
-                        ->setFactor($json_discount->factor)
-                        ->setMonto($json_discount->monto);
+            if ($productTmp && $productTmp->product) {
+                $prodData = json_decode($productTmp->product);
+                if (!empty($prodData->usine)) {
+                    $item->setCodProdSunat($prodData->usine);
                 }
+            }
 
-                $item->setDescuentos($charges);
+            if ($this->hasPersistedItemDiscount($detail)) {
+                $item->setDescuento((float) $detail->mto_discount);
+                $item->setDescuentos($this->buildDiscountCharges($detail));
             }
 
             array_push($items, $item);
@@ -270,69 +270,21 @@ class Boleta
     public function updateStockSale($id)
     {
         try {
-            $res = DB::transaction(function () use ($id) {
-                $document = SaleDocument::find($id);
+            $stockService = app(\Modules\Sales\Services\SaleStockService::class);
 
+            DB::transaction(function () use ($id, $stockService) {
+                $document = SaleDocument::find($id);
                 $sale = Sale::find($document->sale_id);
                 $sale->update(['status' => false]);
 
                 $products = SaleProduct::where('sale_id', $sale->id)->get();
+                $stockService->reverseSaleProducts(
+                    $products,
+                    $sale->local_id,
+                    $document->id,
+                    SaleDocument::class
+                );
 
-                foreach ($products as $item) {
-                    // solo si son productos no aplica a los servicios
-                    if (json_decode($item->saleProduct)->unit_type != 'ZZ') {
-
-                        $k = Kardex::create([
-                            'date_of_issue' => Carbon::now()->format('Y-m-d'),
-                            'motion' => 'sale',
-                            'product_id' => $item->product_id,
-                            'local_id' => $sale->local_id,
-                            'quantity' => $item->quantity,
-                            'document_id' => $document->id,
-                            'document_entity' => SaleDocument::class,
-                            'description' => 'Anulacion de Venta'
-                        ]);
-
-                        $product = Product::find($item->product_id);
-
-                        if ($product->presentations) {
-
-                            KardexSize::create([
-                                'kardex_id' => $k->id,
-                                'product_id' => $item->product_id,
-                                'local_id' => $sale->local_id,
-                                //'size'      => json_decode($produc->product)->size,
-                                'size'      => json_decode($item->saleProduct)->size,
-                                'quantity'  => $item->quantity
-                            ]);
-
-                            $tallas = json_decode($product->sizes, true);
-
-                            $n_tallas = [];
-                            foreach ($tallas as &$size) {
-                                // Si el tamaño es igual a 22
-                                if ($size["size"] == json_decode($item->saleProduct)->size) {
-
-                                    // Obtiene la cantidad actual
-                                    $currentQuantity = intval($size["quantity"]); // Convierte a entero
-
-                                    // Suma 1 a la cantidad actual
-                                    $newQuantity = $currentQuantity + $item->quantity;
-
-                                    // Actualiza la cantidad
-                                    $size["quantity"] = $newQuantity;
-                                }
-                            }
-
-                            $n_tallas = $tallas;
-
-                            $product->update([
-                                'sizes' => json_encode($n_tallas)
-                            ]);
-                        }
-                        Product::find($item->product_id)->increment('stock', $item->quantity);
-                    }
-                }
                 return $sale;
             });
 
@@ -340,5 +292,37 @@ class Boleta
         } catch (\Exception $e) {
             return false;
         }
+    }
+
+    private function hasPersistedItemDiscount(SaleDocumentItem $detail): bool
+    {
+        $jsonDiscounts = json_decode($detail->json_discounts ?? '[]');
+
+        return (float) $detail->mto_discount > 0
+            && is_array($jsonDiscounts)
+            && count($jsonDiscounts) > 0;
+    }
+
+    /**
+     * @return array<int, Charge>
+     */
+    private function buildDiscountCharges(SaleDocumentItem $detail): array
+    {
+        $jsonDiscounts = json_decode($detail->json_discounts ?? '[]');
+        $charges = [];
+
+        if (! is_array($jsonDiscounts)) {
+            return $charges;
+        }
+
+        foreach ($jsonDiscounts as $k => $jsonDiscount) {
+            $charges[$k] = (new Charge())
+                ->setCodTipo($jsonDiscount->type)
+                ->setMontoBase($jsonDiscount->base)
+                ->setFactor($jsonDiscount->factor)
+                ->setMonto($jsonDiscount->monto);
+        }
+
+        return $charges;
     }
 }

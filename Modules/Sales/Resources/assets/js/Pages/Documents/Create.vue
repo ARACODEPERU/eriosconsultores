@@ -1,17 +1,22 @@
 <script setup>
  import AppLayout from '@/Layouts/Vristo/AppLayout.vue';
     import PrimaryButton from '@/Components/PrimaryButton.vue';
-    import DangerButton from '@/Components/DangerButton.vue';
+    import SuccessButton from '@/Components/SuccessButton.vue';
     import SearchClients from './Partials/SearchClients.vue';
     import SearchProducts from './Partials/SearchProducts.vue';
     import { faPlus, faXmark, faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
     import { useForm } from '@inertiajs/vue3';
     import InputError from '@/Components/InputError.vue';
-    import { ref, onMounted } from 'vue';
+    import { ref, onMounted, watch } from 'vue';
     import Swal2 from 'sweetalert2';
     import { Link, router } from '@inertiajs/vue3';
     import Navigation from '@/Components/vristo/layout/Navigation.vue';
-    import { message } from 'ant-design-vue';
+    import ModalLarge from '@/Components/ModalLarge.vue';
+    import TextInput from '@/Components/TextInput.vue';
+    import InputLabel from '@/Components/InputLabel.vue';
+    import { useAppStore } from '@/stores/index';
+    import { calcularMontosPorCuota } from '../../utilities/paymentCalculations'; // Ajusta la ruta según sea necesario
+
 
     const props = defineProps({
         payments: {
@@ -49,6 +54,10 @@
         taxes: {
             type: Object,
             default: () => ({}),
+        },
+        healthBillingDraft: {
+            type: Object,
+            default: null,
         }
     });
 
@@ -79,7 +88,15 @@
             reference: null,
             amount:0
         }],
-        additional_description: null
+        additional_description: null,
+        forma_pago: 'Contado',
+        quotas: {
+            number: 1,
+            days: 15,
+            amounts: [],
+            end_month: false,
+            amount: null
+        }
     });
 
     const series = ref([]);
@@ -116,6 +133,7 @@
         getSeriesByDocumentType();
         getCurrentDate();
         startTaxes();
+        applyHealthBillingDraft();
     });
 
     const taxes = ref({});
@@ -132,6 +150,36 @@
         taxes.value = xa;
     }
 
+    const applyHealthBillingDraft = () => {
+        if (!props.healthBillingDraft?.items?.length) {
+            return;
+        }
+
+        const client = props.healthBillingDraft.client;
+
+        if (client) {
+            formDocument.client_id = client.id;
+            formDocument.client_name = `${client.number}-${client.full_name}`;
+            formDocument.client_rzn_social = client.full_name;
+            formDocument.client_ubigeo = client.ubigeo;
+            formDocument.client_dti = client.document_type_id;
+            formDocument.client_number = client.number;
+            formDocument.client_direction = client.address || formDocument.client_direction;
+            formDocument.client_phone = client.telephone;
+            formDocument.client_email = client.email;
+        }
+
+        formDocument.items = props.healthBillingDraft.items.map((item) => ({
+            ...item,
+            v_sale: 0,
+            m_igv: 0,
+            total: 0,
+        }));
+
+        formDocument.additional_description = props.healthBillingDraft.additional_description || formDocument.additional_description;
+        formDocument.items.forEach((item, index) => calculateTotals(index));
+    }
+
     const getCurrentDate = () => {
         const currentDate = new Date();
         const year = currentDate.getFullYear();
@@ -144,11 +192,12 @@
     };
 
     const getDataClient = async (data) => {
+
         if(formDocument.sale_documenttype_id == 2){
             formDocument.client_id = data.id;
             formDocument.client_name = data.number+"-"+data.full_name;
             formDocument.client_rzn_social = data.full_name;
-            formDocument.client_ubigeo_description = data.city;
+            formDocument.client_ubigeo_description = data.ubigeo_description;
             formDocument.client_ubigeo = data.ubigeo;
             formDocument.client_direction = data.address;
             formDocument.client_dti = data.document_type_id;
@@ -159,7 +208,7 @@
             if(data.document_type_id == '6'){
                 formDocument.client_id = data.id;
                 formDocument.client_name = data.number+"-"+data.full_name;
-                formDocument.client_ubigeo_description = data.city;
+                formDocument.client_ubigeo_description = data.ubigeo_description;
                 formDocument.client_ubigeo = data.ubigeo;
                 formDocument.client_direction = data.address;
                 formDocument.client_dti = data.document_type_id;
@@ -295,6 +344,19 @@
             }
 
             axios.post(route('saledocuments_store'), formDocument ).then((res) => {
+                console.log(res)
+                if (res.data?.success === false) {
+                    Swal2.fire({
+                        title: 'Error SQL / Exception 500',
+                        text: res.data.message,
+                        icon: 'error',
+                        padding: '2em',
+                        customClass: 'sweet-alerts',
+                    });
+                    formDocument.processing = false
+                    return
+                }
+
                 formDocument.client_id = props.client.id,
                 formDocument.client_name = props.client.number+"-"+props.client.full_name,
                 formDocument.client_ubigeo = props.client.ubigeo,
@@ -320,6 +382,7 @@
                 formDocument.additional_description = null;
                 getSeriesByDocumentType();
                 formDocument.processing =  false;
+                formDocument.forma_pago = 'Contado'
                 Swal2.fire({
                     title: 'Comprobante '+ res.data.invoice_serie +'-'+ res.data.invoice_correlative+ ' creado con éxito',
                     text: "¿deseas enviar a sunat y/o Imprimir?",
@@ -555,14 +618,109 @@
         });
     }
     const asetUrl = assetUrl;
+
+    const displayModalQuotas = ref();
+
+    const openModalQuotas = () => {
+        if(formDocument.forma_pago == 'Credito' && formDocument.total > 0){
+            displayModalQuotas.value = true;
+            formDocument.quotas.amount = formDocument.total;
+        } else {
+            displayModalQuotas.value = false;
+        }
+    }
+
+    const closeModalQuotas = () => {
+        displayModalQuotas.value = false;
+    }
+    // Watcher para recalcular las cuotas cuando cambian las dependencias
+    watch(() => [
+        formDocument.total,
+        formDocument.quotas.number,
+        formDocument.quotas.end_month,
+        formDocument.quotas.days,
+        formDocument.date_issue,
+        formDocument.forma_pago
+    ], ([newTotal, newNumber, newEndMonth, newDays, newDateIssue, newFormaPago]) => {
+        if (newFormaPago === 'Credito') {
+            formDocument.quotas.amounts = calcularMontosPorCuota(
+                newTotal,
+                newNumber,
+                newDateIssue,
+                newEndMonth,
+                newDays
+            );
+        } else {
+            formDocument.quotas.amounts = []; // Limpiar cuotas si no es a crédito
+        }
+    }, { immediate: true }); // 'immediate: true' para que se ejecute la primera vez al montar el componente
+
+    const cuotasCalculadas = () => {
+        showAlert()
+        displayModalQuotas.value = false;
+    }
+
+    const showAlert = async () => { // Puedes renombrarla a algo más descriptivo si quieres
+        const toast = Swal2.mixin({ // Usamos Swal directamente si ya lo importaste como Swal
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            showCloseButton: true,
+        });
+
+        toast.fire({
+            html: `
+                <div class="flex">
+                    <div class="shrink-0">
+                        <svg class="size-5 text-gray-100 mt-1 dark:text-neutral-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+                            <path fill="currentColor" d="M192 96C156.7 96 128 124.7 128 160L128 384C128 419.3 156.7 448 192 448L544 448C579.3 448 608 419.3 608 384L608 160C608 124.7 579.3 96 544 96L192 96zM368 192C412.2 192 448 227.8 448 272C448 316.2 412.2 352 368 352C323.8 352 288 316.2 288 272C288 227.8 323.8 192 368 192zM192 216L192 168C192 163.6 195.6 160 200 160L248 160C252.4 160 256.1 163.6 255.5 168C251.9 197 228.9 219.9 200 223.5C195.6 224 192 220.4 192 216zM192 328C192 323.6 195.6 319.9 200 320.5C229 324.1 251.9 347.1 255.5 376C256 380.4 252.4 384 248 384L200 384C195.6 384 192 380.4 192 376L192 328zM536 223.5C507 219.9 484.1 196.9 480.5 168C480 163.6 483.6 160 488 160L536 160C540.4 160 544 163.6 544 168L544 216C544 220.4 540.4 224.1 536 223.5zM544 328L544 376C544 380.4 540.4 384 536 384L488 384C483.6 384 479.9 380.4 480.5 376C484.1 347 507.1 324.1 536 320.5C540.4 320 544 323.6 544 328zM80 216C80 202.7 69.3 192 56 192C42.7 192 32 202.7 32 216L32 480C32 515.3 60.7 544 96 544L488 544C501.3 544 512 533.3 512 520C512 506.7 501.3 496 488 496L96 496C87.2 496 80 488.8 80 480L80 216z"/>
+                        </svg>
+                    </div>
+                    <div class="ms-4">
+                        <h3 class="text-gray-100 font-semibold dark:text-white">
+                            Cuotas programadas con éxito
+                        </h3>
+                        <div class="mt-1 text-sm text-gray-100 dark:text-neutral-400">
+                            ${formDocument.quotas.number } pagos cada ${formDocument.quotas.end_month ? 'fin de mes' : formDocument.quotas.days +' días'}
+                        </div>
+                        <div class="mt-4">
+                        <div class="flex gap-x-3">
+                            <button id="reopenModalBtn" type="button" class="text-blue-300 decoration-2 hover:underline font-medium text-sm focus:outline-hidden focus:underline dark:text-blue-500">
+                                Ver cuotas
+                            </button>
+                        </div>
+                        </div>
+                    </div>
+                </div>
+
+            `, // Usamos 'html' para insertar el botón
+            padding: '2em',
+            customClass: {
+                // Puedes agregar clases personalizadas aquí si las necesitas para el toast en general
+                // por ejemplo, para ajustar el ancho o el estilo del texto.
+                // popup: 'sweet-alerts', // Si esta clase define el ancho del popup, puede afectar el toast
+                title: 'text-sm' // Ejemplo para hacer el título más pequeño
+            },
+            didOpen: (toastElement) => {
+                // Este callback se ejecuta cuando el toast está visible en el DOM
+                const reopenBtn = toastElement.querySelector('#reopenModalBtn');
+                if (reopenBtn) {
+                    reopenBtn.addEventListener('click', () => {
+                        displayModalQuotas.value = true; // Abre el modal
+                        Swal2.close(); // Cierra el toast inmediatamente al hacer clic en el botón
+                    });
+                }
+            }
+        });
+    };
 </script>
 <template>
     <AppLayout title="Punto de Ventas">
-        <Navigation :routeModule="route('sales_dashboard')" :titleModule="'Facturación Electrónica'">
-            <li class="before:content-['/'] ltr:before:mr-2 rtl:before:ml-2">
-                <span>Crear Documentos</span>
-            </li>
-        </Navigation>
+        <Navigation :routeModule="route('sales_dashboard')" :titleModule="'Facturación Electrónica'"
+            :data="[
+                {title: 'Crear Documentos'}
+            ]"
+        />
         <div class="mt-5">
             <div class="flex-shrink max-w-full w-full mb-6">
                 <div class="panel">
@@ -574,8 +732,8 @@
                             </div>
                             <p class="text-sm">Ancash, Chimbote<br>{{ company.fiscal_address }}</p>
                         </div>
-                        <div style="width: 180px;" class="text-4xl uppercase font-bold">
-                            <select @change="getSeriesByDocumentType" v-model="formDocument.sale_documenttype_id" class="form-select text-white-dark">
+                        <div class="text-4xl uppercase font-bold">
+                            <select @change="getSeriesByDocumentType" v-model="formDocument.sale_documenttype_id" class="w-full appearance-none text-3xl rounded-xl text-center font-extrabold text-blue-800 border-4  py-6 px-4 bg-green-100">
                                 <option v-for="(type, index) in saleDocumentTypes" :value="type.id"> {{  type.description  }}</option>
                             </select>
                         </div>
@@ -638,8 +796,8 @@
                         </div>
                     </div>
                     <div class="max-w-full py-2">
-                        <table class="table-bordered w-full ltr:text-left rtl:text-right text-gray-600">
-                            <thead class="border-b border-t border-gray-400 dark:border-gray-700">
+                        <table class="w-full ltr:text-left rtl:text-right text-gray-600">
+                            <thead class="">
                                 <tr class="bg-gray-100 dark:bg-gray-900 dark:bg-opacity-20">
                                     <th style="width: 60px;" class="text-right py-1">
                                         <div class="flex items-center justify-center gap-2">
@@ -652,13 +810,13 @@
                                              />
                                         </div>
                                     </th>
-                                    <th class="text-left text-xs uppercase px-2 py-1">Item</th>
-                                    <th class="text-center text-xs uppercase px-2 py-1">Producto</th>
-                                    <th class="text-center text-xs uppercase px-2 py-1">Tipo de Unidad</th>
-                                    <th class="text-center text-xs uppercase px-2 py-1">Cantidad</th>
-                                    <th class="text-center text-xs uppercase px-2 py-1">Precio unitario</th>
-                                    <th class="text-center text-xs uppercase px-2 py-1">Descuento</th>
-                                    <th class="text-center text-xs uppercase px-2 py-1">Total</th>
+                                    <th class="text-left text-xs uppercase px-2 py-1 dark:text-white-dark">Item</th>
+                                    <th class="text-center text-xs uppercase px-2 py-1 dark:text-white-dark">Producto</th>
+                                    <th class="text-center text-xs uppercase px-2 py-1 dark:text-white-dark">Tipo de Unidad</th>
+                                    <th class="text-center text-xs uppercase px-2 py-1 dark:text-white-dark">Cantidad</th>
+                                    <th class="text-center text-xs uppercase px-2 py-1 dark:text-white-dark">Precio unitario</th>
+                                    <th class="text-center text-xs uppercase px-2 py-1 dark:text-white-dark">Descuento</th>
+                                    <th class="text-center text-xs uppercase px-2 py-1 dark:text-white-dark">Total</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -750,26 +908,26 @@
                                     </tr>
                                 </template>
                             </tbody>
-                            <tfoot>
+                            <tfoot class="dark:text-gray-300">
                                 <tr>
                                     <td colspan="3"></td>
-                                    <td colspan="4" class="text-right text-xs uppercase"><b>OP. GRAVADAS: S/</b></td>
-                                    <td class="text-right text-xs">{{ formDocument.total_taxed }}</td>
+                                    <td colspan="4" class="text-right uppercase pt-4"><b>OP. GRAVADAS: S/</b></td>
+                                    <td class="text-right pr-8">{{ formDocument.total_taxed }}</td>
                                 </tr>
                                 <tr>
                                     <td colspan="3"></td>
-                                    <td colspan="4" class="text-right text-xs uppercase"><b>descuento: S/</b></td>
-                                    <td class="text-right text-xs">{{ formDocument.total_discount  }}</td>
+                                    <td colspan="4" class="text-right uppercase"><b>descuento: S/</b></td>
+                                    <td class="text-right pr-8">{{ formDocument.total_discount  }}</td>
                                 </tr>
                                 <tr>
                                     <td colspan="3"></td>
-                                    <td colspan="4" class="text-right text-xs uppercase"><b>IGV: S/</b></td>
-                                    <td class="text-right text-xs">{{ formDocument.total_igv }}</td>
+                                    <td colspan="4" class="text-right uppercase"><b>IGV: S/</b></td>
+                                    <td class="text-right pr-8">{{ formDocument.total_igv }}</td>
                                 </tr>
                                 <tr>
                                     <td colspan="3"></td>
-                                    <td colspan="4" class="text-right text-xs uppercase"><b>TOTAL A PAGAR: S/</b></td>
-                                    <td class="text-right font-bold text-xs">
+                                    <td colspan="4" class="text-right uppercase pb-4"><b>TOTAL A PAGAR: S/</b></td>
+                                    <td class="text-right font-bold pr-8">
                                         {{ formDocument.total }}
                                         <InputError :message="formDocument.errors.total" class="mt-2" />
                                     </td>
@@ -778,8 +936,17 @@
                         </table>
                     </div>
                     <div class="max-w-full py-2">
-                        <p style="font-size: 14px;" class="italic font-bold uppercase mb-4">Medio de Pago <button @click="addPayment()" type="button" class="inline-block px-0 py-2 bg-transparent text-blue-600 font-medium text-xs leading-tight uppercase rounded transition duration-150 ease-in-out">Agregar (+)</button></p>
-                        <table class="table-bordered w-full ltr:text-left rtl:text-right text-gray-600">
+                        <div class="grid sm:grid-cols-2 items-center gap-6">
+                            <p style="font-size: 14px;" class="italic font-bold uppercase mb-4">Medio de Pago <button @click="addPayment()" type="button" class="inline-block px-0 py-2 bg-transparent text-blue-600 font-medium text-xs leading-tight uppercase rounded transition duration-150 ease-in-out">Agregar (+)</button></p>
+                            <div class="flex sm:flex-row flex-col items-center">
+                                <label  class="mb-0 sm:w-3/5 sm:ltr:mr-2 rtl:ml-2 text-right uppercase">Forma de pago</label>
+                                <select @change="openModalQuotas" v-model="formDocument.forma_pago" class="form-select form-select-sm flex-1">
+                                    <option value="Contado">Al contado</option>
+                                    <option value="Credito">Al crédito</option>
+                                </select>
+                            </div>
+                        </div>
+                        <table class="w-full ltr:text-left rtl:text-right text-gray-600">
                             <tbody>
                                 <tr v-for="(row, index) in formDocument.payments" v-bind:key="index">
                                     <td style="width: 70px;" class="text-right">
@@ -807,7 +974,6 @@
                                 </tr>
                             </tbody>
                         </table>
-
                     </div>
                     <div class="grid grid-cols-4 gap-4">
                         <div class="col-span-4 sm:col-span-3">
@@ -822,14 +988,58 @@
                                 </svg>
                                 Generar
                             </PrimaryButton>
-                            <DangerButton class="w-full">
+                            <Link :href="route('saledocuments_list')" class="btn btn-danger uppercase text-xs w-full">
                                 Cancelar
-                            </DangerButton>
-
+                            </Link>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+        <ModalLarge :show="displayModalQuotas" :onClose="closeModalQuotas" :icon="'/img/pago.png'">
+            <template #title>Programar pagos</template>
+            <template #message>Gestión interna de Cuentas por Cobrar.</template>
+            <template #content>
+                <div class="space-y-5">
+                    <div class="grid sm:grid-cols-2 gap-6">
+                        <div>
+                            <InputLabel for="small-range">Número de Cuota</InputLabel>
+                            <select v-model="formDocument.quotas.number" id="small-range" class="form-select text-white-dark w-full">
+                                <option v-for="n in 36" :key="n" :value="n">
+                                    {{ n }}
+                                </option>
+                            </select>
+                        </div>
+                        <div>
+                            <InputLabel>Número de días / Cada fin de mes <input v-model="formDocument.quotas.end_month" type="checkbox" class="form-checkbox" /></InputLabel>
+                            <select
+                                v-model="formDocument.quotas.days"
+                                :disabled="formDocument.quotas.end_month"
+                                id="small-range"
+                                class="form-select text-white-dark w-full"
+                                :class="formDocument.quotas.end_month ? 'bg-gray-200': ''"
+                            >
+                                <option v-for="n in 31" :key="n" :value="n">
+                                    {{ n }}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+                    <div v-for="(quota, index) in formDocument.quotas.amounts" :key="quota.id" class="grid sm:grid-cols-2 gap-6">
+                        <div>
+                            <InputLabel>Monto de la Cuota {{ index + 1 }}:</InputLabel>
+                            <TextInput v-model="formDocument.quotas.amounts[index].amount" type="number" />
+                        </div>
+                        <div>
+                            <InputLabel>Fecha de Vencimiento Cuota {{ index + 1 }}:</InputLabel>
+                            <TextInput v-model="formDocument.quotas.amounts[index].dueDate" type="date" />
+                        </div>
+                    </div>
+                </div>
+            </template>
+            <template #buttons>
+                <SuccessButton @click="cuotasCalculadas">Hecho</SuccessButton>
+            </template>
+        </ModalLarge>
     </AppLayout>
 </template>

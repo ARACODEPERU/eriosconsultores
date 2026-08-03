@@ -36,7 +36,11 @@ module.exports = {
         'leading-6',
         'h-9',
         'leading-9',
-        'shadow-lg'
+        'shadow-lg',
+        {
+            pattern: /(bg|text|from|via|to|border|ring)-(blue|red|green|orange|purple|indigo|purple|violet|emerald|teal|rose|pink|amber|yellow)-(50|100|400|500|600|700|800|900)/,
+            variants: ['dark', 'hover', 'focus', 'dark:from', 'dark:to'],
+        },
     ],
     theme: {
         container: {
@@ -116,6 +120,18 @@ module.exports = {
                     },
                 },
             }),
+            keyframes: {
+                // Define la secuencia de la animación (cómo se mueve la flecha)
+                pointRight: {
+                '0%, 100%': { transform: 'translateX(0)' }, // En el inicio y al final, la flecha está en su posición original
+                '50%': { transform: 'translateX(4px)' },   // A la mitad de la animación, se mueve 4px a la derecha
+                }
+            },
+            animation: {
+                // Aplica el keyframe 'pointRight' con una duración de 1 segundo,
+                // una función de tiempo suave (ease-in-out) y repetición infinita
+                'point-right': 'pointRight 1s ease-in-out infinite',
+            }
         },
     },
     plugins: [

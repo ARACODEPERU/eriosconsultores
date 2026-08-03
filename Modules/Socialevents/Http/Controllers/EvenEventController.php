@@ -4,6 +4,7 @@ namespace Modules\Socialevents\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Parameter;
+use App\Models\Person;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -58,14 +59,18 @@ class EvenEventController extends Controller
      */
     public function create()
     {
-        $categories = EvenCategory::where('status', true)->get();
-        $instructors = AcaTeacher::with('person')->get();
+        $categories = EvenCategory::with('subcategories.subcategories')
+            ->where('status', true)
+            ->whereNull('main_category_id')
+            ->get();
+        //$instructors = AcaTeacher::with('person')->get();
+        $instructors = Person::all();
+
         $locales = EvenLocal::where('status', true)->get();
 
         return Inertia::render('Socialevents::Events/Create', [
             'categories' => $categories,
             'instructors'   => $instructors,
-            'tiny_api_key' => $this->P000010,
             'locales' => $locales
         ]);
     }
@@ -119,7 +124,7 @@ class EvenEventController extends Controller
             }
         }
 
-        if (count($exhibitors) > 0) {
+        if ($exhibitors && count($exhibitors) > 0) {
             foreach ($exhibitors as $exhibitor) {
                 EvenEventExhibitor::create([
                     'event_id' => $event->id,
@@ -153,7 +158,7 @@ class EvenEventController extends Controller
                     $original_name = strtolower(trim($file->getClientOriginalName()));
                     $original_name = str_replace(" ", "_", $original_name);
                     $extension = $file->getClientOriginalExtension();
-                    $file_name = $event->id . '.' . $extension;
+                    $file_name = date('YmdHis') . '.' . $extension;
                     $path = Storage::disk('public')->putFileAs($destination, $file, $file_name);
                 }
             } catch (\Symfony\Component\HttpFoundation\File\Exception\FileNotFoundException $e) {
@@ -181,7 +186,8 @@ class EvenEventController extends Controller
     public function edit($id)
     {
         $categories = EvenCategory::where('status', true)->get();
-        $instructors = AcaTeacher::with('person')->get();
+        //$instructors = AcaTeacher::with('person')->get();
+        $instructors = Person::all();
         $locales = EvenLocal::where('status', true)->get();
         $event = EvenEvent::find($id);
 
@@ -191,7 +197,6 @@ class EvenEventController extends Controller
         return Inertia::render('Socialevents::Events/Edit', [
             'categories' => $categories,
             'instructors'   => $instructors,
-            'tiny_api_key' => $this->P000010,
             'locales' => $locales,
             'socialevent' => $event,
             'eventLocales' => $eventLocales,
@@ -202,7 +207,7 @@ class EvenEventController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request)
+    public function update(Request $request): RedirectResponse
     {
         $this->validate(
             $request,
@@ -216,9 +221,8 @@ class EvenEventController extends Controller
             ]
         );
 
-        $event = EvenEvent::find($request->get('id'));
-        $ds = $request->get('date')[0]['$d'];
-        $de = $request->get('date')[1]['$d'];
+        $event = EvenEvent::findOrFail($request->get('id'));
+        [$ds, $de] = $this->parseEventDateRange($request);
         $days = Carbon::parse($ds)->diffInDays(Carbon::parse($de));
 
         $event->update([
@@ -238,8 +242,8 @@ class EvenEventController extends Controller
         EvenEventLocal::where('event_id', $event->id)->delete();
         EvenEventExhibitor::where('event_id', $event->id)->delete();
 
-        $locales = $request->get('locales');
-        $exhibitors = $request->get('exhibitors');
+        $locales = $request->get('locales') ?? [];
+        $exhibitors = $request->get('exhibitors') ?? [];
 
         if (count($locales) > 0) {
             foreach ($locales as $local) {
@@ -284,7 +288,7 @@ class EvenEventController extends Controller
                     $original_name = strtolower(trim($file->getClientOriginalName()));
                     $original_name = str_replace(" ", "_", $original_name);
                     $extension = $file->getClientOriginalExtension();
-                    $file_name = $event->id . '.' . $extension;
+                    $file_name = date('YmdHis') . '.' . $extension;
                     $path = Storage::disk('public')->putFileAs($destination, $file, $file_name);
                 }
                 $event->image1 = $path;
@@ -293,6 +297,33 @@ class EvenEventController extends Controller
                 dd($e->getMessage());
             }
         }
+
+        return to_route('even_eventos_list');
+    }
+
+    /**
+     * @return array{0: string, 1: string}
+     */
+    private function parseEventDateRange(Request $request): array
+    {
+        $date = $request->get('date');
+
+        if (is_array($date) && isset($date[0]['$d'], $date[1]['$d'])) {
+            return [$date[0]['$d'], $date[1]['$d']];
+        }
+
+        if (is_array($date) && count($date) >= 2) {
+            $start = $date[0];
+            $end = $date[1];
+            $ds = is_array($start) ? ($start['$d'] ?? $start[0] ?? null) : $start;
+            $de = is_array($end) ? ($end['$d'] ?? $end[0] ?? null) : $end;
+
+            if ($ds && $de) {
+                return [(string) $ds, (string) $de];
+            }
+        }
+
+        abort(422, 'Formato de fechas inválido.');
     }
 
     /**

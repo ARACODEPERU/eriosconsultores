@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class AcaModule extends Model
 {
@@ -15,13 +16,12 @@ class AcaModule extends Model
         'course_id',
         'position',
         'description',
-        'teacher_id'
+        'teacher_id',
+        'allow_certificate_download',
+        'certificate_description',
+        'certificate_title',
     ];
 
-    protected static function newFactory()
-    {
-        return \Modules\Academic\Database\factories\AcaModuleFactory::new();
-    }
     public function course(): BelongsTo
     {
         return $this->belongsTo(AcaCourse::class, 'course_id');
@@ -35,4 +35,21 @@ class AcaModule extends Model
     {
         return $this->belongsTo(AcaTeacher::class, 'teacher_id');
     }
+
+    /**
+     * Relación con el examen regular del módulo (no simulacro)
+     */
+    public function exam(): HasOne
+    {
+        return $this->hasOne(AcaExam::class, 'module_id')->where('is_mock', false);
+    }
+
+    /**
+     * Relación con el examen simulacro del módulo
+     */
+    public function mockExam(): HasOne
+    {
+        return $this->hasOne(AcaExam::class, 'module_id')->where('is_mock', true);
+    }
+
 }

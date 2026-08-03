@@ -56,9 +56,10 @@ class AcaSubscriptionTypeController extends Controller
 
         AcaSubscriptionType::create([
             'title' => $request->get('title'),
+            'usine' => $request->get('usine'),
             'description' => $request->get('description'),
-            'details' => json_encode($request->get('details')),
-            'prices' => json_encode($request->get('prices')),
+            'details' => $request->get('details'),
+            'prices' => $request->get('prices'),
             'status' => $request->get('status') ?? false,
             'period' => $request->get('period'),
             'order_number' => $request->get('order_number'),
@@ -110,9 +111,10 @@ class AcaSubscriptionTypeController extends Controller
 
         AcaSubscriptionType::find($id)->update([
             'title' => $request->get('title'),
+            'usine' => $request->get('usine'),
             'description' => $request->get('description'),
-            'details' => json_encode($request->get('details')),
-            'prices' => json_encode($request->get('prices')),
+            'details' => $request->get('details'),
+            'prices' => $request->get('prices'),
             'status' => $request->get('status') ?? false,
             'period' => $request->get('period'),
             'order_number' => $request->get('order_number'),

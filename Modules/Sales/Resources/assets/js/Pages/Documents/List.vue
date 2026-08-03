@@ -38,9 +38,24 @@
         unitTypes:{
             type: Object,
             default: () => ({}),
+        },
+        operationTypes:{
+            type: Object,
+            default: () => ({}),
+        },
+        creditNoteType: {
+            type: Object,
+            default: () => ({}),
+        },
+        debitNoteType: {
+            type: Object,
+            default: () => ({}),
         }
     });
 
+    const findObjectById = (data, id) => {
+        return data.find(item => item.id === id);
+    };
 
     const displayModalDetails = ref(false);
     const displayLoaderDetails = ref(false);
@@ -52,8 +67,8 @@
         }else{
             disabledButtonDetailsSave.value = true
         }
-
-        documentDetails.value = sales.documents[0];
+        console.log(sales)
+        documentDetails.value = sales.document;
         displayModalDetails.value = true;
     }
 
@@ -191,7 +206,8 @@
         client_email: null,
         invoice_broadcast_date: null,
         invoice_due_date: null,
-        invoice_status: null
+        invoice_status: null,
+        type_operation: null
     });
     const closeModalEditDocument = () => {
         displayEditDocument.value = false ;
@@ -210,6 +226,7 @@
         formHead.invoice_broadcast_date = document.invoice_broadcast_date;
         formHead.invoice_due_date = document.invoice_due_date;
         formHead.invoice_status = document.invoice_status;
+        formHead.type_operation = document.invoice_type_operation;
         displayEditDocument.value = true ;
     }
 
@@ -230,92 +247,92 @@
         });
     }
 
-const formatDate = (dateString) => {
-    const date = new Date(dateString)
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`
-}
+    const formatDate = (dateString) => {
+        const date = new Date(dateString)
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`
+    }
 
-const createFormReason = () => {
+    const createFormReason = () => {
 
-    let formHTML = document.createElement('form');
-    formHTML.classList.add('max-w-sm', 'mx-auto');
+        let formHTML = document.createElement('form');
+        formHTML.classList.add('max-w-sm', 'mx-auto');
 
 
-    let rLabel = document.createElement('label');
-    rLabel.setAttribute('for', 'ctnTextareaReason');
-    rLabel.classList.add('text-left','text-sm','mt-4');
-    rLabel.textContent = 'Ingresar motivo de anulacion';
+        let rLabel = document.createElement('label');
+        rLabel.setAttribute('for', 'ctnTextareaReason');
+        rLabel.classList.add('text-left','text-sm','mt-4');
+        rLabel.textContent = 'Ingresar motivo de anulacion';
 
-    let rInput = document.createElement('textarea');
-    rInput.id = 'ctnTextareaReason';
-    rInput.classList.add(
-        'form-textarea'
-    );
+        let rInput = document.createElement('textarea');
+        rInput.id = 'ctnTextareaReason';
+        rInput.classList.add(
+            'form-textarea'
+        );
 
-    rInput.required = true;
-    rInput.rows = 3;
+        rInput.required = true;
+        rInput.rows = 3;
 
-    formHTML.appendChild(rLabel);
-    formHTML.appendChild(rInput);
+        formHTML.appendChild(rLabel);
+        formHTML.appendChild(rInput);
 
-    return formHTML;
+        return formHTML;
 
-}
+    }
 
-const cancelDocument = (index, item) => {
-    Swal.fire({
-        icon: 'question',
-        title: '¿Estas seguro?',
-        text: "¡No podrás revertir esto!",
-        showCancelButton: true,
-        confirmButtonText: '¡Sí, Anularlo!',
-        cancelButtonText: '¡No, cancelar!',
-        padding: '2em',
-        customClass: 'sweet-alerts',
-    }).then((result) => {
-        if (result.value) {
-            Swal.fire({
-                html: createFormReason(),
-                showCloseButton: true,
-                showCancelButton: true,
-                focusConfirm: false,
-                confirmButtonText: 'Aceptar',
-                cancelButtonText: 'Cancelar',
-                padding: '2em',
-                customClass: 'sweet-alerts',
-                showLoaderOnConfirm: true,
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-                preConfirm: async (input) => {
-                    let textarea = document.getElementById("ctnTextareaReason").value;
-                    let resp = null;
-                    if(textarea){
-                        resp = axios.post(route('saledocuments_cancel_document'), {
-                            reason: textarea,
-                            id: item.document_id,
-                            type: item.invoice_type_doc
-                        }).then((res) => {
-                            if (!res.data.success) {
-                                Swal.showValidationMessage(res.data.alert)
-                            }
-                            return res
-                        });
-                    }else{
-                        Swal.showValidationMessage('El motivo es obligatorio')
+    const cancelDocument = (index, item) => {
+        Swal.fire({
+            icon: 'question',
+            title: '¿Estas seguro?',
+            text: "¡No podrás revertir esto!",
+            showCancelButton: true,
+            confirmButtonText: '¡Sí, Anularlo!',
+            cancelButtonText: '¡No, cancelar!',
+            padding: '2em',
+            customClass: 'sweet-alerts',
+        }).then((result) => {
+            if (result.value) {
+                Swal.fire({
+                    html: createFormReason(),
+                    showCloseButton: true,
+                    showCancelButton: true,
+                    focusConfirm: false,
+                    confirmButtonText: 'Aceptar',
+                    cancelButtonText: 'Cancelar',
+                    padding: '2em',
+                    customClass: 'sweet-alerts',
+                    showLoaderOnConfirm: true,
+                    allowOutsideClick: false,
+                    backdrop: true,
+                    allowEscapeKey: false,
+                    preConfirm: async (input) => {
+                        let textarea = document.getElementById("ctnTextareaReason").value;
+                        let resp = null;
+                        if(textarea){
+                            resp = axios.post(route('saledocuments_cancel_document'), {
+                                reason: textarea,
+                                id: item.document_id,
+                                type: item.invoice_type_doc
+                            }).then((res) => {
+                                if (!res.data.success) {
+                                    Swal.showValidationMessage(res.data.alert)
+                                }
+                                return res
+                            });
+                        }else{
+                            Swal.showValidationMessage('El motivo es obligatorio')
+                        }
+                        return resp;
+                    },
+                    allowOutsideClick: () => !Swal.isLoading()
+                }).then((res) => {
+                    if (res.isConfirmed) {
+                        showMessage('El documento fue anulado correctamente');
                     }
-                    return resp;
-                },
-                allowOutsideClick: () => !Swal.isLoading()
-            }).then((res) => {
-                if (res.isConfirmed) {
-                    showMessage('El documento fue anulado correctamente');
-                    //refreshTable();
-                }
-                refreshTable();
-            });
-        }
-    });
-}
+                    refreshTable();
+                });
+            }
+        });
+    }
 
     const showMessage = (msg = '', type = 'success') => {
         const toast = Swal.mixin({
@@ -335,31 +352,54 @@ const cancelDocument = (index, item) => {
     const columns = [
         {
             data: null,
+            render: '#btnPlus',
+            title: null,
+            className: 'control',
+            orderable: false,
+            searchable: false
+        },
+        {
+            data: null,
             render: '#action',
+            className: 'text-center',
             title: 'Acciones'
         },
         { data: null, render: '#document', title: 'Nmr. Documento' },
-        { data: null, render: '#created',title: 'Fecha Registrado' },
+        { data: null, render: '#created_date',title: 'Fecha Registrado' },
         { data: 'invoice_broadcast_date', title: 'Fecha Emitido' },
+        { data: 'invoice_due_date', title: 'Fecha de vencimiento' },
         { data: 'full_name', title: 'Cliente' },
-        { data: 'total', title: 'Total' },
+        { data: 'overall_total', title: 'Total' },
         { data: null, render: '#status', title: 'Estado' },
+        {
+            data: null,
+            title: 'Forma de pago',
+            render: function(data, type, row) {
+                if (row.document && row.document.forma_pago == 'Credito') {
+                    return '<span class="inline-flex items-center gap-x-1.5 py-1.5 px-3 rounded-full text-xs font-medium bg-gray-500 text-white">Al crédito</span>';
+                }
+                return '<span class="inline-flex items-center gap-x-1.5 py-1.5 px-3 rounded-full text-xs font-medium bg-yellow-500 text-white">Al contado</span>';
+            }
+        },
     ];
 
     const options = {
         responsive: true,
         language: es_PE,
-        order: [[2, 'desc']]
+        order: [[3, 'desc']]
     }
 
     const documentTable = ref(null);
+    let instance = null;
+
+    onMounted(() => {
+        instance = documentTable.value?.dt;
+    });
 
     const refreshTable = () => {
-        const dataTableInstance = documentTable.value?.dt; // accede a la instancia del DataTable
-        if (dataTableInstance) {
-            setInterval(function () {
-                dataTableInstance.ajax.reload();
-            }, 30000);
+        // accede a la instancia del DataTable
+        if (instance) {
+            instance.ajax.url(route('saledocuments_table_document')).load();
         }
     };
 
@@ -368,11 +408,11 @@ const cancelDocument = (index, item) => {
 
 <template>
     <AppLayout title="Documentos">
-        <Navigation :routeModule="route('sales_dashboard')" :titleModule="'Facturación Electrónica'">
-            <li class="before:content-['/'] ltr:before:mr-2 rtl:before:ml-2">
-                <span>Lista de Documentos </span>
-            </li>
-        </Navigation>
+        <Navigation :routeModule="route('sales_dashboard')" :titleModule="'Facturación Electrónica'"
+            :data="[
+                {title: 'Lista de Documentos'}
+            ]"
+        />
         <div class="mt-5">
             <div class="flex items-center justify-between flex-wrap gap-4">
                 <h2 class="text-xl">Lista de Documentos </h2>
@@ -392,11 +432,18 @@ const cancelDocument = (index, item) => {
             <div class="panel pb-1.5 mt-6">
 
                 <DataTable ref="documentTable" :options="options" :ajax="route('saledocuments_table_document')" :columns="columns">
+                    <template #btnPlus="props">
+                        <button type="button" class="inline-flex items-center justify-center w-7 h-7 text-blue-600 bg-blue-100 rounded-md hover:bg-blue-200 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                            </svg>
+                        </button>
+                    </template>
                     <template #action="props">
                         <div class="flex gap-4 items-center justify-center">
                             <div class="dropdown">
                                 <Popper :placement="'bottom-start'" offsetDistance="0" class="align-middle">
-                                    <button type="button" class="btn btn-outline-primary px-2 py-2 dropdown-toggle">
+                                    <button class="border py-1.5 px-2 dropdown-button inline-block text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-4 focus:outline-none focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm" type="button">
                                         <font-awesome-icon :icon="faGears" />
                                     </button>
                                     <template #content="{ close }">
@@ -419,12 +466,14 @@ const cancelDocument = (index, item) => {
                                         <li>
                                             <a @click="downloadDocument(props.rowData.document_id,props.rowData.invoice_type_doc,'PDF','t80')" href="javascript:;">PDF 80x250</a>
                                         </li>
-                                        <li v-if="props.rowData.invoice_status === 'Aceptada'">
-                                            <a @click="downloadDocument(props.rowData.document_id,props.rowData.invoice_type_doc,'XML')" href="javascript:;">Descargar XML</a>
-                                        </li>
-                                        <li v-if="props.rowData.invoice_status === 'Aceptada'">
-                                            <a @click="downloadDocument(props.rowData.document_id,props.rowData.invoice_type_doc,'CDR')" href="javascript:;">Descargar CDR</a>
-                                        </li>
+                                        <template v-if="props.rowData.invoice_type_doc == '01'">
+                                            <li v-if="props.rowData.invoice_status === 'Aceptada'">
+                                                <a @click="downloadDocument(props.rowData.document_id,props.rowData.invoice_type_doc,'XML')" href="javascript:;">Descargar XML</a>
+                                            </li>
+                                            <li v-if="props.rowData.invoice_status === 'Aceptada'">
+                                                <a @click="downloadDocument(props.rowData.document_id,props.rowData.invoice_type_doc,'CDR')" href="javascript:;">Descargar CDR</a>
+                                            </li>
+                                        </template>
                                     </ul>
                                     </template>
                                 </Popper>
@@ -443,12 +492,23 @@ const cancelDocument = (index, item) => {
                                 <code>
                                     Descripción: {{ props.rowData.invoice_response_description }}
                                 </code>
+                                <code v-if="props.rowData.invoice_notes && props.rowData.invoice_notes != '[]' ">
+                                    Notas: {{ props.rowData.invoice_notes }}
+                                </code>
                             </span>
                         </div>
-                        <p v-if="props.rowData.status == 3" class="text-xs font-black text-danger">Motivo de anulacion: {{ props.rowData.reason_cancellation }}</p>
+                        <div v-if="props.rowData.status == 3 && props.rowData.document.note">
+                            <h6 class="font-semibold" >
+                                NOTA DE {{ props.rowData.document.note.invoice_type_doc == '07' ? 'CRÉDITO': 'DÉBITO' }}: {{ props.rowData.document.note.invoice_serie }}-{{ props.rowData.document.note.invoice_correlative }}
+                            </h6>
+                            <p  class="text-xs font-black text-danger">
+                                <template v-if="props.rowData.document.note.invoice_type_doc == '07'" class="text-xs font-black text-danger">MOTIVO: {{ findObjectById(creditNoteType,props.rowData.document.note.note_type_operation_id)?.description }}</template>
+                                <template v-if="props.rowData.document.note.invoice_type_doc == '08'" class="text-xs font-black text-danger">MOTIVO: {{ findObjectById(debitNoteType,props.rowData.document.note.note_type_operation_id)?.description }}</template>
+                            </p>
+                        </div>
                     </template>
-                    <template #created="props">
-                        {{ formatDate(props.rowData.created_at) }}
+                    <template #created_date="props">
+                        {{ formatDate(props.rowData.created_date) }}
                     </template>
                     <template #status="props">
                         <div>
@@ -638,12 +698,21 @@ const cancelDocument = (index, item) => {
                         <InputError :message="formHead.errors.invoice_due_date" class="mt-2" />
                     </div>
                     <div class="col-span-6 sm:col-span-2">
-                        <InputLabel for="invoice_status" value="Esatdo sunat" />
+                        <InputLabel for="invoice_status" value="Estado sunat" />
                         <select v-model="formHead.invoice_status" id="invoice_status" class="form-select">
                             <option :value="'Pendiente'">Pendiente</option>
                             <option :value="'Rechazada'">Rechazada</option>
                         </select>
                         <InputError :message="formHead.errors.invoice_status" class="mt-2" />
+                    </div>
+                    <div class="col-span-6 sm:col-span-2">
+                        <InputLabel for="type_operation" value="Tipo de operación" />
+                        <select v-model="formHead.type_operation" id="type_operation" class="form-select">
+                            <template v-for="operationType in operationTypes">
+                                <option :value="operationType.id">{{ operationType.description }}</option>
+                            </template>
+                        </select>
+                        <InputError :message="formHead.errors.type_operation" class="mt-2" />
                     </div>
                 </div>
             </template>
@@ -667,25 +736,12 @@ const cancelDocument = (index, item) => {
         </DialogModal>
     </AppLayout>
 </template>
+
 <style scoped>
-.invoice-select{
-    margin: 0px !important;
-    padding: 1px !important;
-    height: 26px !important;
-    width: 100% !important;
-    font-size: 12px;
-}
-.invoice-imput{
-    margin: 0px !important;
-    padding: 1px !important;
-    height: 26px !important;
-    width: 100% !important;
-    font-size: 12px;
-}
-.invoice-textarea{
-    margin: 0px !important;
-    padding: 1px !important;
-    width: 100% !important;
-    font-size: 12px;
+/* Ocultar columna de control cuando no hay columnas colapsadas */
+table.dataTable.dtr-inline.collapsed > tbody > tr > td.control,
+table.dataTable.dtr-inline.collapsed > tbody > tr > th.control {
+    display: none !important;
 }
 </style>
+

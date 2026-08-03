@@ -26,12 +26,17 @@ const props = defineProps({
     sectors: {
         type: Object,
         default: () => ({}),
+    },
+    P000018: {
+        type: Boolean,
+        default: false,
     }
 });
 
 const form = useForm({
     status: true,
     description: null,
+    usine: '',
     course_date: null,
     category_id: null,
     image: null,
@@ -41,8 +46,10 @@ const form = useForm({
     sector_description: null,
     price: 0,
     certificate_description: null,
+    certificate_title: null,
     discount: 0,
-    discount_applies: '02'
+    discount_applies: '02',
+    auto_certificate: false
 });
 
 const createCourse = () => {
@@ -135,6 +142,17 @@ const handleImageCompressed = (file) => {
                 />
                 <InputError :message="form.errors.description" class="mt-2" />
             </div>
+            <div class="col-span-6 sm:col-span-2">
+                <InputLabel for="usine" value="Código SUNAT" />
+                <TextInput
+                    id="usine"
+                    v-model="form.usine"
+                    type="text"
+                    placeholder="Según catálogo de SUNAT"
+                />
+                <p class="text-xs text-gray-500 mt-1">Código UCE. Consulte el catálogo de SUNAT Peru</p>
+                <InputError :message="form.errors.usine" class="mt-2" />
+            </div>
             <div class="col-span-6">
                 <InputLabel for="file_input" value="Imagen *" />
                 <div class="flex justify-center space-x-2">
@@ -166,7 +184,20 @@ const handleImageCompressed = (file) => {
                 />
                 <InputError :message="form.errors.price" class="mt-2" />
             </div>
-            <div class="col-span-6">
+
+            <div v-if="P000018 == 1 || P000018 == true || P000018 == 'true'" class="col-span-6">
+                <InputLabel for="certificate_title" value="Título de los certificados *" />
+                <textarea
+                    id="certificate_title"
+                    v-model="form.certificate_title"
+                    class="form-textarea"
+                    rows="1"
+                >
+                </textarea>
+                <InputError :message="form.errors.certificate_title" class="mt-2" />
+            </div>
+
+            <div v-if="P000018 == 1 || P000018 == true || P000018 == 'true'" class="col-span-6">
                 <InputLabel for="certificate_description" value="Descripción de los certificados *" />
                 <textarea
                     id="certificate_description"
@@ -175,10 +206,11 @@ const handleImageCompressed = (file) => {
                     rows="6"
                 >
                 </textarea>
+
                 <InputError :message="form.errors.certificate_description" class="mt-2" />
             </div>
 
-            <div class="col-span-6 sm:col-span-4">
+            <div v-if="P000018 == 1 || P000018 == true || P000018 == 'true'" class="col-span-6 sm:col-span-4">
                 <InputLabel for="discount" value="Descuento (Opcional)" />
                 <div>
                     <input type="range" id="discount" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700" min="0" max="100" v-model="form.discount" />
@@ -187,7 +219,7 @@ const handleImageCompressed = (file) => {
                     </div>
                 </div>
             </div>
-            <div class="col-span-6 sm:col-span-2">
+            <div v-if="P000018 == 1 || P000018 == true || P000018 == 'true'" class="col-span-6 sm:col-span-2">
                 <InputLabel value="¿A que alumnos les aplica el descuento?" />
                 <div class="flex items-center space-x-2">
                     <label class="inline-flex">
@@ -204,6 +236,26 @@ const handleImageCompressed = (file) => {
                 <div class="flex items-center">
                     <input v-model="form.status" id="link-checkbox" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
                     <label for="link-checkbox" class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">Activo</label>
+                </div>
+            </div>
+            <div class="col-span-6 sm:col-span-3">
+                <div class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                    <div class="flex items-start gap-3">
+                        <input
+                            v-model="form.auto_certificate"
+                            id="auto_certificate"
+                            type="checkbox"
+                            class="w-5 h-5 mt-0.5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                        >
+                        <div class="flex-1">
+                            <label for="auto_certificate" class="text-sm font-medium text-gray-900 dark:text-gray-100 cursor-pointer">
+                                Certificado por Finalización
+                            </label>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                Los alumnos podrán descargar el certificado al completar todos los contenidos del curso, sin necesidad de exámenes ni nota aprobatoria.
+                            </p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </template>

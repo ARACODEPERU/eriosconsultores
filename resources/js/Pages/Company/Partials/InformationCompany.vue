@@ -235,6 +235,7 @@ const openSwal2Certificate = () => {
         cancelButtonText: 'Cancelar',
         showLoaderOnConfirm: true,
         allowOutsideClick: false,
+        backdrop: true,
         allowEscapeKey: false,
         padding: '2em',
         customClass: 'sweet-alerts',
@@ -328,6 +329,7 @@ const saveSocialNetworks = () => {
             formAccount.cci = item.cci;
             formAccount.currency_type_id = item.currency_type_id;
             formAccount.status = item.status == 1 ? true : false;
+            formAccount.invoice_show = item.invoice_show == 1 ? true : false;
         }
         displayModalBankAccount.value = true;
     }

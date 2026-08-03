@@ -1,7 +1,7 @@
 import {
     faEarthAmericas,
     faCube,
-    faWindowRestore,
+    faPlaneArrival,
     faArrowTrendUp,
     faTable,
     faBlog,
@@ -62,8 +62,8 @@ const menuCMS = {
         {
             route: route("blog_subscriber"),
             status: false,
-            text: "Suscriptores",
-            permissions: "cms_seccion",
+            text: "Descargas de Brochures",
+            permissions: "cms_subscribers_list",
             icom: faPeopleGroup
         },
         {
@@ -79,6 +79,22 @@ const menuCMS = {
             text: "Publicidad",
             permissions: "cms_publicidad",
             icom: faArrowTrendUp,
+        },
+        {
+            route: null,
+            status: false,
+            text: "Landings",
+            permissions: "cms_landings",
+            icom: faPlaneArrival,
+            items: [
+                {
+                    route: route("cms_landing_course_free",'01'),
+                    status: false,
+                    text: "Academico Curso Gratis",
+                    permissions: "cms_landing_curso_gratis",
+                    icom: faArrowTrendUp,
+                }
+            ]
         },
     ],
 };

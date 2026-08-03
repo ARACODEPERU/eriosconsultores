@@ -1,0 +1,363 @@
+<?php
+
+namespace Modules\Academic\Http\Controllers;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
+use Modules\Academic\Entities\AcaCapRegistration;
+use Modules\Academic\Entities\AcaCertificate;
+use Modules\Academic\Entities\AcaContent;
+use Modules\Academic\Entities\AcaCourse;
+use Modules\Academic\Entities\AcaStudentExam;
+use Modules\Academic\Entities\AcaStudentGrade;
+use Modules\Academic\Entities\AcaStudentGradeDetail;
+use Modules\Academic\Entities\AcaStudentParticipation;
+
+class AcaGradeManagementController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     */
+    public function index()
+    {
+        $courses = AcaCourse::where('status', true)->orderBy('description', 'ASC')->get();
+
+        return Inertia::render('Academic::Courses/GradeManagement', [
+            'courses' => $courses,
+        ]);
+    }
+
+    /**
+     * Search students with grades for a course
+     */
+    public function search(Request $request)
+    {
+        $request->validate([
+            'date_start' => 'nullable|date',
+            'date_end' => 'nullable|date',
+        ]);
+
+        $courseId = $request->input('course_id');
+
+        $course = AcaCourse::with(['modules.mockExam'])->findOrFail($courseId);
+
+        // Obtener estudiantes registrados en el curso con filtro de fechas
+        $query = AcaCapRegistration::with(['student.person'])
+            ->where('course_id', $courseId)
+            ->where('status', true);
+
+        // Filtrar por rango de fechas (date_start de la matrícula)
+        if ($request->date_start) {
+            $query->where('date_start', '>=', $request->date_start);
+        }
+        if ($request->date_end) {
+            $query->where('date_start', '<=', $request->date_end);
+        }
+
+        $registrations = $query->get();
+
+        // Obtener certificados del curso
+        $certificates = AcaCertificate::where('course_id', $courseId)->get();
+
+        // Obtener módulos del curso
+        $modules = $course->modules->map(function ($module) {
+            return [
+                'id' => $module->id,
+                'description' => $module->description,
+                'has_mock_exam' => $module->mockExam !== null,
+            ];
+        });
+
+        // Obtener IDs de contenidos válidos (videoconferencias Zoom) para filtrar participaciones
+        // Solo se consideran participaciones cuyo content_id corresponda a un contenido activo (is_file=3)
+        $validContentIds = AcaContent::whereHas('theme.module', function ($q) use ($courseId) {
+            $q->where('course_id', $courseId);
+        })->where('is_file', 3)->pluck('id');
+
+        // Preparar datos de estudiantes con estructura para notas
+        $students = $registrations->map(function ($reg) use ($certificates, $modules, $courseId, $validContentIds) {
+            $hasCertificate = $certificates->contains('student_id', $reg->student->id);
+
+            // Verificar si existen calificaciones guardadas para este estudiante
+            $savedGrade = AcaStudentGrade::where('registration_id', $reg->id)->first();
+
+            // Estructura de módulos con notas
+            if ($savedGrade) {
+                // Si existen calificaciones guardadas, cargarlas
+                $savedDetails = AcaStudentGradeDetail::where('grade_id', $savedGrade->id)->get();
+
+                $studentModules = $modules->map(function ($module) use ($savedDetails) {
+                    $detail = $savedDetails->firstWhere('module_id', $module['id']);
+
+                    return [
+                        'module_id' => $module['id'],
+                        'module_name' => $module['description'],
+                        'exam_score' => $detail ? $detail->exam_score : null,
+                        'attendance_score' => $detail ? $detail->attendance_score : null,
+                        'participation_score' => $detail ? $detail->participation_score : null,
+                        'average' => $detail ? $detail->average : null,
+                    ];
+                })->toArray();
+
+                $finalAverage = $savedGrade->final_average;
+            } else {
+                // Si no existen calificaciones guardadas, calcular desde las tablas originales
+                // Obtener exámenes del estudiante para este curso (excluyendo simulacros)
+                $studentExams = AcaStudentExam::whereHas('exam', function ($query) use ($courseId) {
+                    $query->where('course_id', $courseId)
+                          ->where('is_mock', false);
+                })->where('student_id', $reg->student->id)->get();
+
+                // Obtener exámenes simulacro del estudiante para este curso (con preguntas para calcular nota máxima)
+                $studentMockExams = AcaStudentExam::with('exam.questions')
+                    ->whereHas('exam', function ($query) use ($courseId) {
+                        $query->where('course_id', $courseId)
+                              ->where('is_mock', true);
+                    })->where('student_id', $reg->student->id)->get();
+
+                // Obtener participaciones del estudiante para este curso
+                // Solo se incluyen aquellas cuyo content_id corresponda a contenidos válidos (videoconferencias is_file=3)
+                // o que no tengan content_id (participaciones generales)
+                $studentParticipations = AcaStudentParticipation::where('course_id', $courseId)
+                    ->where('student_id', $reg->student->id)
+                    ->where(function ($q) use ($validContentIds) {
+                        $q->whereIn('content_id', $validContentIds)
+                          ->orWhereNull('content_id');
+                    })
+                    ->get();
+
+                $studentModules = $modules->map(function ($module) use ($studentExams, $studentMockExams, $studentParticipations) {
+                    // Buscar examen del estudiante para este módulo
+                    $exam = $studentExams->first(function ($se) use ($module) {
+                        return $se->exam && $se->exam->module_id == $module['id'];
+                    });
+
+                    // Buscar simulacro del estudiante para este módulo
+                    $mockExam = $studentMockExams->first(function ($se) use ($module) {
+                        return $se->exam && $se->exam->module_id == $module['id'];
+                    });
+
+                    // Buscar participaciones del estudiante para este módulo
+                    $participations = $studentParticipations->where('module_id', $module['id']);
+                    $participationCount = $participations->count();
+
+                    // Calcular promedio de participación: suma de scores / cantidad
+                    $participationScore = $participationCount > 0
+                        ? round($participations->sum('participation_score') / $participationCount, 2)
+                        : null;
+
+                    // Obtener valores de A y P y Examen
+                    $ayP = $participationScore; // Ahora A y P es un solo campo
+                    $examVal = $exam ? (float) $exam->punctuation : null;
+                    $mockExamVal = $mockExam ? (float) $mockExam->punctuation : null;
+
+                    // Determinar si aprobó el simulacro (50% de la nota máxima + 1)
+                    // Fórmula: floor(puntaje_total / 2) + 1
+                    // Ej: max 20 → 11, max 25 → 13, max 10 → 6
+                    $mockPassed = null;
+                    if ($mockExamVal !== null) {
+                        $maxScore = $mockExam->exam->questions->sum('score');
+                        $minPassingGrade = $maxScore > 0 ? (int) floor($maxScore / 2) + 1 : 0;
+                        $mockPassed = $mockExamVal >= $minPassingGrade;
+                    }
+
+                    // Verificar si los campos son válidos (no null)
+                    $ayPValid = $ayP !== null;
+                    $examValid = $examVal !== null;
+
+                    // Calcular promedio según la nueva lógica
+                    if ($ayPValid && ! $examValid) {
+                        // Caso 1: Solo A y P tiene valor → 100%
+                        $average = $ayP;
+                    } elseif (! $ayPValid && $examValid) {
+                        // Caso 2: Solo E tiene valor → 100%
+                        $average = $examVal;
+                    } elseif ($ayPValid && $examValid) {
+                        // Caso 3: Ambos tienen valor → A y P 40% + E 60%
+                        $average = round(($ayP * 0.4) + ($examVal * 0.6), 2);
+                    } else {
+                        // Caso 4: Ambos vacíos → null
+                        $average = null;
+                    }
+
+                    return [
+                        'module_id' => $module['id'],
+                        'module_name' => $module['description'],
+                        'exam_score' => $examValid ? $examVal : null,
+                        'attendance_score' => 0,
+                        'participation_score' => $ayPValid ? $ayP : null,
+                        'mock_exam_score' => $mockExamVal,
+                        'mock_passed' => $mockPassed,
+                        'average' => $average,
+                    ];
+                })->toArray();
+
+                // Calcular promedio final del estudiante (solo módulos con PROM válido)
+                $validAverages = array_filter(array_column($studentModules, 'average'), function ($val) {
+                    return $val !== null;
+                });
+                $finalAverage = count($validAverages) > 0
+                    ? round(array_sum($validAverages) / count($validAverages), 2)
+                    : null;
+            }
+
+            return [
+                'id' => $reg->student->id,
+                'registration_id' => $reg->id,
+                'name' => $reg->student->person ? $reg->student->person->full_name : 'Sin nombre',
+                'course_name' => $reg->course->description ?? '',
+                'has_certificate' => $hasCertificate,
+                'modules' => $studentModules,
+                'final_average' => $finalAverage,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'students' => $students,
+            'course' => [
+                'id' => $course->id,
+                'description' => $course->description,
+            ],
+            'modules' => $modules,
+        ]);
+    }
+
+    /**
+     * Store or update grades for students
+     */
+    public function store(Request $request)
+    {
+        $request->validate([
+            'grades' => 'required|array',
+            'grades.*.student_id' => 'required|exists:aca_students,id',
+            'grades.*.registration_id' => 'required|exists:aca_cap_registrations,id',
+            'grades.*.course_id' => 'required|exists:aca_courses,id',
+            'grades.*.final_average' => 'nullable|numeric|min:0|max:20',
+            'grades.*.modules' => 'required|array',
+            'grades.*.modules.*.module_id' => 'required|exists:aca_modules,id',
+            'grades.*.modules.*.exam_score' => 'nullable|numeric|min:0|max:20',
+            'grades.*.modules.*.attendance_score' => 'nullable|numeric|min:0|max:12',
+            'grades.*.modules.*.participation_score' => 'nullable|numeric|min:0|max:20',
+            'grades.*.modules.*.average' => 'nullable|numeric|min:0|max:20',
+        ]);
+
+        $userId = Auth::id();
+
+        foreach ($request->grades as $gradeData) {
+            $studentId = $gradeData['student_id'];
+            $registrationId = $gradeData['registration_id'];
+            $courseId = $gradeData['course_id'];
+            $finalAverage = $gradeData['final_average'];
+            $modules = $gradeData['modules'];
+            $observations = $gradeData['observations'] ?? null;
+
+            // Calcular promedio final (promedio de todos los promedios de módulos)
+            $averages = array_filter(array_column($modules, 'average'), function ($val) {
+                return $val !== null && $val !== '';
+            });
+            $calculatedFinalAverage = count($averages) > 0
+                ? round(array_sum($averages) / count($averages), 2)
+                : null;
+
+            $finalAvg = $finalAverage ?? $calculatedFinalAverage;
+            $approved = $finalAvg !== null && $finalAvg >= 11;
+
+            // Buscar o crear registro en aca_student_grades
+            $studentGrade = AcaStudentGrade::updateOrCreate(
+                [
+                    'registration_id' => $registrationId,
+                ],
+                [
+                    'student_id' => $studentId,
+                    'course_id' => $courseId,
+                    'final_average' => $finalAvg,
+                    'approved' => $approved,
+                    'observations' => $observations,
+                    'created_by' => $userId,
+                    'registered_at' => now(),
+                ]
+            );
+
+            // Agregar al historial de ediciones
+            if ($studentGrade->wasRecentlyCreated === false) {
+                $studentGrade->addEditHistory($userId);
+                $studentGrade->save();
+            }
+
+            // Guardar detalles por módulo
+            foreach ($modules as $moduleData) {
+                $moduleId = $moduleData['module_id'];
+                $examScore = $moduleData['exam_score'];
+                $attendanceScore = $moduleData['attendance_score'];
+                $participationScore = $moduleData['participation_score'];
+                $average = $moduleData['average'];
+
+                // Obtener valores
+                $ayP = ($participationScore !== null && $participationScore !== '' && $participationScore !== '-')
+                    ? (float) $participationScore
+                    : null;
+                $examVal = ($examScore !== null && $examScore !== '' && $examScore !== '-')
+                    ? (float) $examScore
+                    : null;
+
+                // Verificar si los campos son válidos
+                $ayPValid = $ayP !== null;
+                $examValid = $examVal !== null;
+
+                // Calcular promedio según la nueva lógica
+                if ($ayPValid && ! $examValid) {
+                    // Caso 1: Solo A y P tiene valor → 100%
+                    $avg = $ayP;
+                } elseif (! $ayPValid && $examValid) {
+                    // Caso 2: Solo E tiene valor → 100%
+                    $avg = $examVal;
+                } elseif ($ayPValid && $examValid) {
+                    // Caso 3: Ambos tienen valor → A y P 40% + E 60%
+                    $avg = round(($ayP * 0.4) + ($examVal * 0.6), 2);
+                } else {
+                    // Caso 4: Ambos vacíos → null
+                    $avg = null;
+                }
+
+                $moduleApproved = $avg !== null && $avg >= 11;
+
+                AcaStudentGradeDetail::updateOrCreate(
+                    [
+                        'grade_id' => $studentGrade->id,
+                        'module_id' => $moduleId,
+                    ],
+                    [
+                        'exam_score' => $examScore,
+                        'attendance_score' => $attendanceScore,
+                        'participation_score' => $participationScore,
+                        'average' => $avg,
+                        'module_approved' => $moduleApproved,
+                    ]
+                );
+            }
+
+            // Si está aprobado y no tiene certificado, crear uno
+            if ($approved) {
+                AcaCertificate::firstOrCreate(
+                    [
+                        'registration_id' => $registrationId,
+                        'course_id' => $courseId,
+                    ],
+                    [
+                        'student_id' => $studentId,
+                        'image' => null,
+                        'content' => null,
+                    ]
+                );
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Calificaciones guardadas correctamente',
+        ]);
+    }
+}

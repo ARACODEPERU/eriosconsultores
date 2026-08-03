@@ -2,7 +2,9 @@
 
 namespace Modules\CRM\Database\Seeders;
 
+use App\Models\Modulo;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -14,6 +16,8 @@ class PermissionsModuleSeeder extends Seeder
     public function run(): void
     {
         $role = Role::find(1);
+
+        $modulo = Modulo::create(['identifier' => 'M008', 'description' => 'Gestión de Clientes y Comunicación']);
 
         $permissions = [];
 
@@ -40,9 +44,16 @@ class PermissionsModuleSeeder extends Seeder
         array_push($permissions, Permission::create(['name' => 'crm_clientes_preguntas_ia']));
         array_push($permissions, Permission::create(['name' => 'crm_dudas_comunes']));
         array_push($permissions, Permission::create(['name' => 'crm_dudas_comunes_edicion']));
+        array_push($permissions, Permission::create(['name' => 'crm_libro_reclamos']));
+        array_push($permissions, Permission::create(['name' => 'crm_nuevas_captaciones']));
 
         foreach ($permissions as $permission) {
             $role->givePermissionTo($permission->name);
+            DB::table('model_has_permissions')->insert([
+                'permission_id' => $permission->id,
+                'model_type' => Modulo::class,
+                'model_id' => $modulo->identifier
+            ]);
         }
     }
 }

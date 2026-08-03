@@ -2,8 +2,8 @@
 
 namespace Modules\Academic\Entities;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -16,6 +16,7 @@ class AcaCourse extends Model
     protected $fillable = [
         'status',
         'description',
+        'usine',
         'course_day',
         'course_month',
         'course_year',
@@ -28,18 +29,16 @@ class AcaCourse extends Model
         'price',
         'certificate_description',
         'discount',
-        'discount_applies'
+        'discount_applies',
+        'auto_certificate',
+        'certificate_title',
     ];
-
-    protected static function newFactory()
-    {
-        return \Modules\Academic\Database\factories\AcaCourseFactory::new();
-    }
 
     public function category(): BelongsTo
     {
         return $this->belongsTo(AcaCategoryCourse::class, 'category_id');
     }
+
     public function modality(): BelongsTo
     {
         return $this->belongsTo(AcaModality::class, 'modality_id', 'id');
@@ -88,5 +87,36 @@ class AcaCourse extends Model
     public function onlitem(): HasOne
     {
         return $this->hasOne(OnliItem::class, 'id', 'item_id');
+    }
+
+    public function exams(): HasOne
+    {
+        return $this->hasOne(AcaExam::class, 'course_id');
+    }
+
+    public function certificates(): HasMany
+    {
+        return $this->hasMany(AcaCertificate::class, 'course_id');
+    }
+
+    public function exam(): HasOne
+    {
+        return $this->hasOne(AcaExam::class, 'course_id');
+    }
+
+    public function getStudentsCount(): int
+    {
+        return $this->registrations()->count();
+    }
+
+    public function isPopular(int $threshold = 30): bool
+    {
+        return $this->registrations()->count() >= $threshold;
+    }
+
+    public function landing()
+    {
+        // 'course_id' es la columna en aca_course_landings que apunta a este curso
+        return $this->hasOne(AcaCourseLanding::class, 'course_id');
     }
 }

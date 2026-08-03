@@ -33,7 +33,7 @@ class MercadopagoController extends Controller
     public function formPay(Request $request, $id)
     {
         $personInvoice = $request->get('personInvoice');
-        MercadoPagoConfig::setAccessToken(env('MERCADOPAGO_TOKEN'));
+        MercadoPagoConfig::setAccessToken(config('services.mercadopago.token'));
         $client = new PreferenceClient();
         $items = [];
 
@@ -67,13 +67,14 @@ class MercadopagoController extends Controller
             'preference' => $preference_id,
             'subscription' => $subscription,
             'samount' => floatval($amount),
-            'personInvoice' => $personInvoice
+            'personInvoice' => $personInvoice,
+            'MERCADOPAGO_KEY' => config('services.mercadopago.key')
         ]);
     }
 
     public function processPayment(Request $request, $id)
     {
-        \MercadoPago\MercadoPagoConfig::setAccessToken(env('MERCADOPAGO_TOKEN'));
+        \MercadoPago\MercadoPagoConfig::setAccessToken(config('services.mercadopago.token'));
 
         $client = new \MercadoPago\Client\Payment\PaymentClient();
         $payment_server = null;
@@ -81,6 +82,11 @@ class MercadopagoController extends Controller
         $sus = AcaSubscriptionType::find($id);
         //dd($request->all());
         try {
+            if ($request->get('payment_method_id') !== 'yape' && ! $request->filled('token')) {
+                return response()->json([
+                    'error' => 'Mercado Pago no genero el token de tarjeta. Recarga el formulario y vuelve a ingresar los datos de la tarjeta.'
+                ], 422);
+            }
 
             if ($request->get('payment_method_id') == 'yape') {
 
@@ -142,9 +148,13 @@ class MercadopagoController extends Controller
         } catch (\MercadoPago\Exceptions\MPApiException $e) {
             // Manejar la excepción
             $response = $e->getApiResponse();
-            $content  = $response->getContent();
-            //dd($content);
-            $message = $content['message'];
+            $content = $response ? $response->getContent() : [];
+            $message = $content['message'] ?? $e->getMessage();
+
+            if ($message === 'Invalid card_token_id') {
+                $message .= '. Verifica que MERCADOPAGO_KEY y MERCADOPAGO_TOKEN sean de prueba y pertenezcan a la misma cuenta, y recarga el formulario para generar un token nuevo.';
+            }
+
             return response()->json(['error' => 'Error al procesar el pago: ' . $message], 412);
         }
     }
@@ -160,7 +170,7 @@ class MercadopagoController extends Controller
 
     public function createPreference(Request $request)
     {
-        MercadoPagoConfig::setAccessToken(env('MERCADOPAGO_TOKEN'));
+        MercadoPagoConfig::setAccessToken(config('services.mercadopago.token'));
         $client = new PreferenceClient();
         $items = [];
         $msg = null;
@@ -194,7 +204,7 @@ class MercadopagoController extends Controller
 
     public function createItemsPreference(Request $request)
     {
-        MercadoPagoConfig::setAccessToken(env('MERCADOPAGO_TOKEN'));
+        MercadoPagoConfig::setAccessToken(config('services.mercadopago.token'));
         $client = new PreferenceClient();
         $items = [];
         $msg = null;
@@ -233,7 +243,7 @@ class MercadopagoController extends Controller
 
     public function processPaymentCourses(Request $request)
     {
-        \MercadoPago\MercadoPagoConfig::setAccessToken(env('MERCADOPAGO_TOKEN'));
+        \MercadoPago\MercadoPagoConfig::setAccessToken(config('services.mercadopago.token'));
 
         $client = new \MercadoPago\Client\Payment\PaymentClient();
         //dd($request->all());
@@ -245,6 +255,12 @@ class MercadopagoController extends Controller
         $amount = (float) $request->get('transaction_amount');
 
         try {
+            if ($request->get('payment_method_id') !== 'yape' && ! $request->filled('token')) {
+                return response()->json([
+                    'error' => 'Mercado Pago no genero el token de tarjeta. Recarga el formulario y vuelve a ingresar los datos de la tarjeta.'
+                ], 422);
+            }
+
             $res = DB::transaction(function () use ($request, $client, $amount, $products, $student, $personInvoice) {
 
                 if ($request->get('payment_method_id') == 'yape') {
@@ -301,7 +317,16 @@ class MercadopagoController extends Controller
                     'clie_full_name' => $person->full_name,
                     'phone' => $person->telephone,
                     'email' => $person->email,
-                    'nota_sale_id' => $sale_note->id
+                    'nota_sale_id' => $sale_note->id,
+                    'utm_source'     => session('traffic_tracking.utm_source'),
+                    'utm_medium'     => session('traffic_tracking.utm_medium'),
+                    'utm_campaign'   => session('traffic_tracking.utm_campaign'),
+                    'utm_term'       => session('traffic_tracking.utm_term'),
+                    'utm_content'    => session('traffic_tracking.utm_content'),
+                    'gclid'          => session('traffic_tracking.gclid'),
+                    'referer'        => session('traffic_tracking.referer'),
+                    'landing_url'    => session('traffic_tracking.landing_url'),
+                    'traffic_source' => session('traffic_tracking.traffic_source'),
                 ]);
 
                 $studentSubscribed = AcaStudentSubscription::where('student_id', $student->id)
@@ -315,8 +340,8 @@ class MercadopagoController extends Controller
                                 $xpro = AcaCourse::find($product['id']);
                                 $true = AcaCapRegistration::where('student_id', $student->id)->where('course_id', $xpro->id)->doesntExist();
 
-                                $price = 0;
-                                if ($xpro->discount || $xpro->discount > 0) {
+                                $price = $xpro->price;
+                                if ($xpro->discount && $xpro->discount > 0) {
                                     if ($xpro->discount_applies == '01') {
                                         $price = number_format($xpro->price - ($xpro->price * $xpro->discount / 100), 2, '.', '');
                                     } elseif ($xpro->discount_applies == '02') {
@@ -326,8 +351,6 @@ class MercadopagoController extends Controller
                                             $price = number_format($xpro->price, 2, '.', '');
                                         }
                                     }
-                                } else {
-                                    $price = $xpro->price;
                                 }
 
                                 OnliSaleDetail::create([
@@ -380,9 +403,7 @@ class MercadopagoController extends Controller
                         $sale->mercado_payment_id = $payment->id;
                         $sale->mercado_payment = json_encode($payment);
 
-                        ////enviar correo de agradecimiento///
-                        Mail::to($sale->email)
-                            ->send(new CratitudeCoursePurchase(OnliSale::with('details.course')->where('id', $sale->id)->first()));
+
 
                         $message = 'Pago aprobado';
                         break;
@@ -399,6 +420,13 @@ class MercadopagoController extends Controller
 
                 $sale->save();
 
+                if($payment->status == 'approved'){
+                    ////enviar correo de agradecimiento///
+                    Mail::to($sale->email)
+                        ->send(new CratitudeCoursePurchase(OnliSale::with('details.course')->where('id', $sale->id)->first()));
+
+                }
+
                 return [
                     'payment' => $payment,
                     'message' => $message
@@ -409,6 +437,7 @@ class MercadopagoController extends Controller
             $url = route('aca_mycourses');
 
             $payment = $res['payment'];
+
             return response()->json([
                 'status' => $payment->status,
                 //'message' => $payment->status_detail,
@@ -419,9 +448,13 @@ class MercadopagoController extends Controller
             // Manejar la excepción
 
             $response = $e->getApiResponse();
-            $content  = $response->getContent();
-            //dd($content);
-            $message = $content['message'];
+            $content = $response ? $response->getContent() : [];
+            $message = $content['message'] ?? $e->getMessage();
+
+            if ($message === 'Invalid card_token_id') {
+                $message .= '. Verifica que MERCADOPAGO_KEY y MERCADOPAGO_TOKEN sean de prueba y pertenezcan a la misma cuenta, y recarga el formulario para generar un token nuevo.';
+            }
+
             return response()->json(['error' => 'Error al procesar el pago: ' . $message], 412);
         } catch (\Exception $e) {
             // Manejar cualquier otro error

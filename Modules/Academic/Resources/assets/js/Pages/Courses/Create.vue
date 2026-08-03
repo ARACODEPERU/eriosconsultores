@@ -1,7 +1,7 @@
 <script setup>
 import AppLayout from "@/Layouts/Vristo/AppLayout.vue";
 import CreateForm from './Partials/CreateForm.vue';
-import { Link } from '@inertiajs/vue3';
+import Navigation from '@/Components/vristo/layout/Navigation.vue';
 
 const props = defineProps({
     modalities: {
@@ -19,6 +19,10 @@ const props = defineProps({
     sectors: {
         type: Object,
         default: () => ({}),
+    },
+    P000018: {
+        type: Boolean,
+        default: false,
     }
 });
 
@@ -26,19 +30,20 @@ const props = defineProps({
 
 <template>
     <AppLayout title="Crear Curso">
-        <ul class="flex space-x-2 rtl:space-x-reverse">
-            <li>
-                <a href="javascript:;" class="text-primary hover:underline">Académico</a>
-            </li>
-            <li class="before:content-['/'] ltr:before:mr-1 rtl:before:ml-1">
-                <a :href="route('aca_courses_list')" class="text-primary hover:underline">Cursos</a>
-            </li>
-            <li class="before:content-['/'] ltr:before:mr-1 rtl:before:ml-1">
-                <span>Nuevo</span>
-            </li>
-        </ul>
+        <Navigation :routeModule="route('aca_dashboard')" :titleModule="'Académico'"
+            :data="[
+                {route: route('aca_courses_list'), title: 'Cursos'},
+                {title: 'Nuevo'}
+            ]"
+        />
         <div class="pt-5">
-            <CreateForm :modalities="modalities" :categories="categories" :types="types" :sectors="sectors" /> 
+            <CreateForm
+                :modalities="modalities"
+                :categories="categories"
+                :types="types"
+                :sectors="sectors"
+                :P000018="P000018"
+            />
         </div>
-    </AppLayout>  
+    </AppLayout>
 </template>

@@ -15,6 +15,7 @@ class AcaSubscriptionType extends Model
      */
     protected $fillable = [
         'title',
+        'usine',
         'description',
         'details',
         'prices',
@@ -23,8 +24,8 @@ class AcaSubscriptionType extends Model
         'order_number'
     ];
 
-    protected static function newFactory(): AcaSubscriptionTypeFactory
-    {
-        //return AcaSubscriptionTypeFactory::new();
-    }
+    protected $casts = [
+        'details' => 'array',
+        'prices' => 'array',
+    ];
 }

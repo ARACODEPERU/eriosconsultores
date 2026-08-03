@@ -22,7 +22,6 @@ use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use DataTables;
 use Exception;
-use Greenter\Model\Sale\Note;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 
 class SaleCreditNotesController extends Controller
@@ -48,23 +47,31 @@ class SaleCreditNotesController extends Controller
 
         $affectations = DB::table('sunat_affectation_igv_types')->get();
         $unitTypes = DB::table('sunat_unit_types')->get();
+        $creditNoteType = DB::table('sunat_note_credit_types')->get();
+        $debitNoteType = DB::table('sunat_note_debit_types')->get();
+
         return Inertia::render('Sales::Documents/CreditNotes', [
             'affectations'  => $affectations,
             'unitTypes'     => $unitTypes,
             'taxes'         => array(
                 'igv' => $this->igv,
                 'icbper' => $this->icbper
-            )
+            ),
+            'creditNoteType' => $creditNoteType,
+            'debitNoteType'  => $debitNoteType
         ]);
     }
     public function tableDocument()
     {
         $sales = (new Sale())->newQuery();
 
-        $isAdmin = Auth::user()->hasRole('admin');
+        $isAdmin = Auth::user()->hasAnyRole(['admin', 'Contabilidad']);
 
         $sales = $sales->join('people', 'client_id', 'people.id')
-            ->join('sale_documents', 'sale_documents.sale_id', 'sales.id')
+            ->join('sale_documents', function($query) {
+                $query->on('sale_documents.sale_id', 'sales.id')
+                    ->whereIn('sale_documents.invoice_type_doc', ['08','07']);
+            })
             ->join('series', 'sale_documents.serie_id', 'series.id')
             ->select(
                 'sales.id',
@@ -95,13 +102,14 @@ class SaleCreditNotesController extends Controller
                 'sale_documents.client_email',
                 'sale_documents.invoice_broadcast_date',
                 'sale_documents.invoice_due_date',
-                'sale_documents.reason_cancellation'
+                'sale_documents.reason_cancellation',
+                'sale_documents.note_type_operation_id'
             )
             ->whereIn('series.document_type_id', [3, 4])
             ->when(!$isAdmin, function ($q) {
                 return $q->where('sales.user_id', Auth::id());
             })
-            ->with('documents.items')
+            ->with(['document.items'])
             ->orderBy('sales.id', 'DESC');
         //dd($sales);
         return DataTables::of($sales)->toJson();
@@ -114,7 +122,7 @@ class SaleCreditNotesController extends Controller
         $saleDocumentTypes = SaleDocumentType::whereIn('id', [3, 4])->get();
         $typeCreditNote = DB::table('sunat_note_credit_types')->whereIn('id', ['01', '02'])->get();
         $typeDebitNote = DB::table('sunat_note_debit_types')->get();
-        $series = Serie::where('document_type_id', 1)->get();
+        $series = Serie::whereIn('document_type_id', [1, 2, 4])->get();
         $noteSeries = Serie::where('document_type_id', 3)->get();
         $unitTypes = DB::table('sunat_unit_types')->get();
 
@@ -183,7 +191,8 @@ class SaleCreditNotesController extends Controller
 
         try {
             if ($request->get('note_type') == 3) {
-                $this->store($request);
+                $result = $this->store($request);
+                return response()->json($result);
             } elseif ($request->get('note_type') == 4) {
                 if ($request->get('note_overall_total') > $request->get('document_mto_total')) {
                     $result = $this->store($request);
@@ -217,22 +226,24 @@ class SaleCreditNotesController extends Controller
                 $total_discount = 0;
                 $total = 0;
 
+                $invoice = SaleDocument::find($request->get('document_id'));
+
                 $document = SaleDocument::create([
                     'sale_id'                       => $request->get('document_sale_id'),
                     'serie_id'                      => $request->get('note_serie'),
                     'number'                        => str_pad($serie->number, 9, '0', STR_PAD_LEFT),
                     'status'                        => true,
-                    'client_type_doc'               => $request->get('document_client_type'),
-                    'client_number'                 => $request->get('document_client_ruc'),
-                    'client_rzn_social'             => $request->get('document_client'),
-                    'client_address'                => $request->get('document_client_address'),
-                    'client_email'                  => $request->get('document_client_email'),
-                    'invoice_ubl_version'           => '2.0', ///para notas de credito
+                    'client_type_doc'               => $invoice->client_type_doc,
+                    'client_number'                 => $invoice->client_number,
+                    'client_rzn_social'             => $invoice->client_rzn_social,
+                    'client_address'                => $invoice->client_address,
+                    'client_email'                  => $invoice->client_email,
+                    'invoice_ubl_version'           => $this->ubl, ///para notas de credito
                     'note_type_operation_id'        => $request->get('note_operation_type'),
                     'invoice_type_doc'              => $tido->sunat_id,
                     'invoice_serie'                 => $serie->description,
                     'invoice_correlative'           => $serie->number,
-                    'invoice_type_currency'         => 'PEN',
+                    'invoice_type_currency'         => $invoice->invoice_type_currency,
                     'invoice_broadcast_date'        => $fechaFormatoSQL,
                     'invoice_due_date'              => $request->get('note_due_date') ?? Carbon::now()->format('Y-m-d'),
                     'invoice_send_date'             => Carbon::now()->format('Y-m-d'),
@@ -246,123 +257,73 @@ class SaleCreditNotesController extends Controller
 
                 foreach ($request->get('document_items') as $item) {
 
-                    /// imiciamos las variables para hacer los calculos por item;
-                    $percentage_igv = $this->igv;
-                    $mto_base_igv = 0;
-                    $price_sale = $item['price_sale'];
-                    $nfactorIGV = round(($percentage_igv / 100) + 1, 2);
-                    $ifactorIGV = round($percentage_igv / 100, 2);
-                    $quantity = $item['quantity'];
-                    $value_unit = 0;
-                    $igv = 0;
-                    $total_tax = 0;
-                    $icbper = 0;
-                    $value_sale = 0;
-                    $total_item = 0;
-                    $mto_discount = 0;
-                    $array_discounts = [];
-
                     $afe_igv = $item['type_afe_igv'];
-                    //dd($item['json_discounts']);
-                    if ($item['mto_discount'] > 0) {
-                        $mtoDiscount = json_decode($item['json_discounts'], true)[0]['value'];
-                    } else {
-                        $mtoDiscount = 0;
-                    }
-
-
-                    if ($afe_igv == '10') {
-                        //valor unitario presio de venta / 1.IGV para quitarle el igv
-                        //se tiene que quitar el igv porque el sistema trabaja con los precios
-                        //incluido el igv
-                        $value_unit = round($price_sale / $nfactorIGV, 2);
-                        //la base para hacer el descuento
-                        $base = round($value_unit * $quantity, 2);
-                        //el sistema resive un monto fijo como descuento y lo convierte a un porcentaje
-                        $factor = (($mtoDiscount * 100) / $price_sale) / 100;
-                        //el descuento se aplica por unidad vendida
-                        $descuento_monto = $factor * $value_unit * $quantity;
-                        //a la base igv le restamos el descuento
-                        $mto_base_igv = ($value_unit * $quantity) - $descuento_monto;
-                        //una ves restada la vase lo multiplicamos por el 18% vigente para sacar
-                        //el valor total igv
-                        $igv = ($mto_base_igv * $ifactorIGV);
-                        //total del item
-                        $total_item = (($value_unit * $quantity) - $descuento_monto) + $igv;
-                        //el valor de la venta
-                        $value_sale = ($value_unit * $quantity) - $descuento_monto;
-                        //si tiene descuento creamos el array de descuento
-                        //2023-07-20 el sistema solo trabaja con un descuento
-                        if ($mtoDiscount > 0) {
-                            //el precio unitario se calcula
-                            //(Valor venta + Total Impuestos) / Cantidad
-                            $unit_price = round(($value_sale + $igv) / $quantity, 2);
-                            $array_discounts[0] = array(
-                                'value'     => $mtoDiscount,
-                                'type'      => '00',
-                                'base'      => round($base, 2),
-                                'factor'    => $factor,
-                                'monto'     => round($descuento_monto, 2)
-                            );
-                        } else {
-                            //el precio unitario es el mismo
-                            $unit_price = $price_sale;
-                        }
-
-                        $mto_discount = round($descuento_monto, 2);
-                    }
-                    if ($afe_igv == '20') { //Exonerated
-
-                    }
-                    if ($afe_igv == '30') { //Unaffected
-
-                    }
+                    $price_sale = $item['price_sale'];
+                    $quantity = $item['quantity'];
+                    $descuento = isset($item['descuento']) ? floatval($item['descuento']) : 0;
+                    $igv = isset($item['igv']) ? floatval($item['igv']) : 0;
+                    $mto_total = isset($item['mto_total']) ? floatval($item['mto_total']) : 0;
+                    $mto_value_unit = isset($item['mto_value_unit']) ? floatval($item['mto_value_unit']) : 0;
+                    $mto_discount = $descuento * $quantity;
+                    $value_unit = $mto_value_unit;
+                    $value_sale = $mto_value_unit * $quantity;
+                    $mto_base_igv = $value_sale;
+                    $unit_price = $price_sale;
 
                     $porcentage_item_icbper = 0;
                     $icbper = 0;
 
-                    if ($item['entity_name_product'] == Product::class) {
-                        $product = Product::find($item['product_id']);
-                        if ($product->icbper && $product->icbper == 1) {
-                            $porcentage_item_icbper = $porcentage_icbper;
-                            $icbper = ($quantity * $porcentage_item_icbper);
-                        } else {
-                            $porcentage_item_icbper = 0;
-                            $icbper = 0;
+                    if ($afe_igv == '10') {
+                        if ($item['entity_name_product'] == Product::class) {
+                            $product = Product::find($item['product_id']);
+                            if ($product->icbper && $product->icbper == 1) {
+                                $porcentage_item_icbper = $porcentage_icbper;
+                                $icbper = ($quantity * $porcentage_item_icbper);
+                            }
                         }
                     }
 
                     $total_tax = $igv + $icbper;
 
-                    //se inserta los datos al detalle del documento
+                    $array_discounts = [];
+                    if ($descuento > 0) {
+                        $array_discounts[0] = array(
+                            'value'     => $descuento,
+                            'type'      => '00',
+                            'base'      => round($price_sale * $quantity, 2),
+                            'factor'    => round($descuento / $price_sale, 4),
+                            'monto'     => round($mto_discount, 2)
+                        );
+                    }
+
                     SaleDocumentItem::create([
                         'document_id'           => $document->id,
                         'product_id'            => $item['product_id'],
                         'cod_product'           => $item['cod_product'],
                         'decription_product'    => $item['decription_product'],
                         'unit_type'             => $item['unit_type'],
-                        'quantity'              => $item['quantity'],
+                        'quantity'              => $quantity,
                         'mto_base_igv'          => $mto_base_igv,
                         'percentage_igv'        => $this->igv,
                         'igv'                   => $igv,
                         'total_tax'             => $total_tax,
-                        'type_afe_igv'          => $item['type_afe_igv'],
+                        'type_afe_igv'          => $afe_igv,
                         'icbper'                => $icbper,
                         'factor_icbper'         => $porcentage_item_icbper,
                         'mto_value_sale'        => $value_sale,
                         'mto_value_unit'        => $value_unit,
                         'mto_price_unit'        => $unit_price,
                         'price_sale'            => $price_sale,
-                        'mto_total'             => round($unit_price * $item['quantity'], 2),
-                        'mto_discount'          => $mto_discount ?? 0,
+                        'mto_total'             => $mto_total,
+                        'mto_discount'          => round($mto_discount, 2),
                         'json_discounts'        => json_encode($array_discounts),
                         'entity_name_product'   => $item['entity_name_product']
                     ]);
 
-                    $mto_igv = $mto_igv + $igv; //total del igv
-                    $total_icbper = $total_icbper + $icbper; //total del impuesto a la bolsa plastica
-                    $mto_oper_taxed = $mto_oper_taxed + $value_sale; // total operaciones gravadas
-                    $total = $total + $total_item; // total de la venta general
+                    $mto_igv = $mto_igv + $igv;
+                    $total_icbper = $total_icbper + $icbper;
+                    $mto_oper_taxed = $mto_oper_taxed + $value_sale;
+                    $total = $total + $mto_total;
                 }
 
                 //totales de la cabesera del documento
@@ -428,35 +389,4 @@ class SaleCreditNotesController extends Controller
         ];
     }
 
-    /**
-     * Show the specified resource.
-     */
-    public function show($id)
-    {
-        return view('sales::show');
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit($id)
-    {
-        return view('sales::edit');
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, $id): RedirectResponse
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy($id)
-    {
-        //
-    }
 }

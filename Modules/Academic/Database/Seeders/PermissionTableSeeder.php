@@ -2,9 +2,11 @@
 
 namespace Modules\Academic\Database\Seeders;
 
+use App\Models\Modulo;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -18,6 +20,8 @@ class PermissionTableSeeder extends Seeder
     public function run()
     {
         $role = Role::find(1);
+
+        $modulo = Modulo::create(['identifier' => 'M007', 'description' => 'Académico']);
 
         $permissions = [];
 
@@ -40,14 +44,19 @@ class PermissionTableSeeder extends Seeder
         array_push($permissions, Permission::create(['name' => 'aca_estudiante_importar_excel']));
         array_push($permissions, Permission::create(['name' => 'aca_estudiante_eliminar']));
         array_push($permissions, Permission::create(['name' => 'aca_estudiante_certificados_crear']));
+        array_push($permissions, Permission::create(['name' => 'aca_estudiante_matricular']));
         array_push($permissions, Permission::create(['name' => 'aca_cursos_listado']));
         array_push($permissions, Permission::create(['name' => 'aca_cursos_nuevo']));
         array_push($permissions, Permission::create(['name' => 'aca_cursos_editar']));
         array_push($permissions, Permission::create(['name' => 'aca_cursos_eliminar']));
         array_push($permissions, Permission::create(['name' => 'aca_cursos_listado_estudiantes']));
         array_push($permissions, Permission::create(['name' => 'aca_cursos_modulos']));
+        array_push($permissions, Permission::create(['name' => 'aca_cursos_modulos_examen']));
+        array_push($permissions, Permission::create(['name' => 'aca_cursos_examen_configuracion']));
+        array_push($permissions, Permission::create(['name' => 'aca_cursos_examen_ver']));
+        array_push($permissions, Permission::create(['name' => 'aca_cursos_examen_resolver']));
         array_push($permissions, Permission::create(['name' => 'aca_miscursos']));
-
+        array_push($permissions, Permission::create(['name' => 'aca_cursos_revisar_examenes']));
         array_push($permissions, Permission::create(['name' => 'aca_estudiante_listar_comprobantes']));
         array_push($permissions, Permission::create(['name' => 'aca_estudiante_cobrar']));
         array_push($permissions, Permission::create(['name' => 'aca_certificados_listado']));
@@ -64,9 +73,27 @@ class PermissionTableSeeder extends Seeder
         array_push($permissions, Permission::create(['name' => 'aca_tutoriales_videos_editar']));
         array_push($permissions, Permission::create(['name' => 'aca_tutoriales_videos_eliminar']));
         array_push($permissions, Permission::create(['name' => 'aca_tutoriales_lista_agregar_video']));
+        array_push($permissions, Permission::create(['name' => 'aca_estudiante_exportar_excel']));
+        array_push($permissions, Permission::create(['name' => 'aca_reportes']));
+        array_push($permissions, Permission::create(['name' => 'aca_reportes_estado_susc_estudiantes']));
+        array_push($permissions, Permission::create(['name' => 'aca_suscripcion_estudiante_editar']));
+        array_push($permissions, Permission::create(['name' => 'aca_estudiante_listar_cuotas_espaciales']));
+        array_push($permissions, Permission::create(['name' => 'aca_alumno_examenes']));
+        array_push($permissions, Permission::create(['name' => 'aca_asistencia_administrador']));
+        array_push($permissions, Permission::create(['name' => 'aca_asistencia_crear_link']));
+        array_push($permissions, Permission::create(['name' => 'aca_gestion_de_calificaciones']));
+        array_push($permissions, Permission::create(['name' => 'aca_gestion_de_participaciones']));
+        array_push($permissions, Permission::create(['name' => 'aca_cursos_examen_eliminar']));
+        array_push($permissions, Permission::create(['name' => 'aca_cursos_examen_final_editar']));
+        array_push($permissions, Permission::create(['name' => 'aca_cursos_examen_final_crear']));
 
         foreach ($permissions as $permission) {
             $role->givePermissionTo($permission->name);
+            DB::table('model_has_permissions')->insert([
+                'permission_id' => $permission->id,
+                'model_type' => Modulo::class,
+                'model_id' => $modulo->identifier
+            ]);
         }
 
         $alumno = Role::create(['name' => 'Alumno']);

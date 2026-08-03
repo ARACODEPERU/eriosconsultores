@@ -8,11 +8,14 @@
     import IconBox from '@/Components/vristo/icon/icon-box.vue';
     import IconUserPlus from '@/Components/vristo/icon/icon-user-plus.vue';
     import IconSearch from '@/Components/vristo/icon/icon-search.vue';
-    import iconExcel from "@/Components/vristo/icon/icon-excel.vue";
+    import iconPencil from '@/Components/vristo/icon/icon-pencil.vue';
     import ModalLarge from "@/Components/ModalLarge.vue";
-    import { ref } from 'vue';
-
+    import { ref, onUnmounted } from 'vue';
+    import Navigation from "@/Components/vristo/layout/Navigation.vue";
     import { useAppStore } from '@/stores/index';
+    import iconExcel from "@/Components/vristo/icon/icon-excel.vue";
+    import ModalStatus from "@/Components/ModalStatus.vue";
+
     const store = useAppStore();
 
     const props = defineProps({
@@ -34,6 +37,10 @@
 
     const getImage = (path) => {
         return baseUrl + 'storage/'+ path;
+    }
+
+    const getImageFlag = (path) => {
+        return baseUrl + path;
     }
 
     const displayModalImport = ref(false);
@@ -62,27 +69,25 @@
         const formData = new FormData();
         formData.append("file", file.value);
 
-        axios.post(route('aca_student_import_file_excel'), formData)
-            .then((response) => {
-                importKey.value = response.data.importKey;
-                trackProgress(); // Inicia la actualización del progreso
-                showAlert("Procesando archivo, por favor espere.", 'success'); // Mostrar mensaje de éxito
-            }).catch((error) => {
-                // Verifica si hay un mensaje de error en la respuesta
-                if (error.response && error.response.data && error.response.data.message) {
-                    console.log('Error detectado:', error.response.data.message);
-                    showAlert(error.response.data.message, 'error');
-                } else {
-                    console.log('Error genérico detectado');
-                    showAlert("Ocurrió un error al importar el archivo.", 'error');
-                }
-            })
-            .finally(() => {
-                // Solo detener el estado de carga si no hay errores
-                if (!importKey.value) {
-                    loading.value = false;
-                }
-            });
+        axios.post(route('aca_student_import_file_excel'), formData).then((response) => {
+            importKey.value = response.data.importKey;
+            trackProgress(); // Inicia la actualización del progreso
+            showAlert("Procesando archivo, por favor espere.", 'success'); // Mostrar mensaje de éxito
+        }).catch((error) => {
+            // Verifica si hay un mensaje de error en la respuesta
+            if (error.response && error.response.data && error.response.data.message) {
+                console.log('Error detectado:', error.response.data.message);
+                showAlert(error.response.data.message, 'error');
+            } else {
+                console.log('Error genérico detectado');
+                showAlert("Ocurrió un error al importar el archivo.", 'error');
+            }
+        }).finally(() => {
+            // Solo detener el estado de carga si no hay errores
+            if (!importKey.value) {
+                loading.value = false;
+            }
+        });
     };
     const trackProgress = () => {
         const interval = setInterval(async () => {
@@ -125,23 +130,258 @@
             customClass: 'sweet-alerts',
         });
     }
+
+    // Estado de la exportación
+    const isExporting = ref(false);
+    const downloadUrl = ref(null);
+    const fileName = ref('');
+    const errorMessage = ref(null);
+    const displayModalExportStatus = ref(false);
+    let pollingInterval = null; // Para controlar el intervalo de polling
+    let currentJobId = null; // Para guardar el ID del job actual
+    const mensajeExporting = ref([]);
+
+    const generateExcelStudents = async () => {
+        // Resetear estados
+        isExporting.value = true;
+        downloadUrl.value = null;
+        fileName.value = '';
+        errorMessage.value = null;
+        currentJobId = null; // Resetear el ID del job anterior
+        displayModalExportStatus.value = true;
+
+        try {
+            // 1. Iniciar la exportación en el backend y obtener el jobId
+            // Usa axios.post directamente si no necesitas enviar datos del form (e.g. filtros)
+            const response = await axios.post(route('aca_export_students_excel'));
+
+            // 2. Obtener el jobId de la respuesta
+            currentJobId = response.data.job_id;
+            // console.log('Exportación iniciada. Job ID:', currentJobId);
+            mensajeExporting.value.push({success: true, label: 'Exportación iniciada.', path: null});
+            // 3. Iniciar el polling para verificar el estado
+            startPolling();
+
+        } catch (error) {
+            // console.error('Error al iniciar la exportación:', error);
+            // Mostrar mensaje de error al usuario
+            errorMessage.value = error.response?.data?.message || 'Hubo un problema al iniciar la exportación.';
+            isExporting.value = false; // Detener el indicador de carga
+            mensajeExporting.value.push({success: false, label: 'Error al iniciar la exportación:'+ error.response?.data?.message, path: null});
+        }
+    }
+
+    const startPolling = () => {
+        // Limpiar cualquier intervalo anterior para evitar múltiples pollings
+        if (pollingInterval) {
+            clearInterval(pollingInterval);
+        }
+
+        // Configurar un intervalo para verificar el estado del job cada 3 segundos
+        pollingInterval = setInterval(async () => {
+            if (!currentJobId) {
+                //console.warn('No hay Job ID para hacer polling. Deteniendo polling.');
+                mensajeExporting.value.push({success: false, label: 'No hay Job ID para hacer polling. Deteniendo polling.', path: null});
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+                isExporting.value = false;
+                return;
+            }
+
+            try {
+                const response = await axios.get(route('aca_export_students_excel_status', currentJobId));
+                const jobStatus = response.data;
+
+                // Actualizar el estado local con los datos del job
+                // (aunque no haya barra de progreso, estos datos son útiles para depuración o si decides añadir una barra mínima)
+                // progress.value = jobStatus.progress; // Puedes mantener esta línea si el backend la sigue enviando
+                // processedCount.value = jobStatus.processed_count;
+                // totalCount.value = jobStatus.total_count;
+
+                if (jobStatus.status === 'completed') {
+                    downloadUrl.value = jobStatus.download_url; // La URL de descarga del archivo Excel
+                    fileName.value = jobStatus.file_name;
+                    isExporting.value = false; // Detener el indicador de carga
+                    clearInterval(pollingInterval); // Detener el polling
+                    pollingInterval = null;
+                    //console.log('Exportación completada. Archivo listo para descargar:', downloadUrl.value);
+                    mensajeExporting.value.push({success: true, label: 'Exportación completada. Archivo listo para descargar', path: downloadUrl.value});
+                } else if (jobStatus.status === 'failed') {
+                    errorMessage.value = jobStatus.error_message || 'La exportación falló por un error desconocido.';
+                    isExporting.value = false; // Detener el indicador de carga
+                    clearInterval(pollingInterval); // Detener el polling
+                    pollingInterval = null;
+                    // console.error('Exportación fallida:', jobStatus.error_message);
+                    mensajeExporting.value.push({success: false, label: 'Exportación fallida:'+ jobStatus.error_message, path: null});
+                } else {
+                    // El job sigue en 'pending' o 'processing'
+                    // console.log('Exportación en curso. Estado:', jobStatus.status);
+                    mensajeExporting.value.push({success: false, label: 'Exportación en curso. Estado:'+ jobStatus.status, path: null});
+                }
+            } catch (error) {
+                //console.error('Error al obtener el estado de la exportación:', error);
+                errorMessage.value = 'No se pudo verificar el estado de la exportación.';
+                isExporting.value = false;
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+                mensajeExporting.value.push({success: false, label: errorMessage.value, path: null});
+            }
+        }, 3000); // Poll cada 3 segundos (ajusta según necesites)
+    };
+
+    // Limpiar el intervalo cuando el componente se desmonte para evitar fugas de memoria
+    onUnmounted(() => {
+        if (pollingInterval) {
+            clearInterval(pollingInterval);
+        }
+    });
+
+    const closeModalExportStatus = () => {
+        displayModalExportStatus.value = false;
+    }
+
+    const destroyStudent = (id) => {
+        Swal2.fire({
+            title: '¿Estas seguro?',
+            text: "¡No podrás revertir esto!",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: '¡Sí, Eliminar!',
+            cancelButtonText: 'Cancelar',
+            showLoaderOnConfirm: true,
+            padding: '2em',
+            customClass: 'sweet-alerts',
+            backdrop: true,
+            preConfirm: () => {
+                return axios.delete(route('aca_students_destroy', id)).then((res) => {
+                    if (!res.data.success) {
+                        swal.showValidationMessage(res.data.message)
+                    }
+                    return res
+                });
+            },
+            allowOutsideClick: () => !swal.isLoading()
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal2.fire({
+                    title: 'Enhorabuena',
+                    text: 'Se Eliminó correctamente',
+                    icon: 'success',
+                    padding: '2em',
+                    customClass: 'sweet-alerts',
+                });
+                router.visit(route('aca_students_list'), {
+                    replace: false,
+                    method: 'get',
+                    preserveState: true,
+                    preserveScroll: true,
+                    only: ['students'],
+                });
+            }
+        });
+    }
+
+    const sendAccessMail = (personId, personEmail) => {
+        Swal2.fire({
+            title: 'Enviar correo de accesos',
+            text: "Se enviará un correo con los accesos al estudiante.",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: '¡Sí, Enviar!',
+            cancelButtonText: 'Cancelar',
+            showLoaderOnConfirm: true,
+            padding: '2em',
+            customClass: 'sweet-alerts',
+            backdrop: true,
+            preConfirm: () => {
+                return axios.get(route('aca_students_send_access_mail', personId)).then((res) => {
+                    if (!res.data.success) {
+                        Swal2.showValidationMessage(res.data.message)
+                    }
+                    return res
+                });
+            },
+            allowOutsideClick: () => !Swal2.isLoading()
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal2.fire({
+                    title: 'Enhorabuena',
+                    text: 'Correo enviado correctamente',
+                    icon: 'success',
+                    padding: '2em',
+                    customClass: 'sweet-alerts',
+                });
+            }
+        });
+    }
+
+    const sendPasswordRecoveryMail = (personId) => {
+        Swal2.fire({
+            title: 'Enviar recuperacion de contraseña',
+            text: 'Se enviara un correo con el enlace para que el estudiante cambie su contraseña.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Enviar',
+            cancelButtonText: 'Cancelar',
+            showLoaderOnConfirm: true,
+            padding: '2em',
+            customClass: 'sweet-alerts',
+            backdrop: true,
+            preConfirm: () => {
+                return axios.get(route('aca_students_send_password_recovery_mail', personId)).then((res) => {
+                    if (!res.data.success) {
+                        Swal2.showValidationMessage(res.data.message)
+                    }
+                    return res
+                });
+            },
+            allowOutsideClick: () => !Swal2.isLoading()
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal2.fire({
+                    title: 'Enhorabuena',
+                    text: 'Correo de recuperacion enviado correctamente',
+                    icon: 'success',
+                    padding: '2em',
+                    customClass: 'sweet-alerts',
+                });
+            }
+        });
+    }
+
 </script>
 
 <template>
     <AppLayout title="Estudiantes">
-        <ul class="flex space-x-2 rtl:space-x-reverse">
-            <li>
-                <a href="javascript:;" class="text-primary hover:underline">Académico</a>
-            </li>
-            <li class="before:content-['/'] ltr:before:mr-1 rtl:before:ml-1">
-                <span>Estudiantes</span>
-            </li>
-        </ul>
+        <Navigation :routeModule="route('aca_dashboard')" :titleModule="'Académico'"
+            :data="[
+                {title: 'Estudiantes'}
+            ]"
+        />
         <div class="pt-5">
             <div class="flex items-center justify-between flex-wrap gap-4">
                 <h2 class="text-xl">Estudiantes</h2>
                 <div class="flex sm:flex-row flex-col sm:items-center sm:gap-3 gap-4 w-full sm:w-auto">
                     <div class="flex gap-3">
+                        <div v-can="'aca_estudiante_exportar_excel'">
+                            <button v-on:click="generateExcelStudents()" type="button" :class="{ 'opacity-25': isExporting }" :disabled="isExporting" class="btn btn-warning">
+                                <template v-if="isExporting" >
+                                    <svg aria-hidden="true" role="status" class="inline w-4 h-4 mr-3 text-gray-200 animate-spin dark:text-gray-600" viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z" fill="currentColor"/>
+                                        <path d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z" fill="#1C64F2"/>
+                                    </svg>
+                                </template>
+                                <icon-excel v-else class="ltr:mr-2 rtl:ml-2" />
+                                Generar Excel
+                            </button>
+
+                        </div>
                         <div>
                             <Link :href="route('aca_students_create')" type="button" class="btn btn-primary">
                                 <icon-user-plus class="ltr:mr-2 rtl:ml-2" />
@@ -166,7 +406,7 @@
                             @keyup.enter="form.get(route('aca_students_list'))"
                         />
                         <div class="absolute ltr:right-[11px] rtl:left-[11px] top-1/2 -translate-y-1/2 peer-focus:text-primary">
-                            <icon-search class="mx-auto" />
+                            <icon-search @click="form.get(route('aca_students_list'))" class="mx-auto" />
                         </div>
                     </div>
                 </div>
@@ -174,59 +414,121 @@
             <template v-if="students.data && students.data.length > 0">
                 <ConfigProvider>
                     <div class="mt-5 p-0 border-0 overflow-hidden">
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div v-for="(student, index) in students.data" class="relative">
+                        <div class="grid 2xl:grid-cols-4 xl:grid-cols-3 sm:grid-cols-2 grid-cols-1 gap-6 w-full">
+                            <template v-for="(student, index) in students.data">
                                 <!-- Badge "Nuevo" en la parte superior izquierda -->
-                                <div v-if="student.new_student"  class="absolute top-6 left-10 transform -translate-x-1/2 -translate-y-1/2 bg-red-500 text-white text-xs font-bold py-1 px-3 rounded ">
+                                <!-- <div v-if="student.new_student"  class="absolute top-6 left-10 transform -translate-x-1/2 -translate-y-1/2 bg-red-500 text-white text-xs font-bold py-1 px-3 rounded ">
                                     Nuevo
-                                </div>
-                                <div class="w-full max-w-sm bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
-                                    <div class="flex justify-end px-4 pt-4">
-                                        <div class="dropdown">
-                                            <Popper :placement="store.rtlClass === 'rtl' ? 'bottom-start' : 'bottom-end'" offsetDistance="0" class="align-middle">
-                                                <button type="button" class="btn p-0 rounded-none border-0 shadow-none dropdown-toggle text-black dark:text-white-dark hover:text-primary dark:hover:text-primary">
-                                                    <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 3">
-                                                        <path d="M2 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm6.041 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM14 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Z"/>
-                                                    </svg>
-                                                </button>
-                                                <template #content="{ close }">
-                                                    <ul @click="close()" class="whitespace-nowrap">
-                                                        <li>
-                                                            <Link :href="route('aca_students_edit', student.id)" type="Button" class="dark:text-white">
-                                                                Editar
+                                </div> -->
+                                <template v-if="student.person">
+                                    <div class="bg-white dark:bg-[#1c232f] rounded-md overflow-hidden text-center shadow relative">
+                                        <div :class="`bg-white/40 rounded-t-md bg-[url('/themes/vristo/images/notification-bg.png')] bg-center bg-cover p-6 pb-0`">
+                                            <template v-if="student.person.image">
+                                                <img :src="getImage(student.person.image)" class="object-contain w-4/5 max-h-40 mx-auto" :alt="student.person.formatted_name"/>
+                                            </template>
+                                            <template v-else>
+                                                <img :src="'https://ui-avatars.com/api/?name='+student.person.formatted_name+'&rounded=false'" class="object-contain w-4/5 max-h-40 mx-auto" :alt="student.person.formatted_name"/>
+                                            </template>
+                                        </div>
+                                        <div class="px-6 pb-24 -mt-10 relative">
+                                            <div class="shadow-md bg-white dark:bg-gray-900 rounded-md px-2 py-4">
+                                                <div class="text-xl">{{ student.person.formatted_name }}</div>
+                                                <div class="text-white-dark">{{ student.role }}</div>
+                                                <div class="flex items-center justify-between flex-wrap mt-6 gap-3">
+                                                    <div class="flex-auto">
+                                                        <div class="text-info">{{ student.countCourses ?? 0 }}</div>
+                                                        <div>Cursos</div>
+                                                    </div>
+                                                    <div class="flex-auto">
+                                                        <div class="text-info">{{ student.countSubscriptions ?? 0 }}</div>
+                                                        <div>Suscripciones</div>
+                                                    </div>
+                                                    <div class="flex-auto">
+                                                        <div class="text-info">{{ student.countCertificates ?? 0 }}</div>
+                                                        <div>Certificados</div>
+                                                    </div>
+                                                </div>
+                                                <div class="mt-4">
+                                                    <ul class="flex space-x-4 rtl:space-x-reverse items-center justify-center">
+                                                        <li v-can="'aca_estudiante_editar'">
+                                                            <Link :href="route('aca_students_edit', student.id)" v-tippy="{ content: 'Editar', placement: 'bottom'}" class="btn btn-outline-primary p-0 h-7 w-7 rounded-full">
+                                                                <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+                                                                    <path fill="currentColor" d="M362.7 19.3L314.3 67.7 444.3 197.7l48.4-48.4c25-25 25-65.5 0-90.5L453.3 19.3c-25-25-65.5-25-90.5 0zm-71 71L58.6 323.5c-10.4 10.4-18 23.3-22.2 37.4L1 481.2C-1.5 489.7 .8 498.8 7 505s15.3 8.5 23.7 6.1l120.3-35.4c14.1-4.2 27-11.8 37.4-22.2L421.7 220.3 291.7 90.3z"/>
+                                                                </svg>
                                                             </Link>
                                                         </li>
                                                         <li v-can="'aca_estudiante_cobrar'">
-                                                            <Link :href="route('aca_student_invoice', student.id)" type="Button" class="text-warning">
-                                                                Cobrar
+                                                            <Link :href="route('aca_student_invoice', student.id)" v-tippy="{ content: 'Cobrar', placement: 'bottom'}" class="btn btn-outline-primary p-0 h-7 w-7 rounded-full">
+                                                                <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+                                                                    <path fill="currentColor" d="M64 0C46.3 0 32 14.3 32 32l0 64c0 17.7 14.3 32 32 32l80 0 0 32-57 0c-31.6 0-58.5 23.1-63.3 54.4L1.1 364.1C.4 368.8 0 373.6 0 378.4L0 448c0 35.3 28.7 64 64 64l384 0c35.3 0 64-28.7 64-64l0-69.6c0-4.8-.4-9.6-1.1-14.4L488.2 214.4C483.5 183.1 456.6 160 425 160l-217 0 0-32 80 0c17.7 0 32-14.3 32-32l0-64c0-17.7-14.3-32-32-32L64 0zM96 48l160 0c8.8 0 16 7.2 16 16s-7.2 16-16 16L96 80c-8.8 0-16-7.2-16-16s7.2-16 16-16zM64 432c0-8.8 7.2-16 16-16l352 0c8.8 0 16 7.2 16 16s-7.2 16-16 16L80 448c-8.8 0-16-7.2-16-16zm48-168a24 24 0 1 1 0-48 24 24 0 1 1 0 48zm120-24a24 24 0 1 1 -48 0 24 24 0 1 1 48 0zM160 344a24 24 0 1 1 0-48 24 24 0 1 1 0 48zM328 240a24 24 0 1 1 -48 0 24 24 0 1 1 48 0zM256 344a24 24 0 1 1 0-48 24 24 0 1 1 0 48zM424 240a24 24 0 1 1 -48 0 24 24 0 1 1 48 0zM352 344a24 24 0 1 1 0-48 24 24 0 1 1 0 48z"/>
+                                                                </svg>
                                                             </Link>
                                                         </li>
                                                         <li v-can="'aca_estudiante_listar_comprobantes'">
-                                                            <Link :href="route('aca_student_invoice_list', student.id)" type="Button" class="text-info">
-                                                                Lista de Comprobantes
+                                                            <Link :href="route('aca_student_invoice_list', student.id)" v-tippy="{ content: 'Lista de comprobantes', placement: 'bottom'}" class="btn btn-outline-success p-0 h-7 w-7 rounded-full">
+                                                                <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512">
+                                                                    <path fill="currentColor" d="M64 0C28.7 0 0 28.7 0 64L0 448c0 35.3 28.7 64 64 64l256 0c35.3 0 64-28.7 64-64l0-288-128 0c-17.7 0-32-14.3-32-32L224 0 64 0zM256 0l0 128 128 0L256 0zM64 80c0-8.8 7.2-16 16-16l64 0c8.8 0 16 7.2 16 16s-7.2 16-16 16L80 96c-8.8 0-16-7.2-16-16zm0 64c0-8.8 7.2-16 16-16l64 0c8.8 0 16 7.2 16 16s-7.2 16-16 16l-64 0c-8.8 0-16-7.2-16-16zm128 72c8.8 0 16 7.2 16 16l0 17.3c8.5 1.2 16.7 3.1 24.1 5.1c8.5 2.3 13.6 11 11.3 19.6s-11 13.6-19.6 11.3c-11.1-3-22-5.2-32.1-5.3c-8.4-.1-17.4 1.8-23.6 5.5c-5.7 3.4-8.1 7.3-8.1 12.8c0 3.7 1.3 6.5 7.3 10.1c6.9 4.1 16.6 7.1 29.2 10.9l.5 .1s0 0 0 0s0 0 0 0c11.3 3.4 25.3 7.6 36.3 14.6c12.1 7.6 22.4 19.7 22.7 38.2c.3 19.3-9.6 33.3-22.9 41.6c-7.7 4.8-16.4 7.6-25.1 9.1l0 17.1c0 8.8-7.2 16-16 16s-16-7.2-16-16l0-17.8c-11.2-2.1-21.7-5.7-30.9-8.9c0 0 0 0 0 0c-2.1-.7-4.2-1.4-6.2-2.1c-8.4-2.8-12.9-11.9-10.1-20.2s11.9-12.9 20.2-10.1c2.5 .8 4.8 1.6 7.1 2.4c0 0 0 0 0 0s0 0 0 0s0 0 0 0c13.6 4.6 24.6 8.4 36.3 8.7c9.1 .3 17.9-1.7 23.7-5.3c5.1-3.2 7.9-7.3 7.8-14c-.1-4.6-1.8-7.8-7.7-11.6c-6.8-4.3-16.5-7.4-29-11.2l-1.6-.5s0 0 0 0c-11-3.3-24.3-7.3-34.8-13.7c-12-7.2-22.6-18.9-22.7-37.3c-.1-19.4 10.8-32.8 23.8-40.5c7.5-4.4 15.8-7.2 24.1-8.7l0-17.3c0-8.8 7.2-16 16-16z"/>
+                                                                </svg>
                                                             </Link>
                                                         </li>
+                                                        <li v-can="'aca_estudiante_listar_cuotas_espaciales'">
+                                                            <Link :href="route('aca_student_space_sales_list', student.id)" v-tippy="{ content: 'Cuotas pendientes especiales', placement: 'bottom'}" class="btn btn-outline-info p-0 h-7 w-7 rounded-full">
+                                                                <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+                                                                    <path fill="currentColor" d="M320 48C306.7 48 296 58.7 296 72L296 84L294.2 84C257.6 84 228 113.7 228 150.2C228 183.6 252.9 211.8 286 215.9L347 223.5C352.1 224.1 356 228.5 356 233.7C356 239.4 351.4 243.9 345.8 243.9L272 244C256.5 244 244 256.5 244 272C244 287.5 256.5 300 272 300L296 300L296 312C296 325.3 306.7 336 320 336C333.3 336 344 325.3 344 312L344 300L345.8 300C382.4 300 412 270.3 412 233.8C412 200.4 387.1 172.2 354 168.1L293 160.5C287.9 159.9 284 155.5 284 150.3C284 144.6 288.6 140.1 294.2 140.1L360 140C375.5 140 388 127.5 388 112C388 96.5 375.5 84 360 84L344 84L344 72C344 58.7 333.3 48 320 48zM141.3 405.5L98.7 448L64 448C46.3 448 32 462.3 32 480L32 544C32 561.7 46.3 576 64 576L384.5 576C413.5 576 441.8 566.7 465.2 549.5L591.8 456.2C609.6 443.1 613.4 418.1 600.3 400.3C587.2 382.5 562.2 378.7 544.4 391.8L424.6 480L312 480C298.7 480 288 469.3 288 456C288 442.7 298.7 432 312 432L384 432C401.7 432 416 417.7 416 400C416 382.3 401.7 368 384 368L231.8 368C197.9 368 165.3 381.5 141.3 405.5z"/>
+                                                                </svg>
+                                                            </Link>
+                                                        </li>
+                                                        <li v-can="'aca_estudiante_eliminar'">
+                                                            <button @click="destroyStudent(student.id)" v-tippy="{ content: 'Eliminar alumno', placement: 'bottom'}" class="btn btn-outline-danger p-0 h-7 w-7 rounded-full">
+                                                                <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+                                                                    <path fill="currentColor" d="M232.7 69.9C237.1 56.8 249.3 48 263.1 48L377 48C390.8 48 403 56.8 407.4 69.9L416 96L512 96C529.7 96 544 110.3 544 128C544 145.7 529.7 160 512 160L128 160C110.3 160 96 145.7 96 128C96 110.3 110.3 96 128 96L224 96L232.7 69.9zM128 208L512 208L512 512C512 547.3 483.3 576 448 576L192 576C156.7 576 128 547.3 128 512L128 208zM216 272C202.7 272 192 282.7 192 296L192 488C192 501.3 202.7 512 216 512C229.3 512 240 501.3 240 488L240 296C240 282.7 229.3 272 216 272zM320 272C306.7 272 296 282.7 296 296L296 488C296 501.3 306.7 512 320 512C333.3 512 344 501.3 344 488L344 296C344 282.7 333.3 272 320 272zM424 272C410.7 272 400 282.7 400 296L400 488C400 501.3 410.7 512 424 512C437.3 512 448 501.3 448 488L448 296C448 282.7 437.3 272 424 272z"/>
+                                                                </svg>
+                                                            </button>
+                                                        </li>
                                                     </ul>
-                                                </template>
-                                            </Popper>
+                                                </div>
+                                            </div>
+                                            <div class="mt-6 grid grid-cols-1 gap-4 ltr:text-left rtl:text-right">
+                                                <div v-if="student.person.country" class="flex items-center">
+                                                    <div class="flex-none ltr:mr-2 rtl:ml-2">País :</div>
+                                                    <div class="flex gap-2 truncate text-white-dark">
+                                                        <span>{{ student.person.country.description }}</span>
+                                                        <img :src="getImageFlag(student.person.country.image)" class="w-4 h-4" />
+                                                    </div>
+                                                </div>
+                                                <div class="flex items-center">
+                                                    <div class="flex-none ltr:mr-2 rtl:ml-2">Num. de identificación :</div>
+                                                    <div class="truncate text-white-dark">{{ student.person.number }}</div>
+                                                </div>
+                                                <div class="flex items-center">
+                                                    <div class="flex-none ltr:mr-2 rtl:ml-2">Email :</div>
+                                                    <div class="truncate text-white-dark">{{ student.person.email }}</div>
+                                                    <button v-can="'aca_estudiante_enviar_correo_acceso'" @click="sendAccessMail(student.person.id, student.person.email)" v-tippy="{ content: 'Enviar correo de Acceso', placement: 'bottom'}" class="btn btn-outline-info p-0 h-6 w-6 rounded-full ltr:ml-2 rtl:mr-2">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><path d="M64 112c0-26.5 21.5-48 48-48l416 0c26.5 0 48 21.5 48 48l0 81.4c-24.4-11.2-51.4-17.4-80-17.4-87.7 0-161.7 58.8-184.7 139.2-7.1-1.3-14.1-4.2-20.1-8.8l-208-156C71.1 141.3 64 127.1 64 112zM304 368c0 28.6 6.2 55.6 17.4 80L128 448c-35.3 0-64-28.7-64-64l0-188 198.4 148.8c12.6 9.4 26.9 15.4 41.7 17.9 0 1.8-.1 3.5-.1 5.3zm48 0a144 144 0 1 1 288 0 144 144 0 1 1 -288 0zm201.4-60.9c-7.1-5.2-17.2-3.6-22.4 3.5l-53 72.9-26.8-26.8c-6.2-6.2-16.4-6.2-22.6 0s-6.2 16.4 0 22.6l40 40c3.3 3.3 7.9 5 12.6 4.6s8.9-2.8 11.7-6.5l64-88c5.2-7.1 3.6-17.2-3.5-22.3z"/></svg>
+                                                    </button>
+                                                    <button @click="sendPasswordRecoveryMail(student.person.id)" v-tippy="{ content: 'Enviar recuperacion de contraseña', placement: 'bottom'}" class="btn btn-outline-warning p-0 h-6 w-6 rounded-full ltr:ml-2 rtl:mr-2">
+                                                        <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+                                                            <path fill="currentColor" d="M336 352c97.2 0 176-78.8 176-176S433.2 0 336 0S160 78.8 160 176c0 18.7 2.9 36.8 8.3 53.7L7 391c-4.5 4.5-7 10.6-7 17v80c0 13.3 10.7 24 24 24h80c13.3 0 24-10.7 24-24v-40h40c13.3 0 24-10.7 24-24v-40h40c6.4 0 12.5-2.5 17-7l33.3-33.3c16.9 5.4 35 8.3 53.7 8.3zM376 96a40 40 0 1 1 0 80 40 40 0 1 1 0-80z"/>
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                                <div class="flex items-center">
+                                                    <div class="flex-none ltr:mr-2 rtl:ml-2">Teléfono :</div>
+                                                    <div class="text-white-dark">{{ student.person.telephone }}</div>
+                                                </div>
+                                                <div class="flex items-center">
+                                                    <div class="flex-none ltr:mr-2 rtl:ml-2">Dirección :</div>
+                                                    <div class="text-white-dark">{{ student.person.address }}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="mt-6 flex gap-4 absolute bottom-0 w-full ltr:left-0 rtl:right-0 p-6">
+                                            <Link v-can="'aca_estudiante_matricular'" :href="route('aca_students_registrations_create',student.id)" class="btn btn-outline-primary w-1/2">Matriculas</Link>
+                                            <Link v-can="'aca_estudiante_certificados_crear'" :href="route('aca_students_certificates_create',student.id)" class="btn btn-outline-danger w-1/2">Certificados</Link>
                                         </div>
                                     </div>
-                                    <div class="flex flex-col items-center pb-10">
-                                        <template v-if="student.people_image">
-                                            <img :src="getImage(student.people_image)" style="width: 96px; height: 96px;" class="mb-3 rounded-full shadow-lg" :alt="student.full_name"/>
-                                        </template>
-                                        <template v-else>
-                                            <img :src="'https://ui-avatars.com/api/?name='+student.full_name+'&size=96&rounded=true'" class="w-24 h-24 mb-3 rounded-full shadow-lg" :alt="student.full_name"/>
-                                        </template>
-                                        <h5 class="mb-1 text-xl font-medium text-gray-900 dark:text-white">{{ student.number }}</h5>
-                                        <span class="text-sm text-gray-500 dark:text-gray-400 p-2">{{ student.full_name }}</span>
-                                        <div class="flex mt-4 space-x-3 mb-2 md:mt-6">
-                                            <Link :href="route('aca_students_registrations_create',student.id)" class="inline-flex items-center px-4 py-2 text-sm font-medium text-center text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">Matriculas</Link>
-                                            <Link v-can="'aca_estudiante_certificados_crear'" :href="route('aca_students_certificates_create',student.id)" class="inline-flex items-center px-4 py-2 text-sm font-medium text-center text-gray-900 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-200 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-700 dark:focus:ring-gray-700">Certificados</Link>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                                </template>
+                            </template>
                         </div>
                         <div>
                             <Pagination :data="students" />
@@ -303,5 +605,29 @@
                 </button>
             </template>
         </ModalLarge>
+        <ModalStatus :show="displayModalExportStatus" :onClose="closeModalExportStatus">
+            <template #title>Estado de Exportación</template>
+            <template #content>
+                <div v-if="mensajeExporting.length == 0">
+                    <span class="mr-2">Iniciando</span>
+                    <span class="animate-[ping_1.5s_0.5s_ease-in-out_infinite]">.</span>
+                    <span class="animate-[ping_1.5s_0.7s_ease-in-out_infinite]">.</span>
+                    <span class="animate-[ping_1.5s_0.9s_ease-in-out_infinite]">.</span>
+                </div>
+                <div v-for="(msg, inx) in mensajeExporting" class="space-y-4">
+                    <div v-if="msg.success" class="text-[#9CA3AF]">{{ msg.label }}</div>
+                    <div v-if="!msg.success" class="text-[#FFD60A]">{{ msg.label }}</div>
+                    <div v-if="msg.path" class="flex justify-center">
+                        <a :href="msg.path" type="button" class="btn btn-primary text-xs btn-sm uppercase" target="_blank">Descargar</a>
+                    </div>
+                    <div v-if="isExporting">
+                        <span class="mr-2">Cargando</span>
+                        <span class="animate-[ping_1.5s_0.5s_ease-in-out_infinite]">.</span>
+                        <span class="animate-[ping_1.5s_0.7s_ease-in-out_infinite]">.</span>
+                        <span class="animate-[ping_1.5s_0.9s_ease-in-out_infinite]">.</span>
+                    </div>
+                </div>
+            </template>
+        </ModalStatus>
     </AppLayout>
 </template>

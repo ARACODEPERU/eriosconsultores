@@ -204,7 +204,7 @@
     } else {
         $logo = public_path('storage' . DIRECTORY_SEPARATOR . $company->logo_document);
     }
-
+    $bankAccounts = \App\Models\BankAccount::with('bank')->where('invoice_show',true)->get();
 @endphp
 
 <body>
@@ -270,7 +270,13 @@
                 </div>
                 <div class="detail" style="font-size: 12px">
                     <strong>Dirección: </strong>
-                    {{ $document->getClient()->getAddress() }}
+                    @php
+                        $clientAddress = $document->getClient()->getAddress();
+                        $clientAddressText = is_object($clientAddress) && method_exists($clientAddress, 'getDireccion')
+                            ? $clientAddress->getDireccion()
+                            : ($clientAddress ?? '');
+                    @endphp
+                    {{ $clientAddressText }}
                 </div>
                 <div class="detail" style="font-size: 12px">
                     <strong>Fecha Emisión: </strong>
@@ -282,6 +288,14 @@
                     {{ $extra['name'] }} : {{ $extra['value'] }}<br />
                 @endforeach
             </div>
+            @php
+                $documentDiscountTotal = 0;
+                foreach ($document->getDetails() as $detail) {
+                    $documentDiscountTotal += method_exists($detail, 'getDescuento')
+                        ? (float) ($detail->getDescuento() ?? 0)
+                        : 0;
+                }
+            @endphp
             <table style="font-size: 11px; width: 100%;border: 0px; border-collapse: collapse; ">
                 <thead>
                     <tr>
@@ -297,6 +311,11 @@
                 </thead>
                 <tbody>
                     @foreach ($document->getDetails() as $item)
+                        @php
+                            $itemDiscount = method_exists($item, 'getDescuento')
+                                ? (float) ($item->getDescuento() ?? 0)
+                                : 0;
+                        @endphp
                         <tr>
                             <td align="center" style="padding: 4px 0px 4px 0px">
                                 {{ $item->getCantidad() }}
@@ -306,6 +325,9 @@
                             </td>
                             <td align="left" style="padding: 4px 0px 4px 0px">
                                 {{ $item->getCodProducto() }} - {{ $item->getDescripcion() }}
+                                @if ($itemDiscount > 0)
+                                    <br><span style="font-size: 10px">Desc. SUNAT: S/ {{ number_format($itemDiscount, 2, '.', ',') }}</span>
+                                @endif
                             </td>
                             <td align="right" style="padding: 4px 0px 4px 0px">
                                 S/ {{ number_format($item->getMtoPrecioUnitario(), 2, '.', ',') }}
@@ -332,6 +354,14 @@
                             S/ {{ number_format($document->getMtoIGV(), 2, '.', ',') }}
                         </td>
                     </tr>
+                    @if ($documentDiscountTotal > 0)
+                        <tr>
+                            <td width="70%" align="right"><strong>Descuento:</strong></td>
+                            <td width="30%" align="right">
+                                S/ {{ number_format($documentDiscountTotal, 2, '.', ',') }}
+                            </td>
+                        </tr>
+                    @endif
                     <tr>
                         <td width="70%" align="right"><strong>Precio Venta:</strong></td>
                         <td width="30%" align="right">
@@ -370,13 +400,65 @@
                         </td>
                     </tr>
                 </table>
-                <div class="break">
-                    *************************************
-                </div>
-                <br /><br />
-                <p class="centrado">¡GRACIAS POR SU COMPRA!</p>
             </div>
         </div>
+    </div>
+    <div>
+        <table style="width: 100%; border-collapse: collapse;">
+            <tbody>
+                {{-- El bucle foreach crea una nueva fila (<tr>) para cada cuenta bancaria --}}
+                @foreach ($bankAccounts as $account)
+                    <tr>
+                        {{-- La única celda (<td>) por fila que contendrá toda la información de la cuenta --}}
+                        <td style="padding: 8px;"> {{-- Añadimos padding a la celda principal --}}
+                            <div style="border: 1px solid black;"> {{-- Contenedor con borde para cada cuenta --}}
+                                <table style="width: 100%; font-size: 0.75rem; border-collapse: collapse;">
+                                    <thead>
+                                        <tr>
+                                            <td style="border-bottom: 1px solid black; padding-bottom: 8px; padding-left: 12px; font-weight: bold; color: #4a5568;">
+                                                {{-- Tabla interna para la imagen y los dos textos --}}
+                                                <table>
+                                                    <tr>
+                                                        <td style="font-size: 0.60rem; vertical-align: top;">
+                                                            {{ $account->description }}
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="vertical-align: top;">
+                                                            {{ $account->bank->full_name }}
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td style="padding-top: 8px; padding-bottom: 4px; padding-left: 12px; text-align: left;">
+                                                <b>Número de cuenta:</b> {{ $account->number }}
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding-top: 4px; padding-bottom: 8px; padding-left: 12px; text-align: left;">
+                                                <b>N° de cuenta interbancario (cci):</b> {{ $account->cci }}
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+    <div style="padding: 8px;text-align:center">
+        <br /><br />
+        <div class="break">
+            *************************************
+        </div>
+        <br /><br />
+        <p class="centrado">¡GRACIAS POR SU COMPRA!</p>
     </div>
 </body>
 

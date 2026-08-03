@@ -2,7 +2,10 @@
 
 namespace Modules\Sales\Http\Controllers;
 
+use App\Models\ExcelExportJob;
 use App\Models\Expense;
+use App\Models\Kardex;
+use App\Models\KardexSize;
 use App\Models\LocalSale;
 use App\Models\PaymentMethod;
 use App\Models\PettyCash;
@@ -12,7 +15,10 @@ use App\Models\SaleDocument;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Modules\Sales\Jobs\ExportInventoryKardexExcel;
+use Modules\Sales\Services\InventoryKardexQueryService;
 use Inertia\Inertia;
 use PDF;
 use Illuminate\Routing\Controller;
@@ -180,55 +186,43 @@ class ReportController extends Controller
     {
         $petty_cash = PettyCash::find($petty_cash_id);
 
-        $tickets = Sale::join('local_sales', 'sales.local_id', 'local_sales.id')
-            ->join('sale_products', 'sale_products.sale_id', 'sales.id')
-            ->join('products', 'products.id', 'sale_products.product_id')
-            ->select(
-                'sales.*',
-                'products.interne',
-                'products.description as product_description',
-                'products.image',
-                'sale_products.price as price',
-                'sale_products.quantity as quantity'
-            )
+        $tickets = Sale::with('establishment')
+            ->with('document.serie.documentType')
             ->where('sales.petty_cash_id', '=', $petty_cash_id)
             ->where('sales.status', '=', 1)
             ->where('physical', 1)
-            ->orderBy('id', 'desc')
-            ->orderBy('sale_products.id', 'desc')
-            ->get();
-        //dd($tickets);
-        $physicals = Sale::join('local_sales', 'sales.local_id', 'local_sales.id')
-            ->join('sale_physical_documents', 'sale_physical_documents.sale_id', 'sales.id')
-            ->select(
-                'sales.*',
-                'local_sales.description',
-                'sale_physical_documents.products'
-            )
-            ->where('sales.petty_cash_id', '=', $petty_cash_id)
-            ->where('sales.status', '=', 1)
-            ->where('physical', 3)
-            ->where('sale_physical_documents.status', '<>', 'A')
+            ->whereHas('document', function ($query) { // 'document' es el nombre de tu relación en el modelo Sale
+                $query->whereIn('invoice_type_doc', ['80'])
+                    ->where('status', 1);
+            })
             ->orderBy('id', 'desc')
             ->get();
 
-        $documents = Sale::join('local_sales', 'sales.local_id', 'local_sales.id')
-            ->join('sale_documents', 'sale_documents.sale_id', 'sales.id')
-            ->join('sale_document_items', 'sale_document_items.document_id', 'sale_documents.id')
-            ->join('products', 'products.id', 'sale_document_items.product_id')
-            ->select(
-                'sales.*',
-                'sale_document_items.cod_product AS interne',
-                'sale_document_items.decription_product as product_description',
-                'products.image',
-                'sale_document_items.price_sale as price',
-                'sale_document_items.quantity as quantity'
-            )
+        $physicals = Sale::with('establishment')
+            ->with('physicalDocument.saleDocumentType')
+            ->where('sales.petty_cash_id', '=', $petty_cash_id)
+            ->where('sales.status', '=', 1)
+            ->where('physical', 3)
+            ->whereHas('physicalDocument', function ($query) { // 'document' es el nombre de tu relación en el modelo Sale
+                $query->whereIn('document_type', ['1','2'])
+                    ->where('status', '<>', 'A');
+            })
+            ->orderBy('id', 'desc')
+            ->get();
+
+        $documents = Sale::with('establishment')
+            ->with('document.serie.documentType')
             ->where('sales.petty_cash_id', '=', $petty_cash_id)
             ->where('sales.status', '=', 1)
             ->orderBy('id', 'desc')
-            ->orderBy('sale_document_items.id', 'desc')
+            ->where('physical', 2)
+            ->whereHas('document', function ($query) { // 'document' es el nombre de tu relación en el modelo Sale
+                $query->whereIn('invoice_type_doc', ['03','01'])
+                    ->where('status', 1)
+                        ->whereNotIn('invoice_status', ['Rechazada']); // Estado de la factura
+            })
             ->get();
+
 
 
         $total = 0;
@@ -266,6 +260,122 @@ class ReportController extends Controller
         return Inertia::render('Sales::Reports/InventoryReportProducts', [
             'locals' => LocalSale::all()
         ]);
+    }
+
+    public function inventoryKardexReport()
+    {
+        return Inertia::render('Sales::Reports/InventoryKardexReport', [
+            'locals' => LocalSale::orderBy('description')->get(['id', 'description']),
+            'products' => Product::where('is_product', true)
+                ->orderBy('description')
+                ->get(['id', 'interne', 'description', 'presentations']),
+        ]);
+    }
+
+    public function inventoryKardexReportData(Request $request, InventoryKardexQueryService $queryService)
+    {
+        $filters = $queryService->normalizeFilters($request->all());
+
+        $rows = $queryService->buildQuery($filters)
+            ->limit(1000)
+            ->get()
+            ->map(fn ($row) => $queryService->mapRow($row));
+
+        $positive = $rows->where('quantity', '>', 0)->sum('quantity');
+        $negative = abs($rows->where('quantity', '<', 0)->sum('quantity'));
+
+        return response()->json([
+            'rows' => $rows->values(),
+            'summary' => [
+                'total_movements' => $rows->count(),
+                'net_quantity' => round($rows->sum('quantity'), 2),
+                'entries_in' => round($positive, 2),
+                'entries_out' => round($negative, 2),
+            ],
+        ]);
+    }
+
+    public function inventoryKardexReportExport(Request $request, InventoryKardexQueryService $queryService)
+    {
+        $filters = $queryService->normalizeFilters($request->all());
+
+        $excelExportJob = ExcelExportJob::create([
+            'user_id' => Auth::id(),
+            'report_type' => 'inventory_kardex',
+            'status' => 'pending',
+            'filters' => $filters,
+        ]);
+
+        ExportInventoryKardexExcel::dispatch(
+            $filters,
+            $excelExportJob->id,
+            Auth::id()
+        )->onQueue('exports');
+
+        return response()->json([
+            'message' => 'La exportación se ha iniciado. Se le notificará cuando esté lista para descargar.',
+            'job_id' => $excelExportJob->id,
+        ], 202);
+    }
+
+    public function inventoryKardexExportStatus($id)
+    {
+        $excelExportJob = ExcelExportJob::where('id', $id)
+            ->where('user_id', Auth::id())
+            ->where('report_type', 'inventory_kardex')
+            ->first();
+
+        if (! $excelExportJob) {
+            return response()->json(['message' => 'Estado de exportación no encontrado o no autorizado.'], 404);
+        }
+
+        $exportMeta = $excelExportJob->filters['_export_meta'] ?? [];
+
+        return response()->json([
+            'id' => $excelExportJob->id,
+            'status' => $excelExportJob->status,
+            'progress' => $excelExportJob->progress,
+            'file_name' => $excelExportJob->file_name,
+            'download_url' => $excelExportJob->download_url,
+            'error_message' => $excelExportJob->error_message,
+            'processed_rows' => $exportMeta['processed_rows'] ?? null,
+            'total_rows' => $exportMeta['total_rows'] ?? null,
+        ]);
+    }
+
+    public function inventoryKardexReportSizes(Request $request)
+    {
+        $productId = (int) $request->input('product_id', 0);
+        $localId = (int) $request->input('local_id', 0);
+
+        if ($productId <= 0) {
+            return response()->json(['sizes' => []]);
+        }
+
+        $product = Product::where('id', $productId)->where('is_product', true)->first();
+        if (! $product || ! $product->presentations) {
+            return response()->json(['sizes' => []]);
+        }
+
+        $query = KardexSize::query()
+            ->where('product_id', $productId)
+            ->select('size')
+            ->distinct();
+
+        if ($localId > 0) {
+            $query->where('local_id', $localId);
+        }
+
+        $sizes = $query->orderBy('size')->pluck('size')->values();
+
+        if ($sizes->isEmpty() && $product->sizes) {
+            $decoded = json_decode($product->sizes, true);
+            if (is_array($decoded)) {
+                $sizes = collect($decoded)->pluck('size')->filter()->unique()->sort()->values();
+            }
+        }
+
+        return response()->json(['sizes' => $sizes]);
     }
 
 
@@ -506,13 +616,15 @@ class ReportController extends Controller
         });
 
         if ($startDate) {
-            $documentsSales = $documentsSales->whereBetween('invoice_broadcast_date', [$startDate, $endDate]);
+            $documentsSales = $documentsSales->whereDate('invoice_broadcast_date','>=' ,$startDate)
+                ->whereDate('invoice_broadcast_date','<=', $endDate);
         } else {
-            $documentsSales = $documentsSales->whereDate('invoice_broadcast_date', $endDate);
+            $documentsSales = $documentsSales->whereDate('invoice_broadcast_date','=', $endDate);
         }
 
         if ($startDate) {
-            $documentsNotes = $documentsNotes->whereBetween('created_at', [$startDate, $endDate]);
+            $documentsNotes = $documentsNotes->whereDate('created_at','>=' ,$startDate)
+                ->whereDate('created_at','<=', $endDate);
         } else {
             $documentsNotes = $documentsNotes->whereDate('created_at', $endDate);
         }

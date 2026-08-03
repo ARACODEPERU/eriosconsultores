@@ -1,14 +1,19 @@
 <?php
 
+use App\Http\Controllers\ComplaintsBookAttentionController;
+use App\Http\Controllers\ComplaintsBookController;
 use Illuminate\Support\Facades\Route;
+use Modules\CRM\Http\Controllers\CrmChatbotController;
 use Modules\CRM\Http\Controllers\CrmChatController;
 use Modules\CRM\Http\Controllers\CrmContactsController;
 use Modules\CRM\Http\Controllers\CRMController;
 use Modules\CRM\Http\Controllers\CrmConversationController;
+use Modules\CRM\Http\Controllers\CrmExportController;
 use Modules\CRM\Http\Controllers\CrmIaController;
 use Modules\CRM\Http\Controllers\CrmInformationBankController;
 use Modules\CRM\Http\Controllers\CrmMessagesController;
 use Modules\CRM\Http\Controllers\CrmMailboxController;
+use Modules\CRM\Http\Controllers\CrmNewRecruitmentsController;
 use Modules\CRM\Http\Controllers\CrmPersonController;
 
 /*
@@ -22,7 +27,7 @@ use Modules\CRM\Http\Controllers\CrmPersonController;
 |
 */
 
-Route::middleware(['auth', 'verified'])->prefix('crm')->group(function () {
+Route::middleware(['auth', 'verified', 'user_activity_log'])->prefix('crm')->group(function () {
     Route::middleware(['middleware' => 'permission:crm_dashboard'])
         ->get('dashboard', [CRMController::class, 'index'])
         ->name('crm_dashboard');
@@ -76,7 +81,7 @@ Route::middleware(['auth', 'verified'])->prefix('crm')->group(function () {
         ->name('crm_upload_message_file');
 
     Route::middleware(['middleware' => 'permission:crm_clientes_preguntas_ia'])
-        ->post('contacts/docents/chat', [CrmContactsController::class, 'contactsDocentsChat'])
+        ->get('contacts/docents/chat', [CrmContactsController::class, 'contactsDocentsChat'])
         ->name('crm_contacts_docents_chat');
 
     Route::get('download-file/{message_id}', [CrmMessagesController::class, 'downloadMessageFile'])->name('crm_download_message_file');
@@ -168,4 +173,24 @@ Route::middleware(['auth', 'verified'])->prefix('crm')->group(function () {
     Route::middleware(['middleware' => 'permission:crm_dudas_comunes_edicion'])
         ->delete('common-questions/{id}/destroy', [CrmInformationBankController::class, 'destroy'])
         ->name('crm_common_questions_destroy');
+
+    Route::middleware(['middleware' => 'permission:crm_chatbot'])
+        ->get('chatbot/index', [CrmChatbotController::class, 'index'])
+        ->name('crm_dasboard_chatbot');
+
+    Route::middleware(['middleware' => 'permission:crm_nuevas_captaciones'])
+        ->get('new_catchments', [CrmNewRecruitmentsController::class, 'index'])
+        ->name('crm_new_catchments');
+
+    Route::middleware(['middleware' => 'permission:crm_nuevas_captaciones'])
+        ->post('new_catchments/list', [CrmNewRecruitmentsController::class, 'getCatchments'])
+        ->name('crm_new_catchments_list');
+
+    Route::post('new_catchments/export', [CrmNewRecruitmentsController::class, 'exportCrmContacts'])
+        ->name('crm_new_catchments_export');
+    Route::get('/export-status/{id}', [CrmExportController::class, 'exportStatus'])->name('crm_export_status');
+
+    Route::get('complaints-book', [ComplaintsBookController::class, 'index'])->name('complaints_book_list');
+    Route::post('complaints-book/attention/store', [ComplaintsBookAttentionController::class, 'store'])->name('complaints_book_attention_store');
+    Route::delete('complaints-book/attention/{id}/destroy', [ComplaintsBookAttentionController::class, 'destroy'])->name('complaints_book_attention_destroy');
 });

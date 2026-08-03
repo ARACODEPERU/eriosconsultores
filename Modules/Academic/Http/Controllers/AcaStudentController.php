@@ -2,6 +2,7 @@
 
 namespace Modules\Academic\Http\Controllers;
 
+use App\Models\Country;
 use App\Models\District;
 use App\Models\Industry;
 use App\Models\Parameter;
@@ -19,6 +20,9 @@ use Modules\Academic\Entities\AcaStudent;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\Password;
 use Modules\Academic\Entities\AcaCapRegistration;
 use Modules\Academic\Entities\AcaCourse;
 use Modules\Academic\Entities\AcaModule;
@@ -27,8 +31,14 @@ use Modules\Academic\Entities\AcaStudentSubscription;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Modules\Academic\Entities\AcaCertificate;
+use Modules\Academic\Entities\AcaStudentExam;
 use Modules\Academic\Entities\AcaStudentHistory;
+use Modules\Academic\Entities\AcaSubscriptionPayment;
+use Modules\Academic\Entities\AcaStudentAttendance;
+use Modules\Academic\Entities\AcaStudentParticipation;
+use Modules\Academic\Entities\AcaStudentGrade;
 
 class AcaStudentController extends Controller
 {
@@ -38,6 +48,7 @@ class AcaStudentController extends Controller
     private $igv;
     private $top;
     private $icbper;
+    private $displayVideo = false;
 
     /**
      * Display a listing of the resource.
@@ -50,44 +61,53 @@ class AcaStudentController extends Controller
         $this->igv = Parameter::where('parameter_code', 'P000001')->value('value_default');
         $this->top = Parameter::where('parameter_code', 'P000002')->value('value_default');
         $this->icbper = Parameter::where('parameter_code', 'P000004')->value('value_default');
+        $parameterValue = Parameter::where('parameter_code', 'P000019')->value('value_default');
+        if($parameterValue){
+            $this->displayVideo = ($parameterValue === 'true');
+        }
+
     }
 
     public function index()
     {
-        $students = (new AcaStudent())->newQuery();
-        $students = $students->join('people', 'aca_students.person_id', 'people.id')
-            ->select(
-                'aca_students.id',
-                'aca_students.student_code',
-                'people.document_type_id',
-                'people.full_name',
-                'people.number',
-                'people.telephone',
-                'people.email',
-                'people.address',
-                'people.birthdate',
-                'people.image AS people_image',
-                'aca_students.created_at',
-                'aca_students.new_student'
-            );
+        $students = AcaStudent::with([
+            'person.country'
+        ])
+        ->select('aca_students.*',
+            DB::raw('(SELECT COUNT(course_id) FROM aca_cap_registrations WHERE student_id=aca_students.id) as countCourses'),
+            DB::raw('(SELECT COUNT(subscription_id) FROM aca_student_subscriptions WHERE student_id=aca_students.id) as countSubscriptions'),
+            DB::raw('(SELECT COUNT(course_id) FROM aca_certificates WHERE student_id=aca_students.id) as countCertificates')
+        );
+
+        //Filtro de búsqueda
         if (request()->has('search')) {
-            $students->where('people.full_name', 'Like', '%' . request()->input('search') . '%');
+            $searchTerm = request()->input('search');
+
+            $students->whereHas('person', function ($query) use ($searchTerm) {
+                $query->where('full_name', 'LIKE', '%' . $searchTerm . '%')
+                    ->orWhere('email', 'LIKE', '%' . $searchTerm . '%')
+                    ->orWhere('number', '=', $searchTerm);
+            });
         }
 
+        // 📌 Ordenamiento
         if (request()->query('sort')) {
             $attribute = request()->query('sort');
             $sort_order = 'ASC';
+
             if (strncmp($attribute, '-', 1) === 0) {
                 $sort_order = 'DESC';
                 $attribute = substr($attribute, 1);
             }
+
             $students->orderBy($attribute, $sort_order);
         } else {
             $students->latest();
         }
 
+        //Paginación
         $students = $students->paginate(12)->onEachSide(2);
-
+        //dd($students);
         return Inertia::render('Academic::Students/List', [
             'students' => $students,
             'filters' => request()->all('search')
@@ -119,12 +139,15 @@ class AcaStudentController extends Controller
             )
             ->get();
 
+        $countries = Country::orderBy('description')->get();
+
         return Inertia::render('Academic::Students/Create', [
             'identityDocumentTypes' => $identityDocumentTypes,
-            'ubigeo' => $ubigeo,
-            'industrias' => $industrias,
-            'professions' => $professions,
-            'occupations' => $occupations
+            'countries'             => $countries,
+            'ubigeo'                => $ubigeo,
+            'industrias'            => $industrias,
+            'professions'           => $professions,
+            'occupations'           => $occupations
         ]);
     }
 
@@ -149,20 +172,37 @@ class AcaStudentController extends Controller
                 'email'             => 'unique:people,email,' . $update_id . ',id',
                 'email'             => 'unique:users,email,' . ($user ? $user->id  : null) . ',id',
                 'address'           => 'required|max:255',
-                'ubigeo'            => 'required|max:255',
                 'birthdate'         => 'required|',
                 'names'             => 'required|max:255',
                 'father_lastname'   => 'required|max:255',
                 'mother_lastname'   => 'required|max:255',
+                'ubigeo_description'=> 'required|max:255'
+            ],
+            [
+                'email.unique' => 'El email ya esta en uso en usuario o en persona',
+                'ubigeo_description.required' => 'La ciudad es nesesaria',
+                'ubigeo_description.max' => 'Excede el numero de caracteres permitidos'
             ]
         );
 
-        // $path = 'img' . DIRECTORY_SEPARATOR . 'imagen-no-disponible.jpeg';
-        // $destination = 'uploads' . DIRECTORY_SEPARATOR . 'products';
+        $country_id = $request->get('country_id') ?? 1;
+
+        if($country_id == 1){
+            $this->validate(
+                $request,
+                [
+                    'ubigeo' => 'required|max:255',
+                ],
+                [
+                    'ubigeo.required' => 'La ciudad es nesesaria'
+                ]
+            );
+        }
+
         $path = null;
         $destination = 'uploads/students';
         $file = $request->file('image');
-
+        //dd($request->get('industry_id'));
         $per = Person::updateOrCreate(
             [
                 'document_type_id'      => $request->get('document_type_id'),
@@ -191,6 +231,7 @@ class AcaStudentController extends Controller
                 'ocupacion'             => $request->get('occupation_id') ? $request->get('occupation_id')['description'] : null,
                 'profession'            => $request->get('profession_id') ? $request->get('profession_id')['description'] : null,
                 'industry'              => $request->get('industry_id') ? $request->get('industry_id')['description'] : null,
+                'country_id'            => $request->get('country_id') ?? 1,
             ]
         );
 
@@ -221,7 +262,8 @@ class AcaStudentController extends Controller
                 'information'   => $request->get('description'),
                 'avatar'        => $path,
                 'person_id'     => $per->id,
-                'local_id'      => 1
+                'local_id'      => 1,
+                'tour_completed'=> false
             ]
         );
 
@@ -276,10 +318,13 @@ class AcaStudentController extends Controller
             ->orderBy('id')
             ->get();
 
+        $countries = Country::orderBy('description')->get();
+
         $student->image_preview = $student->image;
 
         return Inertia::render('Academic::Students/Edit', [
             'identityDocumentTypes' => $identityDocumentTypes,
+            'countries'             => $countries,
             'ubigeo'                => $ubigeo,
             'student'               => $student,
             'industrias'            => $industrias,
@@ -305,41 +350,54 @@ class AcaStudentController extends Controller
             $request,
             [
                 'document_type_id'  => 'required',
-                'number'            => 'required|max:12',
-                'number'            => 'unique:people,number,' . $person_id . ',id,document_type_id,' . $request->get('document_type_id'),
+                'number' => [
+                            'required',
+                            'max:12',
+                            "unique:people,number,{$person_id},id,document_type_id," . $request->get('document_type_id')
+                            ],
                 'telephone'         => 'required|max:12',
                 'email'             => 'required|email|max:255',
                 'email'            => 'unique:people,email,' . $person_id . ',id',
-                'email'            => 'unique:users,email,' . $user->id . ',id',
-                'address'           => 'required|max:255',
-                'ubigeo'            => 'required|max:255',
                 'birthdate'         => 'required|',
                 'names'             => 'required|max:255',
                 'father_lastname'   => 'required|max:255',
                 'mother_lastname'   => 'required|max:255',
+                'ubigeo_description'=> 'required|max:255'
+            ],
+            [
+                'email.unique' => 'El email ya esta en uso en usuario o en persona',
+                'ubigeo_description.required' => 'La ciudad es nesesaria',
+                'ubigeo_description.max' => 'Excede el numero de caracteres permitidos'
             ]
         );
 
-        // $path = 'img' . DIRECTORY_SEPARATOR . 'imagen-no-disponible.jpeg';
-        // $destination = 'uploads' . DIRECTORY_SEPARATOR . 'products';
-        $path = null;
-        $destination = 'uploads/students';
-        $file = $request->file('image');
-        if ($file) {
-            $original_name = strtolower(trim($file->getClientOriginalName()));
-            $original_name = str_replace(" ", "_", $original_name);
-            $extension = $file->getClientOriginalExtension();
-            $file_name = trim($request->get('number')) . '.' . $extension;
-            $path = $request->file('image')->storeAs(
-                $destination,
-                $file_name,
-                'public'
+        if($user){
+            $this->validate(
+                $request,
+                [
+                    'email' => 'unique:users,email,' . $user->id . ',id',
+                ]
             );
-            //$path = asset('storage/' . $path);
-            $path =  $path;
         }
 
-        Person::find($person_id)->update([
+        $country_id = $request->get('country_id') ?? 1;
+
+        if($country_id == 1){
+            $this->validate(
+                $request,
+                [
+                    'ubigeo' => 'required|max:255',
+                ],
+                [
+                    'ubigeo.required' => 'La ciudad es nesesaria'
+                ]
+            );
+        }
+
+
+        $person = Person::find($person_id);
+
+        $person->update([
             'document_type_id'      => $request->get('document_type_id'),
             'short_name'            => trim($request->get('names')),
             'full_name'             => trim($request->get('father_lastname') . ' ' .  $request->get('mother_lastname') . ' ' . $request->get('names')),
@@ -347,7 +405,6 @@ class AcaStudentController extends Controller
             'number'                => trim($request->get('number')),
             'telephone'             => $request->get('telephone'),
             'email'                 => trim($request->get('email')),
-            'image'                 => $path,
             'address'               => $request->get('address'),
             'is_provider'           => false,
             'is_client'             => true,
@@ -364,15 +421,40 @@ class AcaStudentController extends Controller
             'ocupacion'             => $request->get('occupation_id') ? $request->get('occupation_id')['description'] : null,
             'profession'            => $request->get('profession_id') ? $request->get('profession_id')['description'] : null,
             'industry'              => $request->get('industry_id') ? $request->get('industry_id')['description'] : null,
+            'country_id'            => $request->get('country_id') ?? 1,
         ]);
 
-        $user->update([
-            'name'          => $request->get('names'),
-            'email'         => $request->get('email'),
-            //'password'      => Hash::make($request->get('number')),
-            'information'   => $request->get('description'),
-            'avatar'        => $path
-        ]);
+        if($user){
+            $user->update([
+                'name'          => $request->get('names'),
+                'email'         => $request->get('email'),
+                //'password'      => Hash::make($request->get('number')),
+                'information'   => $request->get('description'),
+            ]);
+        }
+
+        $path = null;
+        $destination = 'uploads/students';
+        $file = $request->file('image');
+        if ($file) {
+
+            $original_name = strtolower(trim($file->getClientOriginalName()));
+            $original_name = str_replace(" ", "_", $original_name);
+            $extension = $file->getClientOriginalExtension();
+            $file_name = trim($request->get('number')) . '.' . $extension;
+            $path = $request->file('image')->storeAs(
+                $destination,
+                $file_name,
+                'public'
+            );
+            $person->image = $path;
+            $person->save();
+
+            if($user){
+                $user->avatar = $path;
+                $user->save();
+            }
+        }
 
         AcaStudent::where('person_id', $person_id)->update([
             'student_code'  => $request->get('number'),
@@ -382,21 +464,15 @@ class AcaStudentController extends Controller
             ->with('message', __('Estudiante creado con éxito'));
     }
 
-    /**
-     * Remove the specified resource from storage.
-     * @param int $id
-     * @return Renderable
-     */
-    public function destroy($id)
-    {
-        //
-    }
-
     public function myCourses()
     {
 
         $user = Auth::user();
-        $student_id = AcaStudent::where('person_id', $user->person_id)->value('id');
+        $student = AcaStudent::firstOrCreate(
+            ['person_id' => $user->person_id],
+            ['student_code' => $user->person?->number ?? (string) $user->id, 'new_student' => false]
+        );
+        $student_id = $student->id;
         $courses = [];
         $mycourses = [];
 
@@ -404,9 +480,9 @@ class AcaStudentController extends Controller
             ->where('status', true)
             ->first();
 
-        // También puedes verificar múltiples roles a la vez
+        // roles superiores que no sea alumno pueden ver todos los curso
         if ($user->hasAnyRole(['admin', 'Docente', 'Administrador'])) {
-            $courses = AcaCourse::with('modules.themes.contents')
+            $mycourses = AcaCourse::with('modules.themes.contents')
                 ->with('teacher.person')->where('status', true)
                 ->with('category')
                 ->with('modality')
@@ -416,93 +492,287 @@ class AcaStudentController extends Controller
                     $course->can_view = true; // Campo adicional
                     return $course;
                 });
+
+
         } else {
-            // $courses = AcaCourse::with(['modules.themes.contents', 'modality', 'category', 'teacher.person'])
-            //     ->with('registrations') // Para validar los cursos registrados
-            //     ->get()
-            //     ->map(function ($course) use ($studentSubscribed, $student_id) {
-            //         // Verificar si el curso es gratuito
-            //         $isFree = is_null($course->price) || floatval($course->price) == 0.00;
-            //         $isProgram = $course->type_description == 'Programas de especialización' ? true : false;
-            //         // Verificar si el alumno está registrado en este curso
-            //         $isRegistered = $course->registrations->contains('student_id', $student_id);
-
-            //         // Verificar si el alumno tiene una suscripción activa
-            //         $hasActiveSubscription = $studentSubscribed !== null;
-
-            //         // Lógica para determinar si puede ver
-            //         if ($hasActiveSubscription || $isRegistered || $isFree) {
-            //             if ($isProgram) {
-            //                 if ($isRegistered) {
-            //                     $course->can_view = true;
-            //                 } else {
-            //                     $course->can_view = false;
-            //                 }
-            //             } else {
-            //                 $course->can_view = true;
-            //             }
-            //         } else {
-            //             $course->can_view = false; // Campo adicional
-            //         }
-
-            //         return $course;
-            //     });
-
-            $mycourses = AcaCourse::with('modules.themes.contents')
-                ->with('modality')
-                ->with('teacher.person')->whereHas('registrations', function ($query) use ($student_id) {
-                    $query->where('student_id', $student_id);
-                })->orderBy('id', 'DESC')
-                ->get();
-
-            $result = AcaCourse::with(['modules.themes.contents', 'modality', 'teacher.person'])
-                ->whereDoesntHave('registrations', function ($query) use ($student_id) {
-                    $query->where('student_id', $student_id);
-                })
-                ->get();
-
-            // Agrupar cursos
-            $grouped = [];
-
-            foreach ($result as $course) {
-                if (empty($course->price) || $course->price == 0) {
-                    $grouped['Cursos gratis'][] = $course;
-                } else {
-                    $grouped[$course->type_description][] = $course;
-                }
-            }
-
-            // Ordenar alfabéticamente por clave del grupo
-            ksort($grouped);
-
-            // Transformar al formato deseado
-            $courses = collect($grouped)->map(function ($items, $type_description) {
-                return [
-                    'type_description' => $type_description,
-                    'courses' => $items,
-                ];
-            })->values(); // values() para que los índices sean numéricos
-            //dd($courses);
+            //si es un alumno se tiene que verificar que tenga los accesos nesesarios
+            $mycourses = $this->getAllCoursesWithAccessStatus();
         }
+
+        // Calcular progreso para todos los cursos (sin importar matrícula)
+        $personId = $user->person_id;
+
+        $viewedContentByCourse = AcaStudentHistory::where('person_id', $personId)
+            ->whereIn('course_id', $mycourses->pluck('id'))
+            ->selectRaw('course_id, COUNT(DISTINCT content_id) as total')
+            ->groupBy('course_id')
+            ->pluck('total', 'course_id');
+
+        $mycourses = $mycourses->map(function ($course) use ($viewedContentByCourse, $student_id) {
+            $course->total_activity = $viewedContentByCourse->get($course->id, 0);
+            $course->contents_total = $course->modules->sum(function ($module) {
+                return $module->themes->sum(function ($theme) {
+                    return $theme->contents->reject(fn($c) => $c->is_file == 4)->count();
+                });
+            });
+            $course->auto_certificate = $course->auto_certificate ?? false;
+            $course->certificate_exists = false;
+            if ($course->auto_certificate && $student_id) {
+                $course->certificate_exists = AcaCertificate::where('student_id', $student_id)
+                    ->where('course_id', $course->id)
+                    ->exists();
+            }
+            return $course;
+        });
+
+        // Crear certificados retroactivos para cursos completados sin matrícula
+        foreach ($mycourses as $course) {
+            if ($course->auto_certificate
+                && !$course->certificate_exists
+                && $course->total_activity >= $course->contents_total
+                && $course->contents_total > 0
+            ) {
+                $this->checkAndCreateCertificate($user->id, $course->id);
+                $course->certificate_exists = true;
+            }
+        }
+
+        // Agrupar cursos
+        $grouped = [];
+
+        foreach ($mycourses as $course) {
+            if (empty($course->price) || $course->price == 0) {
+                $grouped['Cursos gratis'][] = $course;
+            } else {
+                $grouped[$course->type_description][] = $course;
+            }
+        }
+
+        // Ordenar alfabéticamente por clave del grupo
+        ksort($grouped);
+
+        // Transformar al formato deseado
+        $courses = collect($grouped)->map(function ($items, $type_description) {
+            return [
+                'type_description' => $type_description,
+                'courses' => $items,
+            ];
+        })->values(); // values() para que los índices sean numéricos
+        //dd($courses);
 
         $certificates = AcaCertificate::with('course')
             ->where('student_id', $student_id)
             ->get();
 
+        $today = Carbon::today();
 
+        $coursesRegistered = AcaCapRegistration::query()
+            ->join('aca_courses', 'aca_cap_registrations.course_id', '=', 'aca_courses.id')
+            ->where('aca_cap_registrations.student_id', $student_id)
+            ->where(function ($query) use ($today) {
+                $query->where('aca_cap_registrations.unlimited', true)
+                    ->orWhere(function ($q) use ($today) {
+                        $q->where('aca_cap_registrations.unlimited', false)
+                            ->whereDate('aca_cap_registrations.date_end', '>=', $today);
+                    });
+            })
+            ->with([
+                'course.modules.themes.contents',
+                'course.modality',
+                'course.teacher.person',
+                'course.category',
+            ])
+            ->orderBy('aca_courses.description')
+            ->get()
+            ->map(function ($registration) use ($student_id, $user) {
+                $course = $registration->course;
+                $course->can_view = true;
 
+                // Total de actividades/contenidos vistos
+                $course->total_activity = AcaStudentHistory::where('person_id', $user->person_id)
+                    ->where('course_id', $registration->course->id)
+                    ->distinct('content_id')
+                    ->count('content_id');
 
+                // Contenido total del curso
+                $course->contents_total = $course->modules->sum(function ($module) {
+                    return $module->themes->sum(function ($theme) {
+                        return $theme->contents->count();
+                    });
+                });
+
+                // Verificar si el curso tiene auto_certificate
+                $course->auto_certificate = $course->auto_certificate ?? false;
+
+                // Verificar si existe certificado (para auto_certificate)
+                $course->certificate_exists = false;
+                if ($course->auto_certificate) {
+                    $course->certificate_exists = AcaCertificate::where('student_id', $student_id)
+                        ->where('course_id', $course->id)
+                        ->exists();
+                }
+
+                // Obtener nota del estudiante (solo si no es auto_certificate)
+                $course->student_grade = null;
+                $course->student_approved = false;
+                if (!$course->auto_certificate) {
+                    $grade = AcaStudentGrade::where('student_id', $student_id)
+                        ->where('course_id', $course->id)
+                        ->first();
+                    if ($grade) {
+                        $course->student_grade = (float) $grade->final_average;
+                        $course->student_approved = $grade->approved ?? ($course->student_grade >= 11);
+                    }
+                }
+
+                return $course;
+            });
+
+        ///dd($coursesRegistered);
         return Inertia::render('Academic::Students/Courses', [
             'mycourses' => $mycourses,
             'courses' => $courses,
             'studentSubscribed' => $studentSubscribed,
-            'certificates' => $certificates
+            'certificates' => $certificates,
+            'P000019' => $this->displayVideo,
+            'coursesRegistered' => $coursesRegistered,
+            'MERCADOPAGO_KEY' => config('services.mercadopago.key')
         ]);
+    }
+
+    public function getAllCoursesWithAccessStatus()
+    {
+        $user = Auth::user();
+        $studentId = AcaStudent::where('person_id', $user->person_id)->value('id');
+
+        $today = Carbon::today();
+
+        // 1. Verificar si el estudiante tiene una suscripción activa
+        $hasActiveSubscription = AcaStudentSubscription::where('student_id', $studentId)
+            ->where(function ($query) use ($today) {
+                $query->where('status', true)
+                    ->orWhere(function ($q) use ($today) {
+                        $q->whereDate('date_start', '<=', $today)
+                            ->whereDate('date_end', '>=', $today);
+                    });
+            })
+            ->exists();
+
+        // 2. Obtener los IDs de los cursos en los que el estudiante está matriculado
+        $registeredCourseIds = AcaCapRegistration::where('student_id', $studentId)
+            ->where(function ($query) use ($today) {
+                $query->where('unlimited', true) // cursos ilimitados siempre cuentan
+                    ->orWhere(function ($q) use ($today) {
+                        $q->where('unlimited', false) // explícito: solo cursos no ilimitados
+                            ->whereDate('date_end', '>=', $today); // aún vigentes
+                    });
+            })
+            ->pluck('course_id')
+            ->toArray();
+
+        // 3. Obtener todos los cursos disponibles
+        $allCourses = AcaCourse::with('modules.themes.contents')
+                ->with('modality')
+                ->with('teacher.person')
+                ->orderBy('id', 'DESC')
+                ->get();
+
+        // 4. Procesar cada curso para determinar 'can_view'
+        $coursesWithAccess = $allCourses->map(function ($course) use ($hasActiveSubscription, $registeredCourseIds) {
+            $canView = false; // Valor por defecto
+
+            // Condición 4: Si el tipo es 'Programas de especialización', NUNCA se puede ver (a menos que haya una lógica de compra/pago específica no indicada)
+            // Normalizar ambas cadenas (recomendado)
+            if (strcasecmp($course->type_description, 'Programas de Especialización') === 0) {
+                if (in_array($course->id, $registeredCourseIds)) {
+                    $canView = true;
+                } else {
+                    $canView = false;
+                }
+            }
+            // Condición 3: Suscripción activa (siempre puede ver, excepto los de especialización)
+            elseif ($hasActiveSubscription) {
+                $canView = true;
+            }
+            // Condición 2: El estudiante está matriculado en el curso
+            elseif (in_array($course->id, $registeredCourseIds)) {
+                $canView = true;
+            }
+            // Condición 1: El curso es gratis
+            elseif ($course->price == 0 || is_null($course->price)) {
+                $canView = true;
+            }
+
+            // Agrega el campo 'can_view' al objeto del curso
+            $course->can_view = $canView;
+
+            return $course;
+        });
+
+        return $coursesWithAccess;
+    }
+
+    public function checkCourseAccess(int $studentId, int $courseId): bool
+    {
+        // Obtener la información del curso
+        $course = AcaCourse::find($courseId);
+
+        // Si el curso no existe, no hay acceso.
+        if (!$course) {
+            return false;
+        }
+
+        // Condición 4: Si el tipo es 'Programas de especialización', NO pasa (a menos que haya lógica de compra/pago específica)
+        if ($course->type_description === 'Programas de especialización') {
+
+            $isRegistered = AcaCapRegistration::where('student_id', $studentId)
+                                          ->where('course_id', $courseId)
+                                          ->exists();
+            if ($isRegistered) {
+                return true;
+            }else{
+                 return false;
+            }
+        }
+
+        // Condición 3: Si el estudiante tiene una suscripción activa, pasa
+        $hasActiveSubscription = AcaStudentSubscription::where('student_id', $studentId)
+                                                      ->where('status', true)
+                                                      ->exists();
+
+        if ($hasActiveSubscription) {
+            return true;
+        }
+
+        $today = Carbon::today();
+
+        // Condición 2: Si el estudiante está matriculado en este curso, pasa
+        $isRegistered = AcaCapRegistration::where('student_id', $studentId)
+                                            ->where('course_id', $courseId)
+                                            ->where(function ($query) use ($today) {
+                                                $query->where('unlimited', true) // cursos ilimitados siempre cuentan
+                                                    ->orWhere(function ($q) use ($today) {
+                                                        $q->where('unlimited', false) // explícito: solo cursos no ilimitados
+                                                            ->whereDate('date_end', '>=', $today); // aún vigentes
+                                                    });
+                                            })
+                                            ->exists();
+        if ($isRegistered) {
+            return true;
+        }
+
+        // Condición 1: Si el curso es gratis, pasa
+        if ($course->price == 0 || is_null($course->price)) {
+            return true;
+        }
+
+        // Si ninguna de las condiciones anteriores se cumple, el estudiante no tiene acceso
+        return false;
     }
 
     public function courseLessons($id)
     {
-
+        //dd($id);
         // Obtener el curso con relaciones
         $course = AcaCourse::with(['modules.themes.contents'])->where('id', $id)->first();
 
@@ -512,15 +782,22 @@ class AcaStudentController extends Controller
         }
 
         // Verificar si el estudiante está matriculado
-        $isEnrolled = $course->registrations()
-            ->where('student_id', AcaStudent::where('person_id', Auth::user()->person_id)->value('id'))
-            ->exists();
+        $studentId = AcaStudent::where('person_id', Auth::user()->person_id)->value('id');
 
-        // Verificar si el curso es gratuito
-        $isFree = $course->price == 0 || is_null($course->price);
+        $isEnrolled = false;
+
+        $user = Auth::user();
+        if ($user->hasAnyRole(['admin', 'Docente', 'Administrador'])) {
+            $isEnrolled = true;
+        }
+
+        if($studentId){
+            $isEnrolled = $this->checkCourseAccess($studentId, $id);
+        }
 
         // Denegar acceso si no está matriculado y el curso no es gratis
-        if (!$isEnrolled && !$isFree) {
+        if (!$isEnrolled) {
+
             abort(403, 'No tienes acceso a este curso.');
         }
 
@@ -561,27 +838,81 @@ class AcaStudentController extends Controller
 
     public function courseLessonThemes($id)
     {
+        // Verificar si el estudiante está matriculado
+        $studentId = AcaStudent::where('person_id', Auth::user()->person_id)->value('id');
+        $personId = Auth::user()->person_id;
 
-
-        $module = AcaModule::with('teacher.person')
-            ->with(['themes' => function ($query) {
+        $module = AcaModule::with([
+            'teacher.person',
+            'exam.student_exams' => function ($query) use ($studentId) {
+                // Filtramos para que dentro del examen solo cargue los del alumno logueado
+                $query->where('student_id', $studentId);
+            },
+            'mockExam.questions',
+            'mockExam.student_exams' => function ($query) use ($studentId) {
+                // Cargar también los simulacros del alumno logueado
+                $query->where('student_id', $studentId);
+            },
+            'themes' => function ($query) use ($personId) {
                 $query->orderBy('position')
-                    ->with('contents')
-                    ->with('comments.user'); // Cargar los contenidos de cada theme
-            }])
-            ->where('id', $id)
-            ->first();
+                    ->with(['contents', 'comments.user'])
+                    // Cargar historial del estudiante filtrado por person_id
+                    ->with(['student_history' => function ($q) use ($personId) {
+                        $q->where('person_id', $personId);
+                    }]);
+            }
+        ])
+        ->findOrFail($id);
+
+        // Calcular progreso por tema
+        $module->themes->each(function ($theme) {
+            $totalContents = $theme->contents->reject(fn($c) => $c->is_file == 4)->count();
+            $viewedContents = $theme->student_history->unique('content_id')->count();
+            $theme->progress = $totalContents > 0 ? round(($viewedContents / $totalContents) * 100) : 0;
+        });
 
         $course = AcaCourse::with('teacher.person')->where('id', $module->course_id)
             ->first();
 
+        $courseModules = AcaModule::where('course_id', $module->course_id)
+            ->orderByRaw('position IS NULL')
+            ->orderBy('position')
+            ->orderBy('id')
+            ->get(['id', 'description', 'position']);
+        $currentModuleIndex = $courseModules->search(function ($courseModule) use ($module) {
+            return (int) $courseModule->id === (int) $module->id;
+        });
+        $previousModule = $currentModuleIndex !== false && $currentModuleIndex > 0
+            ? $courseModules->get($currentModuleIndex - 1)
+            : null;
+        $nextModule = $currentModuleIndex !== false ? $courseModules->get($currentModuleIndex + 1) : null;
+
+        $isEnrolled = false;
+
+        $user = Auth::user();
+        if ($user->hasAnyRole(['admin', 'Docente', 'Administrador'])) {
+            $isEnrolled = true;
+        }
+
+        if($studentId){
+            $isEnrolled = $this->checkCourseAccess($studentId, $course->id);
+
+        }
+
+        // Denegar acceso si no está matriculado y el curso no es gratis
+        if (!$isEnrolled) {
+            abort(403, 'No tienes acceso a este curso.');
+        }
+
         return Inertia::render('Academic::Students/Themes', [
             'course' => $course,
-            'module' => $module
+            'module' => $module,
+            'previousModule' => $previousModule,
+            'nextModule' => $nextModule,
         ]);
     }
 
-    public function invoice($id)
+    public function invoice($id, $installments = 'not')
     {
         $payments = PaymentMethod::all();
         $saleDocumentTypes = DB::table('sale_document_types')->whereIn('sunat_id', ['01', '03'])->get();
@@ -593,24 +924,80 @@ class AcaStudentController extends Controller
             })
             ->get();
 
-        $registrationCourses = AcaCapRegistration::with('course')
-            ->with('salenote')
-            ->where('student_id', $id)
-            ->whereNull('document_id')
-            ->whereHas('course', function ($query) {
-                $query->whereNotNull('price')->where('price', '>', 0);
+        $registrationCourses = AcaCapRegistration::query()
+            ->select('aca_cap_registrations.*')
+            ->join('aca_courses', 'aca_courses.id', '=', 'aca_cap_registrations.course_id')
+            ->with(['course', 'salenote'])
+            ->where('aca_cap_registrations.student_id', $id)
+            ->where(function ($query) {
+                $query->where(function($qDoc){
+                    $qDoc->whereNull('aca_cap_registrations.document_id')
+                        ->whereNull('aca_cap_registrations.sale_note_id');
+                })->orWhere(function ($qCre) {
+                        $qCre->where('aca_cap_registrations.payment_installments', true)
+                            ->whereColumn('aca_cap_registrations.advancement', '<', 'aca_courses.price');
+                    });
             })
-            ->whereNull('sale_note_id')
+            ->whereNotNull('aca_courses.price')
+            ->where('aca_courses.price', '>', 0)
             ->get();
 
-        $subscriptions = AcaStudentSubscription::with('subscription')
+
+        // 1. Obtener suscripciones principales pendientes de pago
+        $subscriptionsMain = AcaStudentSubscription::with(['subscription'])
             ->where('student_id', $id)
             ->whereNull('onli_sale_id')
-            ->whereNull('xdocument_id') ///si esta lleno es porque lo compro en linea
-            ->get();
+            ->whereNull('xdocument_id')
+            ->whereNull('xsale_note_id')
+            ->get()
+            ->map(function ($item) {
+                $item->is_main_table = true; // Flag para identificar procedencia
+                return $item;
+            });
+
+        // 2. Obtener reactivaciones pendientes de pago
+        $subscriptionsReactivated = AcaSubscriptionPayment::with(['subscription'])
+            ->where('student_id', $id)
+            ->whereNull('document_id')
+            ->get()
+            ->map(function ($item) {
+                $item->is_main_table = false; // Flag para identificar procedencia
+                return $item;
+            });
+
+        // 3. Unir y filtrar según la regla de negocio
+        $finalSubscriptions = $subscriptionsMain->concat($subscriptionsReactivated)
+            ->groupBy('subscription_id') // Agrupamos por el ID de la suscripción
+            ->flatMap(function ($group) {
+                // Buscamos si en este grupo la suscripción principal tiene renewals en true
+                $mainRecord = $group->firstWhere('is_main_table', true);
+
+                if ($mainRecord) {
+                    if ($mainRecord->renewals) {
+                        // SI RENEWALS ES TRUE: Solo mostramos las reactivaciones (quitar la principal)
+                        return $group->where('is_main_table', false);
+                    } else {
+                        // SI RENEWALS ES FALSE: Solo mostramos la principal
+                        return $group->where('is_main_table', true);
+                    }
+                }
+
+                return $group; // Si no hay registro principal, devolver lo que haya
+            });
+
 
         $standardIdentityDocument = DB::table('identity_document_type')->get();
 
+        $ubigeo = District::join('provinces', 'province_id', 'provinces.id')
+            ->join('departments', 'provinces.department_id', 'departments.id')
+            ->select(
+                'districts.id AS district_id',
+                'districts.name AS district_name',
+                'provinces.name AS province_name',
+                'departments.name AS department_name',
+                DB::raw("CONCAT(departments.name,'-',provinces.name,'-',districts.name) AS city_name")
+            )
+            ->get();
 
         return Inertia::render('Academic::Students/Invoice', [
             'payments' => $payments,
@@ -623,8 +1010,11 @@ class AcaStudentController extends Controller
                 'icbper' => $this->icbper
             ),
             'registrationCourses' => $registrationCourses,
-            'subscriptions' => $subscriptions,
-            'standardIdentityDocument' => $standardIdentityDocument
+            'subscriptions' => $finalSubscriptions,
+            'standardIdentityDocument' => $standardIdentityDocument,
+            'departments'       => $ubigeo,
+            'installments'  => $installments,
+            'subscriptionsReactivated' => $subscriptionsReactivated
         ]);
     }
 
@@ -1010,14 +1400,434 @@ class AcaStudentController extends Controller
 
     public function historyStore(Request $request)
     {
+        $userId = Auth::id();
+        $courseId = $request->get('course_id');
+
         AcaStudentHistory::create([
-            'user_id' => Auth::id(),
+            'user_id' => $userId,
             'person_id' => Auth::user()->person_id,
-            'course_id' => $request->get('course_id'),
+            'course_id' => $courseId,
             'module_id' => $request->get('module_id'),
             'theme_id' => $request->get('theme_id'),
             'content_id' => $request->get('content_id'),
             'type_content' => $request->get('type_content')
         ]);
+
+        $this->checkAndCreateCertificate($userId, $courseId);
+    }
+
+    private function checkAndCreateCertificate($userId, $courseId)
+    {
+        $student = AcaStudent::firstOrCreate(
+            ['person_id' => Auth::user()->person_id],
+            ['student_code' => Auth::user()->person?->number ?? (string) Auth::id(), 'new_student' => false]
+        );
+
+        $course = AcaCourse::find($courseId);
+        if (!$course || !$course->auto_certificate) return;
+
+        $contentsViewed = AcaStudentHistory::where('user_id', $userId)
+            ->where('course_id', $courseId)
+            ->distinct('content_id')
+            ->count('content_id');
+
+        $totalContents = AcaModule::where('course_id', $courseId)
+            ->with(['themes.contents' => fn($q) => $q->where('is_file', '!=', 4)])
+            ->get()
+            ->sum(fn($module) => $module->themes->sum(fn($theme) => $theme->contents->count()));
+
+        if ($contentsViewed >= $totalContents && $totalContents > 0) {
+            $registration = AcaCapRegistration::where('student_id', $student->id)
+                ->where('course_id', $courseId)
+                ->first();
+
+            AcaCertificate::firstOrCreate(
+                ['student_id' => $student->id, 'course_id' => $courseId],
+                [
+                    'student_id' => $student->id,
+                    'course_id' => $courseId,
+                    'registration_id' => $registration?->id,
+                    'image' => null,
+                    'content' => null,
+                ]
+            );
+        }
+    }
+
+    public function getSubscriptionStatuses()
+    {
+        $allSubscriptions = collect(); // Colección para almacenar todas las suscripciones con sus mensajes
+
+        // --- 1. Suscripciones a punto de vencer (en los próximos 7 días) ---
+
+        // Vence HOY
+        $today = Carbon::now()->startOfDay();
+        $endOfToday = Carbon::now()->endOfDay();
+        $expiringToday = AcaStudentSubscription::with('student.person')
+            ->whereBetween('date_end', [$today, $endOfToday])
+            ->where('status', true)
+            ->get()
+            ->each(function ($subscription) {
+                $subscription->number_days = 0;
+                $subscription->expiration_message = 'Termina hoy';
+            });
+
+        $allSubscriptions = $allSubscriptions->concat($expiringToday);
+
+        // Vence en 1 día (mañana)
+        $tomorrowStart = Carbon::now()->addDays(1)->startOfDay();
+        $tomorrowEnd = Carbon::now()->addDays(1)->endOfDay();
+        $expiringTomorrow = AcaStudentSubscription::with('student.person')
+            ->whereBetween('date_end', [$tomorrowStart, $tomorrowEnd])
+            ->where('status', true)
+            ->get()
+            ->each(function ($subscription) {
+                $subscription->number_days = 1;
+                $subscription->expiration_message = 'Termina en 1 día';
+            });
+        $allSubscriptions = $allSubscriptions->concat($expiringTomorrow);
+
+        // Vence en 6 días (específico para tu ejemplo, puedes ajustar el rango)
+        // Esto sería entre el inicio del día +2 y el final del día +6
+        $dayTwoStart = Carbon::now()->addDays(2)->startOfDay();
+        $daySixEnd = Carbon::now()->addDays(15)->endOfDay();
+        $expiringInSixDays = AcaStudentSubscription::with('student.person')
+            ->whereBetween('date_end', [$dayTwoStart, $daySixEnd])
+            ->where('status', true)
+            ->get()
+            ->each(function ($subscription) {
+                // Aquí calculamos cuántos días faltan para ser más precisos
+                $daysRemaining = Carbon::now()->startOfDay()->diffInDays($subscription->date_end, false);
+                $subscription->number_days = $daysRemaining;
+                $subscription->expiration_message = "Termina en {$daysRemaining} días";
+            });
+
+        $allSubscriptions = $allSubscriptions->concat($expiringInSixDays);
+
+
+        // --- 2. Suscripciones Vencidas ---
+
+        // Venció hace 1 día
+        $oneDayAgoStart = Carbon::now()->subDays(1)->startOfDay();
+        $oneDayAgoEnd = Carbon::now()->subDays(1)->endOfDay();
+        $expiredOneDayAgo = AcaStudentSubscription::with('student.person')
+            ->whereBetween('date_end', [$oneDayAgoStart, $oneDayAgoEnd])
+            ->where('status', false) // Asumiendo que false es "vencido"
+            ->get()
+            ->each(function ($subscription) {
+                $subscription->number_days = -1;
+                $subscription->expiration_message = 'Terminó hace 1 día';
+            });
+        $allSubscriptions = $allSubscriptions->concat($expiredOneDayAgo);
+
+
+        // Venció hace 2 días
+        $twoDaysAgoStart = Carbon::now()->subDays(2)->startOfDay();
+        $twoDaysAgoEnd = Carbon::now()->subDays(2)->endOfDay();
+        $expiredTwoDaysAgo = AcaStudentSubscription::with('student.person')
+            ->whereBetween('date_end', [$twoDaysAgoStart, $twoDaysAgoEnd])
+            ->where('status', false)
+            ->get()
+            ->each(function ($subscription) {
+                $subscription->number_days = -2;
+                $subscription->expiration_message = 'Terminó hace 2 días';
+            });
+        $allSubscriptions = $allSubscriptions->concat($expiredTwoDaysAgo);
+
+        // Si quieres capturar todas las demás que están simplemente "vencidas" (antes de 2 días)
+        $twoMonthsAgo = Carbon::now()->subMonths(2)->startOfDay();
+        $moreThanTwoDaysAgo = Carbon::now()->subDays(2)->startOfDay();
+        $expiredBeforeTwoDaysAgo = AcaStudentSubscription::with('student.person')
+            ->where('date_end', '<', $moreThanTwoDaysAgo)
+            ->where('date_end', '>=', $twoMonthsAgo)  // Solo las que NO tengan más de 2 meses
+            ->where('status', false)
+            ->get()
+            ->each(function ($subscription) {
+                // Calcular días exactos transcurridos si es necesario, o un mensaje genérico
+                $daysAgo = Carbon::now()->startOfDay()->diffInDays($subscription->date_end, true); // true para valor absoluto
+                $subscription->number_days = -$daysAgo;
+                $subscription->expiration_message = "Terminó hace {$daysAgo} días";
+            });
+        $allSubscriptions = $allSubscriptions->concat($expiredBeforeTwoDaysAgo);
+
+
+        // Puedes ordenar la colección final si lo deseas, por ejemplo, por fecha de fin
+        $allSubscriptions = $allSubscriptions->sortBy('date_end')->values(); // .values() para reindexar el array
+        //dd($allSubscriptions);
+        return response()->json($allSubscriptions);
+    }
+
+    public function destroy($id){
+        $message = null;
+        $success = false;
+
+        try {
+            // Usamos una transacción para asegurarnos de que la operación se realice de manera segura.
+            DB::beginTransaction();
+
+            $tea = AcaStudent::findOrFail($id);
+            $person_id = $tea->person_id;
+            // Verificamos si existe.
+            $per = Person::findOrFail($person_id);
+            $tea->delete();
+            // Si no hay detalles asociados, eliminamos.
+            $per->delete();
+            // Si todo ha sido exitoso, confirmamos la transacción.
+            DB::commit();
+
+            $message =  'Estudiante eliminada correctamente';
+            $success = true;
+        } catch (\Exception $e) {
+            // Si ocurre alguna excepción durante la transacción, hacemos rollback para deshacer cualquier cambio.
+            DB::rollback();
+            $success = false;
+            $message = $e->getMessage();
+        }
+
+        return response()->json([
+            'success' => $success,
+            'message' => $message
+        ]);
+    }
+
+    /**
+     * Mostrar vista de Mis Asistencias del estudiante
+     */
+    public function studentAttendances()
+    {
+        // Obtener estudiante autenticado
+        $student = AcaStudent::where('person_id', Auth::user()->person_id)->first();
+
+        if (!$student) {
+            return redirect()->route('aca_mycourses');
+        }
+
+        // Obtener cursos donde está matriculado el estudiante
+        $registrations = AcaCapRegistration::with(['course'])
+            ->where('student_id', $student->id)
+            ->where('status', true)
+            ->get();
+
+        $courses = $registrations->map(function ($reg) {
+            return [
+                'id' => $reg->course->id,
+                'description' => $reg->course->description,
+            ];
+        });
+
+        return Inertia::render('Academic::Students/StudentAttendances', [
+            'courses' => $courses,
+        ]);
+    }
+
+    /**
+     * Buscar asistencia del estudiante
+     */
+    public function searchStudentAttendances(Request $request)
+    {
+        // Obtener estudiante autenticado
+        $student = AcaStudent::where('person_id', Auth::user()->person_id)->first();
+
+        if (!$student) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Estudiante no encontrado'
+            ], 404);
+        }
+
+        $courseId = $request->get('course_id');
+        $dateStart = $request->get('date_start');
+        $dateEnd = $request->get('date_end');
+
+        // Consulta base
+        $query = AcaStudentAttendance::with(['module', 'content'])
+            ->where('student_id', $student->id);
+
+        // Filtro por curso
+        if ($courseId) {
+            $query->where('course_id', $courseId);
+        }
+
+        // Filtro por fecha inicio
+        if ($dateStart) {
+            $query->whereDate('registered_at', '>=', $dateStart);
+        }
+
+        // Filtro por fecha fin
+        if ($dateEnd) {
+            $query->whereDate('registered_at', '<=', $dateEnd);
+        }
+
+        // Ordenar por fecha más reciente
+        $attendances = $query->orderBy('registered_at', 'desc')->get();
+
+        // Obtener participaciones del estudiante para este curso
+        $participationsQuery = AcaStudentParticipation::where('student_id', $student->id);
+        if ($courseId) {
+            $participationsQuery->where('course_id', $courseId);
+        }
+        $participations = $participationsQuery->get();
+
+        // Crear mapa de participaciones con clave module_id-content_id
+        $participationsMap = [];
+        foreach ($participations as $p) {
+            $key = $p->module_id . '-' . $p->content_id;
+            $participationsMap[$key] = $p->participation_score;
+        }
+
+        // Transformar datos para la vista
+        $data = $attendances->map(function ($attendance) use ($participationsMap) {
+            // Obtener el tema a través del contenido
+            $themeDescription = null;
+            if ($attendance->content && $attendance->content->theme) {
+                $themeDescription = $attendance->content->theme->description;
+            }
+
+            // Calcular nota de participación
+            $key = ($attendance->module_id ?? '') . '-' . ($attendance->content_id ?? '');
+            $hasParticipation = isset($participationsMap[$key]);
+            $participationScore = null;
+
+            if ($hasParticipation) {
+                // Si tiene participación registrada, usar esa nota
+                $participationScore = $participationsMap[$key];
+            } elseif ($attendance->registered_at) {
+                // Si no tiene participación pero asistió, nota = 12
+                $participationScore = 12;
+            } else {
+                // Si no tiene participación y no asistió, nota = 0
+                $participationScore = 0;
+            }
+
+            return [
+                'id' => $attendance->id,
+                'module' => $attendance->module ? [
+                    'id' => $attendance->module->id,
+                    'description' => $attendance->module->description,
+                ] : null,
+                'theme' => $themeDescription,
+                'content' => $attendance->content ? [
+                    'id' => $attendance->content->id,
+                    'description' => $attendance->content->description,
+                ] : null,
+                'registered_at' => $attendance->registered_at,
+                'has_attendance' => $attendance->registered_at ? true : false,
+                'participation_score' => $participationScore,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'attendances' => $data,
+        ]);
+    }
+
+    public function sendAccessMail($personId)
+    {
+        $person = Person::findOrFail($personId);
+
+        if (!$person->email) {
+            return response()->json([
+                'success' => false,
+                'message' => 'La persona no tiene correo electrónico registrado'
+            ], 422);
+        }
+
+        try {
+            \Mail::to($person->email)->send(new \App\Mail\ThankYouAccessMail($person));
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Correo de accesos enviado correctamente'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al enviar correo: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function sendPasswordRecoveryMail($personId)
+    {
+        $person = Person::findOrFail($personId);
+        $user = User::where('person_id', $person->id)->first();
+
+        if (!$person->email || !$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'La persona no tiene correo electrÃ³nico o usuario registrado'
+            ], 422);
+        }
+
+        try {
+            $resetUrl = URL::temporarySignedRoute(
+                'aca_students_password_recovery_form',
+                now()->addMinutes(60),
+                ['personId' => $person->id]
+            );
+
+            \Mail::to($person->email)->send(new \App\Mail\StudentPasswordRecoveryMail($person, $resetUrl));
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Correo de recuperaciÃ³n enviado correctamente'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al enviar correo: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function passwordRecoveryForm(Request $request, $personId)
+    {
+        return Inertia::render('Academic::Students/PasswordRecovery', [
+            'personId' => (int) $personId,
+            'resetUrl' => URL::temporarySignedRoute(
+                'aca_students_password_recovery_update',
+                now()->addMinutes(60),
+                ['personId' => $personId]
+            ),
+        ]);
+    }
+
+    public function updateRecoveredPassword(Request $request, $personId)
+    {
+        $request->validate([
+            'email' => ['required', 'email'],
+            'number' => ['required', 'string'],
+            'password' => ['required', 'confirmed', Password::defaults()],
+        ]);
+
+        $person = Person::where('id', $personId)
+            ->where('email', trim($request->get('email')))
+            ->where('number', trim($request->get('number')))
+            ->first();
+
+        if (!$person) {
+            return back()->withErrors([
+                'email' => 'Los datos ingresados no coinciden con el alumno.',
+                'number' => 'Verifica el email y el nÃºmero de identificaciÃ³n.',
+            ]);
+        }
+
+        $user = User::where('person_id', $person->id)
+            ->where('email', $person->email)
+            ->first();
+
+        if (!$user) {
+            return back()->withErrors([
+                'email' => 'No se encontrÃ³ un usuario asociado a estos datos.',
+            ]);
+        }
+
+        $user->forceFill([
+            'password' => Hash::make($request->get('password')),
+            'remember_token' => Str::random(60),
+        ])->save();
+
+        return redirect()->route('login')->with('status', 'ContraseÃ±a actualizada correctamente. Ahora puedes iniciar sesiÃ³n.');
     }
 }

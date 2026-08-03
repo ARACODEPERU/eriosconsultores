@@ -3,8 +3,6 @@
 namespace Modules\Sales\Http\Controllers;
 
 use App\Models\Company;
-use App\Models\Kardex;
-use App\Models\KardexSize;
 use App\Models\LocalSale;
 use App\Models\PaymentMethod;
 use App\Models\Person;
@@ -24,10 +22,19 @@ use Inertia\Inertia;
 use PDF;
 use Illuminate\Routing\Controller;
 use Illuminate\Foundation\Validation\ValidatesRequests;
+use Illuminate\Support\Facades\Log;
+use Modules\Sales\Support\SalesA4Template;
+use Modules\Health\Entities\HealPatientCharge;
+use Modules\Sales\Services\SaleStockService;
 
 class SaleController extends Controller
 {
     use ValidatesRequests;
+
+    public function __construct(
+        private readonly SaleStockService $stockService
+    ) {
+    }
     /**
      * Display a listing of the resource.
      *
@@ -42,8 +49,11 @@ class SaleController extends Controller
         $isAdmin = Auth::user()->hasRole('admin');
 
         $sales = $sales->join('people', 'client_id', 'people.id')
-            ->join('sale_documents', 'sale_documents.sale_id', 'sales.id')
-            ->join('series', 'sale_documents.serie_id', 'series.id')
+            ->leftJoin('sale_documents', function($q) {
+                $q->on('sale_documents.sale_id', 'sales.id')
+                    ->where('physical','<>', 0);
+            })
+            ->leftJoin('series', 'sale_documents.serie_id', 'series.id')
             ->select(
                 'sales.id',
                 'people.full_name',
@@ -59,7 +69,7 @@ class SaleController extends Controller
                 DB::raw("(SELECT CONCAT(invoice_serie,'-',LPAD(invoice_correlative, 8, '0')) FROM sale_documents WHERE sale_documents.sale_id=sales.id AND invoice_serie IS NOT NULL) AS name_document"),
                 DB::raw("(SELECT COUNT(sale_id) FROM sale_documents WHERE sale_documents.sale_id=sales.id) AS have_document")
             )
-            ->where('series.document_type_id', 5)
+            ->where('physical', 1)
             ->when(!$isAdmin, function ($q) use ($search) {
                 return $q->where('sales.user_id', Auth::id());
             })
@@ -189,51 +199,31 @@ class SaleController extends Controller
 
 
                     if ($product->is_product) {
-
-                        $k = Kardex::create([
-                            'date_of_issue' => Carbon::now()->format('Y-m-d'),
-                            'motion' => 'sale',
-                            'product_id' => $produc['id'],
-                            'local_id' => $local_id,
-                            'quantity' => - ($produc['quantity']),
-                            'document_id' => $document->id,
-                            'document_entity' => SaleDocument::class,
-                            'description' => 'Venta'
-                        ]);
-
-
-
-                        if ($product->presentations) {
-                            KardexSize::create([
-                                'kardex_id' => $k->id,
-                                'product_id' => $produc['id'],
-                                'local_id' => $local_id,
-                                'size'      => $produc['size'],
-                                'quantity'  => (-$produc['quantity'])
-                            ]);
-                            $tallas = $product->sizes;
-                            $n_tallas = [];
-                            foreach (json_decode($tallas, true) as $k => $talla) {
-                                if ($talla['size'] == $produc['size']) {
-                                    $n_tallas[$k] = array(
-                                        'size' => $talla['size'],
-                                        'quantity' => ($talla['quantity'] - $produc['quantity'])
-                                    );
-                                } else {
-                                    $n_tallas[$k] = array(
-                                        'size' => $talla['size'],
-                                        'quantity' => $talla['quantity']
-                                    );
-                                }
-                            }
-                            $product->update([
-                                'sizes' => json_encode($n_tallas)
-                            ]);
-                        }
-
-                        Product::find($produc['id'])->decrement('stock', $produc['quantity']);
+                        $this->stockService->recordOutbound(
+                            $product,
+                            (float) $produc['quantity'],
+                            $document->id,
+                            SaleDocument::class,
+                            $local_id,
+                            $produc['size'] ?? null
+                        );
                     }
                 }
+
+                $healthChargeIds = collect($products)
+                    ->pluck('health_charge_id')
+                    ->filter()
+                    ->unique()
+                    ->values();
+
+                if ($healthChargeIds->isNotEmpty()) {
+                    HealPatientCharge::whereIn('id', $healthChargeIds)->update([
+                        'sale_id' => $sale->id,
+                        'sale_document_id' => $document->id,
+                        'status' => 'paid',
+                    ]);
+                }
+
                 return $sale;
             });
 
@@ -250,66 +240,33 @@ class SaleController extends Controller
 
                 $sale->update(['status' => false]);
 
+                // Busca el SaleDocument asociado a la venta
                 $document = SaleDocument::where('sale_id', $sale->id)->first();
 
-                $document->update([
-                    'status' => 3
-                ]);
+                // Verifica si se encontró el documento antes de intentar actualizarlo
+                if ($document) {
+                    $document->update([
+                        'status' => 3
+                    ]);
+                } else {
+                    // Opcional: Manejar el caso donde no se encontró el documento
+                    // Por ejemplo, loguear un error, emitir una advertencia, o lanzar una excepción.
+                    // Esto es útil para depurar o entender por qué falta el documento.
+                    Log::warning("No se encontró SaleDocument para la venta con ID: " . $sale->id . ". No se pudo actualizar el estado.");
+                    // O si es un error crítico:
+                    // throw new \Exception("SaleDocument no encontrado para la venta ID: " . $sale->id);
+                }
 
                 $products = SaleProduct::where('sale_id', $sale->id)->get();
 
                 foreach ($products as $item) {
-
-                    if (json_decode($item->product)->is_product == 1) {
-                        $k = Kardex::create([
-                            'date_of_issue' => Carbon::now()->format('Y-m-d'),
-                            'motion' => 'sale',
-                            'product_id' => $item->product_id,
-                            'local_id' => $sale->local_id,
-                            'quantity' => $item->quantity,
-                            'document_id' => $document->id,
-                            'document_entity' => SaleDocument::class,
-                            'description' => 'Anulacion de Venta'
-                        ]);
-
-                        $product = Product::find($item->product_id);
-
-                        if ($product->presentations) {
-
-                            KardexSize::create([
-                                'kardex_id' => $k->id,
-                                'product_id' => $item->product_id,
-                                'local_id' => $sale->local_id,
-                                'size'      => json_decode($item->saleProduct)->size,
-                                'quantity'  => $item->quantity
-                            ]);
-
-
-                            $tallas = json_decode($product->sizes, true);
-                            $n_tallas = [];
-                            foreach ($tallas as &$size) {
-                                // Si el tamaño es igual a 22
-                                if ($size["size"] == json_decode($item->saleProduct)->size) {
-
-                                    // Obtiene la cantidad actual
-                                    $currentQuantity = intval($size["quantity"]); // Convierte a entero
-
-                                    // Suma 1 a la cantidad actual
-                                    $newQuantity = $currentQuantity + $item->quantity;
-
-                                    // Actualiza la cantidad
-                                    $size["quantity"] = $newQuantity;
-                                }
-                            }
-
-                            $n_tallas = $tallas;
-
-
-                            $product->update([
-                                'sizes' => json_encode($n_tallas)
-                            ]);
-                        }
-                        //Product::find($produc->product_id)->increment('stock', $produc->quantity);
+                    if ($document) {
+                        $this->stockService->reverseSaleProductLine(
+                            $item,
+                            $sale->local_id,
+                            $document->id,
+                            SaleDocument::class
+                        );
                     }
                 }
                 return $sale;
@@ -325,7 +282,7 @@ class SaleController extends Controller
 
     public function ticketPdf($id)
     {
-        $sale = Sale::find($id);
+        $sale = Sale::with('client')->findOrFail($id);
         $document = SaleDocument::join('series', 'serie_id', 'series.id')
             ->select(
                 'series.description',
@@ -334,28 +291,74 @@ class SaleController extends Controller
             )
             ->where('sale_documents.sale_id', $sale->id)
             ->first();
+
+        if (! $document) {
+            abort(404, 'No se encontró el documento de venta.');
+        }
+
         $local = LocalSale::find($sale->local_id);
         $products = SaleProduct::where('sale_id', $sale->id)->get();
         $company = Company::first();
         $seller = User::find($sale->user_id);
-        $payments = PaymentMethod::all();
+        $paymentMethods = PaymentMethod::all()->keyBy('id');
+        $salePayments = json_decode($sale->payments ?? '[]', true) ?: [];
 
         $data = [
-            'local'     => $local,
-            'sale'      => $sale,
-            'products'  => $products,
-            'document'  => $document,
-            'company'   => $company,
-            'seller'    => $seller,
-            'payments'  => $payments
+            'local'          => $local,
+            'sale'           => $sale,
+            'products'       => $products,
+            'document'       => $document,
+            'company'        => $company,
+            'seller'         => $seller,
+            'client'         => $sale->client,
+            'paymentMethods' => $paymentMethods,
+            'salePayments'   => $salePayments,
+            'logoSrc'        => $this->ticketLogoDataUri($company),
         ];
 
-        $file = public_path('ticket/') . $seller->id . '-ticket.pdf';
-        $pdf = PDF::loadView('sales::sales.ticket_pdf', $data);
-        $pdf->setPaper(array(0, 0, 273, 500), 'portrait');
-        $pdf->save($file);
+        $itemCount = max(1, $products->count());
+        $paymentCount = count($salePayments);
+        $paperHeight = min(1400, max(420, 300 + ($itemCount * 40) + ($paymentCount * 24)));
 
-        return response()->download($file);
+        $pdf = PDF::loadView('sales::sales.ticket_pdf', $data);
+        $pdf->setOption('isRemoteEnabled', false);
+        $pdf->setOption('isHtml5ParserEnabled', true);
+        $pdf->setOption('defaultFont', 'DejaVu Sans');
+        $pdf->setPaper([0, 0, 226, $paperHeight], 'portrait');
+
+        $filename = 'ticket-' . $sale->id . '.pdf';
+
+        return $pdf->download($filename)->withHeaders([
+            'Cache-Control' => 'no-store, no-cache, must-revalidate',
+            'Pragma'        => 'no-cache',
+        ]);
+    }
+
+    /**
+     * Logo embebido en base64 para evitar que DomPDF bloquee el navegador con rutas/archivos pesados.
+     */
+    private function ticketLogoDataUri(?Company $company): ?string
+    {
+        if (! $company || empty($company->logo_document)) {
+            return null;
+        }
+
+        $path = $company->logo_document === '/img/logo176x32.png'
+            ? public_path($company->logo_document)
+            : public_path('storage' . DIRECTORY_SEPARATOR . ltrim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $company->logo_document), DIRECTORY_SEPARATOR));
+
+        if (! is_file($path)) {
+            return null;
+        }
+
+        $size = filesize($path);
+        if ($size === false || $size > 512000) {
+            return null;
+        }
+
+        $mime = mime_content_type($path) ?: 'image/png';
+
+        return 'data:' . $mime . ';base64,' . base64_encode((string) file_get_contents($path));
     }
 
     public function printA4Pdf($id)
@@ -388,7 +391,7 @@ class SaleController extends Controller
         //return view('sales::sales.A4_pdf', $data);
 
         $file = public_path('ticket/') . $seller->id . '-A4.pdf';
-        $pdf = PDF::loadView('sales::sales.A4_pdf', $data);
+        $pdf = PDF::loadView(SalesA4Template::noteSaleView(), $data);
         $pdf->setPaper('a4', 'portrait');
         $pdf->save($file);
 

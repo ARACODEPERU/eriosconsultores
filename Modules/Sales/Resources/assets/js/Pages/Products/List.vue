@@ -19,11 +19,12 @@
     import '@websitebeaver/vue-magnifier/styles.css'
     import Swal2 from 'sweetalert2';
     import esES from 'ant-design-vue/es/locale/es_ES';
-    import { 
+    import {
       ConfigProvider, Dropdown, Menu, MenuItem, Button, Select, Image
     } from 'ant-design-vue';
     import { faTrashAlt } from "@fortawesome/free-solid-svg-icons";
     import Navigation from '@/Components/vristo/layout/Navigation.vue';
+    import Facturador3ImportModal from './Facturador3ImportModal.vue';
 
     const props = defineProps({
         products: {
@@ -40,12 +41,12 @@
         },
     })
 
-    
+
     const form = useForm({
         search: props.filters.search,
         displayProduct: props.filters.displayProduct == 'false' ? false : true,
     });
-    
+
     const formDetails = useForm({
         usine: '',
         interne: '',
@@ -142,11 +143,11 @@
                     padding: '2em',
                     customClass: 'sweet-alerts',
                 });
-                router.visit(route('products.index'), { 
+                router.visit(route('products.index'), {
                   replace: false,
                   preserveState: true,
                   preserveScroll: true,
-                  method: 'get' 
+                  method: 'get'
                 });
             }
         });
@@ -169,7 +170,7 @@
       openModalEntrada.value = true;
     }
 
-    
+
 
     const dataProducts= useForm({
       products: [],
@@ -303,7 +304,7 @@
         }else{
           formReLocate.stock = product.stock;
         }
-        
+
         openModalTraslado.value = true;
     }
 
@@ -329,6 +330,16 @@
       });
     }
 
+    const displayModalFacturador3 = ref(false);
+
+    const openModalFacturador3 = () => {
+      displayModalFacturador3.value = true;
+    };
+
+    const closeModalFacturador3 = () => {
+      displayModalFacturador3.value = false;
+    };
+
     const displayModalImport = ref(false);
 
     const openModalImport = () => {
@@ -351,12 +362,13 @@
           imageAlt: 'Cargando',
           showConfirmButton: false,
           allowOutsideClick: false,
+          backdrop: true,
           padding: '2em',
           customClass: 'sweet-alerts',
         });
 
         displayModalImport.value = false;
-        
+
         try {
           const response = await axios.post(route('import_product_data'), formImport, {
             headers: {
@@ -364,8 +376,8 @@
             },
           });
           formImport.reset()
-          Swal2.fire({ 
-            html: `total de registros: ${response.data.total}` 
+          Swal2.fire({
+            html: `total de registros: ${response.data.total}`
           }).then((result) => {
             if (result.isConfirmed) {
               window.location.href = route('product.index');
@@ -373,7 +385,7 @@
           })
         } catch (error) {
             console.log(error)
-        } 
+        }
       }else{
         formImport.errors.file = 'Seleccionar Archivo';
       }
@@ -397,11 +409,11 @@
 <template>
     <AppLayout title="Productos">
       <ConfigProvider :locale="esES">
-        <Navigation :routeModule="route('sales_dashboard')" :titleModule="'Ventas'">
-            <li class="before:content-['/'] ltr:before:mr-2 rtl:before:ml-2">
-                <span>Productos</span>
-            </li>
-        </Navigation>
+        <Navigation :routeModule="route('sales_dashboard')" :titleModule="'Ventas'"
+            :data="[
+                {title: 'Productos'}
+            ]"
+        />
         <div class="mt-5">
           <!-- Breadcrumb End -->
 
@@ -410,7 +422,7 @@
             <!-- ====== Table One Start -->
             <div class="panel p-0">
               <div class="w-full p-4 ">
-                <div class="grid grid-cols-3">
+                <div class="grid grid-cols-3 gap-6">
                   <div class="col-span-3 sm:col-span-1">
                     <form @submit.prevent="form.get(route('products.index'))">
                       <label for="table-search" class="sr-only">Search</label>
@@ -418,21 +430,18 @@
                             <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                                 <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path></svg>
                             </div>
-                            <input v-model="form.search" type="text" id="table-search-users" class="block p-2 pl-10 text-sm text-gray-900 border border-gray-300 rounded-lg w-80 bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="Buscar productos">
+                            <input v-model="form.search" type="text" id="table-search-users" class="form-input pl-8" placeholder="Buscar productos">
                         </div>
                     </form>
                   </div>
-                  <div class="col-span-3 sm:col-span-2">
-                    <Keypad>
-                      <template #botones>
-                          <button v-can="'productos_salida'" @click="openModalEntradaSalida(0)" type="button" class="mr-1 inline-block px-6 py-2.5 bg-green-500 text-white font-medium text-xs leading-tight uppercase rounded shadow-md hover:bg-green-600 hover:shadow-lg focus:bg-green-600 focus:shadow-lg focus:outline-none focus:ring-0 active:bg-green-700 active:shadow-lg transition duration-150 ease-in-out">Salidas</button>
-                          <button v-can="'productos_entrada'" @click="openModalEntradaSalida(1)" type="button" class="mr-1 inline-block px-6 py-2.5 bg-blue-700 text-white font-medium text-xs leading-tight uppercase rounded shadow-md hover:bg-blue-800 hover:shadow-lg  focus:bg-green-600 focus:shadow-lg focus:outline-none  focus:ring-0 focus:ring-blue-300 active:shadow-lg dark:bg-blue-600 dark:hover:bg-blue-700 transition duration-150 ease-in-out">Entradas</button>
-                          <button v-can="'sale_productos_importar'" @click="openModalImport()" type="button" class="mr-1 inline-block px-6 py-2.5 bg-green-700 text-white font-medium text-xs leading-tight uppercase rounded shadow-md hover:bg-green-800 hover:shadow-lg focus:ring-green-300  focus:shadow-lg focus:outline-none focus:ring-0 active:bg-green-700 active:shadow-lg dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800 transition duration-150 ease-in-out" >Importar</button>
-                          <Link v-can="'productos_nuevo'" :href="route('products.create')" class="flex items-center justify-center inline-block px-6 py-2.5 bg-blue-900 text-white font-medium text-xs leading-tight uppercase rounded shadow-md hover:bg-blue-700 hover:shadow-lg focus:bg-blue-700 focus:shadow-lg focus:outline-none focus:ring-0 active:bg-blue-800 active:shadow-lg transition duration-150 ease-in-out">
+                  <div class="col-span-3 sm:col-span-2 flex sm:flex-row justify-end gap-2">
+                        <button v-can="'productos_salida'" @click="openModalEntradaSalida(0)" type="button" class="mr-1 inline-block px-6 py-2.5 bg-green-500 text-white font-medium text-xs leading-tight uppercase rounded shadow-md hover:bg-green-600 hover:shadow-lg focus:bg-green-600 focus:shadow-lg focus:outline-none focus:ring-0 active:bg-green-700 active:shadow-lg transition duration-150 ease-in-out">Salidas</button>
+                        <button v-can="'productos_entrada'" @click="openModalEntradaSalida(1)" type="button" class="mr-1 inline-block px-6 py-2.5 bg-blue-700 text-white font-medium text-xs leading-tight uppercase rounded shadow-md hover:bg-blue-800 hover:shadow-lg  focus:bg-green-600 focus:shadow-lg focus:outline-none  focus:ring-0 focus:ring-blue-300 active:shadow-lg dark:bg-blue-600 dark:hover:bg-blue-700 transition duration-150 ease-in-out">Entradas</button>
+                        <button v-can="'sale_productos_importar'" @click="openModalImport()" type="button" class="mr-1 inline-block px-6 py-2.5 bg-green-700 text-white font-medium text-xs leading-tight uppercase rounded shadow-md hover:bg-green-800 hover:shadow-lg focus:ring-green-300  focus:shadow-lg focus:outline-none focus:ring-0 active:bg-green-700 active:shadow-lg dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800 transition duration-150 ease-in-out" >Importar</button>
+                        <button v-can="'sale_importar_facturador3'" @click="openModalFacturador3()" type="button" class="mr-1 inline-block px-6 py-2.5 bg-amber-700 text-white font-medium text-xs leading-tight uppercase rounded shadow-md hover:bg-amber-800 transition duration-150 ease-in-out">Facturador3</button>
+                        <Link v-can="'productos_nuevo'" :href="route('products.create')" class="flex items-center justify-center inline-block px-6 py-2.5 bg-blue-900 text-white font-medium text-xs leading-tight uppercase rounded shadow-md hover:bg-blue-700 hover:shadow-lg focus:bg-blue-700 focus:shadow-lg focus:outline-none focus:ring-0 active:bg-blue-800 active:shadow-lg transition duration-150 ease-in-out">
                             Nuevo
-                          </Link>
-                      </template>
-                    </Keypad>
+                        </Link>
                   </div>
                 </div>
               </div>
@@ -450,6 +459,9 @@
                           Código
                       </th>
                       <th class="">
+                          Código SUNAT
+                      </th>
+                      <th class="">
                           Descripción
                       </th>
                     </tr>
@@ -457,7 +469,7 @@
                   <tbody>
                     <tr v-for="(product, index) in products.data" :key="product.id" >
                         <td class="text-center">
-                          
+
                             <Dropdown :placement="'bottomLeft'" arrow>
                                 <button class="btn btn-outline-info dropdown-toggle inline-flex px-2 py-2" type="button" @click="toggle">
                                     <font-awesome-icon :icon="faGears" />
@@ -497,7 +509,7 @@
                                 </Menu>
                               </template>
                             </Dropdown>
-                          
+
                         </td>
                         <td v-if="form.displayProduct" class="text-center">
                           <Image
@@ -508,13 +520,16 @@
                         <td class="text-center ">
                             {{ product.interne }}
                         </td>
+                        <td class="text-center ">
+                            {{ product.usine }}
+                        </td>
                         <td class="text-sm ">
                             {{ product.description }}
                         </td>
                     </tr>
                   </tbody>
                 </table>
-                
+
               </div>
               <Pagination :data="products" />
             </div>
@@ -687,7 +702,7 @@
                         id="description"
                         v-model="formInput.description"
                         type="text"
-                       
+
                     />
                     <InputError :message="formInput.errors.description" class="mt-2" />
                   </div>
@@ -820,7 +835,7 @@
                                         v-model="item.size"
                                         type="text"
                                         class="bg-gray-200 block w-full mt-1"
-                                        
+
                                     />
 
                                   </td>
@@ -832,7 +847,7 @@
                                       v-model="item.quantity"
                                       type="number"
                                       class="bg-gray-200 block w-full mt-1"
-                                        
+
                                     />
                                   </td>
                                   <td style="padding-left: 4px;" valign="bottom">
@@ -848,7 +863,7 @@
                           </table>
                       </div>
                   </div>
-                  
+
                   <div v-else class="col-span-3">
                     <table style="width: 100%;">
                       <tr>
@@ -966,7 +981,7 @@
           </template>
           <template #content>
             <div class="flex flex-col">
-              
+
               <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white" for="file_input">Upload file</label>
               <input @input="formImport.file = $event.target.files[0]" accept=".xls, .xlsx"  class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400" aria-describedby="file_input_help" id="file_input" type="file">
               <p class="mt-1 text-sm text-gray-500 dark:text-gray-300" id="file_input_help">.xlsx.</p>
@@ -983,6 +998,12 @@
             </DangerButton>
           </template>
         </ModalSmall>
+
+        <Facturador3ImportModal
+            :show="displayModalFacturador3"
+            :establishments="establishments"
+            @close="closeModalFacturador3"
+        />
       </ConfigProvider>
     </AppLayout>
 </template>

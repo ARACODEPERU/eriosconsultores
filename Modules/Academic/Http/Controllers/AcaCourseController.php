@@ -4,62 +4,98 @@ namespace Modules\Academic\Http\Controllers;
 
 use App\Models\Parameter;
 use Illuminate\Contracts\Support\Renderable;
+use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Modules\Academic\Entities\AcaBrochure;
+use Modules\Academic\Entities\AcaCapRegistration;
 use Modules\Academic\Entities\AcaCategoryCourse;
 use Modules\Academic\Entities\AcaCourse;
+use Modules\Academic\Entities\AcaExam;
 use Modules\Academic\Entities\AcaInstitution;
 use Modules\Academic\Entities\AcaModality;
+use Modules\Academic\Entities\AcaStudentAttendance;
+use Modules\Academic\Entities\AcaStudentParticipation;
 use Modules\Academic\Entities\AcaTeacher;
 use Modules\Academic\Entities\AcaTeacherCourse;
-use Illuminate\Foundation\Validation\ValidatesRequests;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
-use Modules\Academic\Entities\AcaCapRegistration;
-use Modules\Academic\Entities\AcaStudent;
 
 class AcaCourseController extends Controller
 {
     use ValidatesRequests;
+
     /**
      * Display a listing of the resource.
+     *
      * @return Renderable
      */
-    protected $P000010; ///token Tiny
+    protected $P000010; // /token Tiny
+
+    protected $P000018;
 
     protected $RPTABLE;
 
     public function __construct()
     {
         $this->RPTABLE = env('RECORDS_PAGE_TABLE') ?? 10;
-        $this->P000010  = Parameter::where('parameter_code', 'P000010')->value('value_default');
+        $this->P000010 = Parameter::where('parameter_code', 'P000010')->value('value_default');
+        $this->P000018 = Parameter::where('parameter_code', 'P000018')->value('value_default');
     }
 
     public function index()
     {
-        $courses = (new AcaCourse())->newQuery();
+        // dd(request()->all('status'));
+        $courses = (new AcaCourse)->newQuery();
         if (request()->has('search')) {
-            $courses->where('description', 'like', '%' . request()->input('search') . '%');
+            $courses->where('description', 'like', '%'.request()->input('search').'%');
+        }
+        if (request()->has('modality')) {
+            $courses->where('modality_id', '=', request()->input('modality'));
+        }
+        if (request()->has('status')) {
+
+            if (request()->get('status') == 1) {
+                $courses->where('status', true);
+            }
+
+            if (request()->get('status') == 0) {
+                $courses->where('status', false);
+            }
         }
         $courses->orderBy('id', 'DESC');
-        $courses->with('category');
-        $courses->with('modality');
+        $courses->with([
+            'category',
+            'modality',
+            'exam' => function ($query) {
+                $query->whereNull('module_id');
+            },
+        ]);
         $courses = $courses->paginate($this->RPTABLE)->onEachSide(2);
+
+        $categories = AcaCategoryCourse::get();
+        $modalities = AcaModality::get();
+        $types = getEnumValues('aca_courses', 'type_description');
 
         $institutions = AcaInstitution::where('status', true)->get();
 
         return Inertia::render('Academic::Courses/List', [
-            'courses'       => $courses,
-            'institutions'  => $institutions
+            'courses' => $courses,
+            'institutions' => $institutions,
+            'categories' => $categories,
+            'modalities' => $modalities,
+            'types' => $types,
+            'coursesActive' => AcaCourse::where('status', true)->count(),
+            'filters' => request()->all(),
         ]);
     }
 
     /**
      * Show the form for creating a new resource.
+     *
      * @return Renderable
      */
     public function create()
@@ -70,16 +106,17 @@ class AcaCourseController extends Controller
         $sectors = getEnumValues('aca_courses', 'sector_description');
 
         return Inertia::render('Academic::Courses/Create', [
-            'modalities'    => $modalities,
-            'categories'    => $categories,
-            'types'    => $types,
-            'sectors'    => $sectors,
+            'modalities' => $modalities,
+            'categories' => $categories,
+            'types' => $types,
+            'sectors' => $sectors,
+            'P000018' => $this->P000018,
         ]);
     }
 
     /**
      * Store a newly created resource in storage.
-     * @param Request $request
+     *
      * @return Renderable
      */
     public function store(Request $request)
@@ -93,25 +130,29 @@ class AcaCourseController extends Controller
                 'image' => 'required',
                 'modality_id' => 'required',
                 'type_description' => 'required',
+                'certificate_title' => 'required',
             ]
         );
 
         $timestamp = strtotime($request->get('course_date'));
 
         $courseNew = AcaCourse::create([
-            'status'            => $request->get('status') ? true : false,
-            'description'       => $request->get('description'),
-            'course_day'        => date("d", $timestamp),
-            'course_month'      => date("m", $timestamp),
-            'course_year'       => date("Y", $timestamp),
-            'category_id'       => $request->get('category_id'),
-            'modality_id'       => $request->get('modality_id'),
-            'type_description'  => $request->get('type_description'),
+            'status' => $request->get('status') ? true : false,
+            'description' => $request->get('description'),
+            'usine' => $request->get('usine'),
+            'course_day' => date('d', $timestamp),
+            'course_month' => date('m', $timestamp),
+            'course_year' => date('Y', $timestamp),
+            'category_id' => $request->get('category_id'),
+            'modality_id' => $request->get('modality_id'),
+            'type_description' => $request->get('type_description'),
             'sector_description' => $request->get('sector_description'),
-            'price'                     => $request->get('price') ?? 0,
-            'certificate_description'   => trim($request->get('certificate_description')) ?? null,
-            'discount'  => $request->get('discount'),
-            'discount_applies'  => $request->get('discount_applies')
+            'price' => $request->get('price') ?? 0,
+            'certificate_description' => trim($request->get('certificate_description')) ?? null,
+            'certificate_title' => trim($request->get('certificate_title')) ?? null,
+            'discount' => $request->get('discount'),
+            'discount_applies' => $request->get('discount_applies'),
+            'auto_certificate' => $request->get('auto_certificate') ? true : false,
         ]);
 
         $path = null;
@@ -129,22 +170,21 @@ class AcaCourseController extends Controller
             file_put_contents($tempFile, $fileData);
             $mime = mime_content_type($tempFile);
 
-            $name = uniqid('', true) . '.' . str_replace('image/', '', $mime);
+            $name = uniqid('', true).'.'.str_replace('image/', '', $mime);
             $file = new UploadedFile(realpath($tempFile), $name, $mime, null, true);
 
             if ($file) {
                 // $original_name = strtolower(trim($file->getClientOriginalName()));
                 // $file_name = time() . rand(100, 999) . $original_name;
                 $original_name = strtolower(trim($file->getClientOriginalName()));
-                $original_name = str_replace(" ", "_", $original_name);
+                $original_name = str_replace(' ', '_', $original_name);
                 $extension = $file->getClientOriginalExtension();
-                $file_name = time() . rand(100, 999) . '.' . $extension;
+                $file_name = time().rand(100, 999).'.'.$extension;
                 $path = Storage::disk('public')->putFileAs($destination, $file, $file_name);
                 $courseNew->image = $path;
                 $courseNew->save();
             }
         }
-
 
         return redirect()->route('aca_courses_information', $courseNew->id)
             ->with('message', 'Curso creado con éxito, registrar informacion del curso');
@@ -152,7 +192,8 @@ class AcaCourseController extends Controller
 
     /**
      * Show the specified resource.
-     * @param int $id
+     *
+     * @param  int  $id
      * @return Renderable
      */
     public function information($id)
@@ -173,15 +214,10 @@ class AcaCourseController extends Controller
             'course' => AcaCourse::find($id),
             'tiny_api_key' => $this->P000010,
             'teachers' => $teachers,
-            'course_teachers' => $course_teachers
+            'course_teachers' => $course_teachers,
         ]);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     * @param int $id
-     * @return Renderable
-     */
     public function edit($id)
     {
         $categories = AcaCategoryCourse::all();
@@ -190,18 +226,19 @@ class AcaCourseController extends Controller
         $sectors = getEnumValues('aca_courses', 'sector_description');
 
         return Inertia::render('Academic::Courses/Edit', [
-            'course'        => AcaCourse::find($id),
-            'modalities'    => $modalities,
-            'categories'    => $categories,
-            'types'    => $types,
-            'sectors'    => $sectors,
+            'course' => AcaCourse::find($id),
+            'modalities' => $modalities,
+            'categories' => $categories,
+            'types' => $types,
+            'sectors' => $sectors,
+            'P000018' => $this->P000018,
         ]);
     }
 
     /**
      * Update the specified resource in storage.
-     * @param Request $request
-     * @param int $id
+     *
+     * @param  int  $id
      * @return Renderable
      */
     public function update(Request $request)
@@ -216,26 +253,30 @@ class AcaCourseController extends Controller
                 'category_id' => 'required',
                 'modality_id' => 'required',
                 'type_description' => 'required',
+                'certificate_title' => 'required',
             ]
         );
 
         $course = AcaCourse::find($id);
         $timestamp = strtotime($request->get('course_date'));
 
-        //dd($request->get('category_id'));
-        $course->status           = $request->get('status') ? true : false;
-        $course->description      = $request->get('description');
-        $course->course_day       = date("d", $timestamp);
-        $course->course_month     = date("m", $timestamp);
-        $course->course_year       = date("Y", $timestamp);
-        $course->category_id      = $request->get('category_id');
-        $course->modality_id       = $request->get('modality_id');
-        $course->type_description  = $request->get('type_description');
+        // dd($request->get('category_id'));
+        $course->status = $request->get('status') ? true : false;
+        $course->description = $request->get('description');
+        $course->usine = $request->get('usine');
+        $course->course_day = date('d', $timestamp);
+        $course->course_month = date('m', $timestamp);
+        $course->course_year = date('Y', $timestamp);
+        $course->category_id = $request->get('category_id');
+        $course->modality_id = $request->get('modality_id');
+        $course->type_description = $request->get('type_description');
         $course->sector_description = $request->get('sector_description');
-        $course->price                   = $request->get('price') ?? 0;
-        $course->certificate_description  = trim($request->get('certificate_description')) ?? null;
+        $course->price = $request->get('price') ?? 0;
+        $course->certificate_description = trim($request->get('certificate_description')) ?? null;
+        $course->certificate_title = trim($request->get('certificate_title')) ?? null;
         $course->discount = $request->get('discount') ?? 0;
         $course->discount_applies = $request->get('discount_applies') ?? null;
+        $course->auto_certificate = $request->get('auto_certificate') ? true : false;
 
         $destination = 'uploads/courses';
         $base64Image = $request->get('image');
@@ -250,16 +291,16 @@ class AcaCourseController extends Controller
             file_put_contents($tempFile, $fileData);
             $mime = mime_content_type($tempFile);
 
-            $name = uniqid('', true) . '.' . str_replace('image/', '', $mime);
+            $name = uniqid('', true).'.'.str_replace('image/', '', $mime);
             $file = new UploadedFile(realpath($tempFile), $name, $mime, null, true);
 
             if ($file) {
                 // $original_name = strtolower(trim($file->getClientOriginalName()));
                 // $file_name = time() . rand(100, 999) . $original_name;
                 $original_name = strtolower(trim($file->getClientOriginalName()));
-                $original_name = str_replace(" ", "_", $original_name);
+                $original_name = str_replace(' ', '_', $original_name);
                 $extension = $file->getClientOriginalExtension();
-                $file_name = time() . rand(100, 999) . '.' . $extension;
+                $file_name = time().rand(100, 999).'.'.$extension;
                 $path = Storage::disk('public')->putFileAs($destination, $file, $file_name);
                 $course->image = $path;
             }
@@ -270,7 +311,8 @@ class AcaCourseController extends Controller
 
     /**
      * Remove the specified resource from storage.
-     * @param int $id
+     *
+     * @param  int  $id
      * @return Renderable
      */
     public function destroy($id)
@@ -279,18 +321,25 @@ class AcaCourseController extends Controller
         $success = false;
         try {
             // Usamos una transacción para asegurarnos de que la operación se realice de manera segura.
-            DB::beginTransaction();
-
-            // Verificamos si existe.
+           // 1. Buscamos el curso. findOrFail lanzará una excepción si no existe,
+            // lo cual detendrá el flujo y saltará al catch.
             $item = AcaCourse::findOrFail($id);
 
-            // Si no hay detalles asociados, eliminamos.
+            // 2. Eliminamos el curso.
             $item->delete();
 
-            // Si todo ha sido exitoso, confirmamos la transacción.
+            // 3. Buscamos el OnliItem. Usamos un condicional por seguridad
+            // para evitar un error de "delete() on null" si el registro no existe.
+            $onliItem = OnliItem::where('item_id', $id)->first();
+
+            if ($onliItem) {
+                $onliItem->delete();
+            }
+
+            // 4. Si todo salió bien, confirmamos los cambios.
             DB::commit();
 
-            $message =  'Curso eliminado correctamente';
+            $message = 'Curso eliminado correctamente';
             $success = true;
         } catch (\Exception $e) {
             // Si ocurre alguna excepción durante la transacción, hacemos rollback para deshacer cualquier cambio.
@@ -301,7 +350,7 @@ class AcaCourseController extends Controller
 
         return response()->json([
             'success' => $success,
-            'message' => $message
+            'message' => $message,
         ]);
     }
 
@@ -312,28 +361,350 @@ class AcaCourseController extends Controller
             $courses = AcaCourse::whereNull('teacher_id')->get();
         }
 
-
         return response()->json([
-            'courses' => $courses
+            'courses' => $courses,
         ]);
     }
 
     public function enrolledStudents($id)
     {
         $course = AcaCourse::find($id);
+        $search = request()->input('search');
 
         $students = AcaCapRegistration::with(['student.person', 'document'])
             ->where('course_id', $id)
-            ->paginate(20) // Puedes ajustar el número de resultados por página
-            ->through(function ($student) {
-                $student->checkbox = false;
-                $student->email_send = $student->document_id && $student->sale_note_id ? true : false;
-                return $student;
+            // Aplicamos el filtro solo si existe búsqueda
+            ->when($search, function ($query) use ($search) {
+                $query->whereHas('student.person', function ($q) use ($search) {
+                    $q->where('full_name', 'like', '%'.$search.'%')
+                        ->orWhere('number', '=', $search);
+                });
+            })
+            ->paginate(20)
+            ->through(function ($registration) {
+                $registration->checkbox = false;
+                // Corregido: Si tiene document_id O sale_note_id se considera enviado (ajusta según tu lógica si es AND u OR)
+                $registration->email_send = $registration->document_id || $registration->sale_note_id ? true : false;
+
+                return $registration;
             });
 
         return Inertia::render('Academic::Courses/EnrolledStudents', [
             'course' => $course,
-            'students' => $students
+            'students' => $students,
+            'filters' => request()->all(),
+        ]);
+    }
+
+    /**
+     * Crear o actualizar examen final del curso
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function updateOrCreateCourseExam(Request $request)
+    {
+        // 1. Validación de los campos recibidos
+        $this->validate($request, [
+            'course_id' => 'required',
+            'description' => 'required|string|max:255',
+            'date_start' => 'required|date',
+            'date_end' => 'required|date|after_or_equal:date_start',
+            'duration_minutes' => 'required|numeric|min:1',
+            'attempts' => 'required|numeric|min:0',
+            'status' => 'required',
+            'answer_key_pdf' => 'nullable|file|mimes:pdf|max:10240',
+        ]);
+
+        // 2. Preparar los datos básicos para la persistencia
+        $data = [
+            'course_id' => $request->get('course_id'),
+            'description' => $request->get('description'),
+            'date_start' => $request->get('date_start'),
+            'date_end' => $request->get('date_end'),
+            'duration_minutes' => (int) $request->get('duration_minutes'),
+            'attempts' => (int) $request->get('attempts'),
+            'status' => $request->get('status'),
+        ];
+
+        // 3. Lógica de subida de archivo personalizada
+        if ($request->hasFile('answer_key_pdf')) {
+            $file = $request->file('answer_key_pdf');
+
+            // Procesar nombre original
+            $original_name = strtolower(trim($file->getClientOriginalName()));
+            $original_name = str_replace(' ', '_', $original_name);
+
+            $extension = $file->getClientOriginalExtension();
+            $file_name = time().rand(100, 999).'.'.$extension;
+
+            $destination = 'uploads/courses/exams';
+
+            // Guardar el archivo con el nombre generado
+            $path = Storage::disk('public')->putFileAs($destination, $file, $file_name);
+
+            // Asignar a los campos correspondientes
+            $data['file_resolved_name'] = $original_name;
+            $data['file_resolved_path'] = $path;
+        }
+
+        // 4. Update or Create basado solo en course_id (para examen de curso)
+        AcaExam::updateOrCreate(
+            [
+                'id' => $request->id,
+            ],
+            $data
+        );
+
+    }
+
+    /**
+     * Vista de participaciones de estudiantes
+     *
+     * @param  int  $courseId  ID del curso
+     * @return \Inertia\Response
+     */
+    public function participations()
+    {
+        $courses = AcaCourse::with([
+            'modules.themes.contents' => function ($query) {
+                $query->where('is_file', 3); // Solo videoconferencias (Zoom)
+            },
+        ])->get();
+
+        return Inertia::render('Academic::Courses/StudentParticipations', [
+            'courses' => $courses,
+        ]);
+    }
+
+    /**
+     * Buscar estudiantes con filtros para participaciones
+     *
+     * @param  int  $courseId  ID del curso
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function searchParticipations(Request $request, $courseId)
+    {
+        $request->validate([
+            'module_id' => 'nullable|exists:aca_modules,id',
+            'theme_id' => 'nullable|exists:aca_themes,id',
+            'content_id' => 'nullable|exists:aca_contents,id',
+        ]);
+
+        // Obtener estudiantes del curso
+        $registrations = AcaCapRegistration::with(['student.person'])
+            ->where('course_id', $courseId)
+            ->where('status', true)
+            ->get();
+
+        // Obtener participaciones existentes según filtros
+        $participationsQuery = AcaStudentParticipation::where('course_id', $courseId);
+
+        if ($request->module_id) {
+            $participationsQuery->where('module_id', $request->module_id);
+        }
+
+        if ($request->theme_id) {
+            $participationsQuery->where('theme_id', $request->theme_id);
+        }
+
+        if ($request->content_id) {
+            $participationsQuery->where('content_id', $request->content_id);
+        }
+
+        $participations = $participationsQuery->get();
+        $participationsByStudent = $participations->keyBy('student_id');
+
+        // Obtener ASISTENCIAS en UNA SOLA CONSULTA (elimina N+1)
+        $attendanceQuery = AcaStudentAttendance::where('course_id', $courseId)
+            ->whereIn('student_id', $registrations->pluck('student.id'));
+
+        if ($request->module_id) {
+            $attendanceQuery->where('module_id', $request->module_id);
+        }
+
+        if ($request->content_id) {
+            $attendanceQuery->where('content_id', $request->content_id);
+        }
+
+        $attendanceStudentIds = $attendanceQuery->pluck('student_id')->toArray();
+
+        // Combinar estudiantes con sus participaciones
+        $students = $registrations->map(function ($reg) use ($participationsByStudent, $attendanceStudentIds) {
+            $participation = $participationsByStudent->get($reg->student->id);
+
+            // Si no existe participación, verificar asistencia
+            $participationScore = null;
+            $hasAttendance = false;
+            if (! $participation) {
+                // Verificar si el estudiante tiene asistencia (usando el array precargado)
+                $hasAttendance = in_array($reg->student->id, $attendanceStudentIds);
+
+                if ($hasAttendance) {
+                    $participationScore = 12; // Nota por haber asistido
+                }
+            }
+
+            return [
+                'id' => $reg->student->id,
+                'name' => $reg->student->person ? $reg->student->person->full_name : 'Sin nombre',
+                'number' => $reg->student->person ? $reg->student->person->number : 'Sin número',
+                'email' => $reg->student->person ? $reg->student->person->email : '',
+                'participation' => $participation ? [
+                    'id' => $participation->id,
+                    'participation_score' => $participation->participation_score,
+                    'teacher_comment' => $participation->teacher_comment,
+                ] : ($hasAttendance ? [
+                    'id' => null,
+                    'participation_score' => $participationScore,
+                    'teacher_comment' => '',
+                ] : null),
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'students' => $students,
+        ]);
+    }
+
+    /**
+     * Guardar o actualizar participación de estudiante
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function storeParticipation(Request $request)
+    {
+        // 1. Validación de datos
+        $request->validate([
+            'student_id' => 'required|exists:aca_students,id',
+            'course_id' => 'nullable|exists:aca_courses,id',
+            'module_id' => 'nullable|exists:aca_modules,id',
+            'theme_id' => 'nullable|exists:aca_themes,id',
+            'content_id' => 'required|exists:aca_contents,id',
+            'participation_score' => 'nullable|numeric|min:0|max:20',
+            'teacher_comment' => 'nullable|string',
+        ]);
+
+        $userId = Auth::user()->id;
+
+        // 2. Primero buscamos si ya existe para armar el historial de cambios
+        $existingParticipation = AcaStudentParticipation::where('student_id', $request->student_id)
+            ->where('course_id', $request->course_id)
+            ->where('module_id', $request->module_id)
+            ->where('theme_id', $request->theme_id)
+            ->where('content_id', $request->content_id)
+            ->first();
+
+        // 3. Preparamos el array de historial solo si ya existía el registro
+        $history = null;
+        if ($existingParticipation) {
+            $history = $existingParticipation->edited_by ?? [];
+            $history[] = [
+                'user_id' => $userId,
+                'updated_at' => now()->toISOString(),
+            ];
+        }
+
+        // 4. El "Upsert" mágico de Laravel
+        $participation = AcaStudentParticipation::updateOrCreate(
+            // Condición para buscar el registro (Claves únicas de negocio)
+            [
+                'student_id' => $request->student_id,
+                'course_id' => $request->course_id,
+                'module_id' => $request->module_id,
+                'theme_id' => $request->theme_id,
+                'content_id' => $request->content_id,
+            ],
+            // Valores que se van a insertar o actualizar
+            [
+                'participation_score' => $request->participation_score,
+                'teacher_comment' => $request->teacher_comment,
+                // Si es nuevo, se usa "created_by". Si ya existe, se mantiene el que estaba.
+                'created_by' => $existingParticipation ? $existingParticipation->created_by : $userId,
+                // Si es nuevo queda en null, si es edición se guarda el historial que armamos arriba
+                'edited_by' => $history,
+            ]
+        );
+
+        // 5. Respuesta única (Laravel sabrá si fue "creado" o "actualizado")
+        $wasRecentlyCreated = $participation->wasRecentlyCreated;
+
+        return response()->json([
+            'success' => true,
+            'message' => $wasRecentlyCreated ? 'Participación guardada correctamente' : 'Participación actualizada correctamente',
+            'participation' => $participation,
+        ]);
+    }
+
+    /**
+     * Guardar todas las participaciones de estudiantes en una sola acción
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function storeAllParticipations(Request $request)
+    {
+        $request->validate([
+            'participations' => 'required|array',
+            'participations.*.student_id' => 'required|exists:aca_students,id',
+            'participations.*.course_id' => 'nullable|exists:aca_courses,id',
+            'participations.*.module_id' => 'nullable|exists:aca_modules,id',
+            'participations.*.theme_id' => 'nullable|exists:aca_themes,id',
+            'participations.*.content_id' => 'required|exists:aca_contents,id',
+            'participations.*.participation_score' => 'nullable|numeric|min:0|max:20',
+            'participations.*.teacher_comment' => 'nullable|string',
+        ]);
+
+        $userId = Auth::user()->id;
+        $savedCount = 0;
+
+        $participations = $request->participations;
+        if (empty($participations)) {
+            return response()->json(['success' => true, 'message' => 'No hay participaciones para guardar']);
+        }
+
+        $first = $participations[0];
+
+        $existingParticipations = AcaStudentParticipation::where('course_id', $first['course_id'])
+            ->where('module_id', $first['module_id'])
+            ->where('theme_id', $first['theme_id'])
+            ->where('content_id', $first['content_id'])
+            ->get()
+            ->keyBy('student_id');
+
+        foreach ($participations as $participationData) {
+            $studentId = $participationData['student_id'];
+            $existing = $existingParticipations->get($studentId);
+
+            if ($existing) {
+                $existing->participation_score = $participationData['participation_score'];
+                $existing->teacher_comment = $participationData['teacher_comment'];
+
+                $history = $existing->edited_by ?? [];
+                $history[] = [
+                    'user_id' => $userId,
+                    'updated_at' => now()->toISOString(),
+                ];
+                $existing->edited_by = $history;
+                $existing->save();
+            } else {
+                AcaStudentParticipation::create([
+                    'student_id' => $studentId,
+                    'course_id' => $participationData['course_id'],
+                    'module_id' => $participationData['module_id'],
+                    'theme_id' => $participationData['theme_id'],
+                    'content_id' => $participationData['content_id'],
+                    'participation_score' => $participationData['participation_score'],
+                    'teacher_comment' => $participationData['teacher_comment'],
+                    'created_by' => $userId,
+                    'edited_by' => null,
+                ]);
+            }
+            $savedCount++;
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Se guardaron {$savedCount} participaciones correctamente",
         ]);
     }
 }

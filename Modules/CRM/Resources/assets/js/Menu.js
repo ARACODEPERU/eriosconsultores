@@ -4,13 +4,15 @@ import {
     faComments,
     faEnvelopesBulk ,
     faBuildingUser,
-    faPersonCircleQuestion
+    faPersonCircleQuestion,
+    faBookBookmark,
+    faHeadset
 } from "@fortawesome/free-solid-svg-icons";
 
 const menuCRM = {
     status: false,
     text: "Gestión de Clientes y Comunicación",
-    icom: faGear,
+    icom: faHeadset,
     route: 'module',
     permissions: "crm_dashboard",
     items: [
@@ -48,6 +50,20 @@ const menuCRM = {
             text: "Dudas Comunes",
             permissions: "crm_dudas_comunes",
             icom: faPersonCircleQuestion,
+        },
+        {
+            route: route("complaints_book_list"),
+            status: false,
+            text: "Libro de Reclamaciones",
+            permissions: "crm_libro_reclamos",
+            icom: faBookBookmark,
+        },
+        {
+            route: route("crm_new_catchments"),
+            status: false,
+            text: "Nuevas Captaciones",
+            permissions: "crm_nuevas_captaciones",
+            icom: faBuildingUser,
         },
     ],
 };

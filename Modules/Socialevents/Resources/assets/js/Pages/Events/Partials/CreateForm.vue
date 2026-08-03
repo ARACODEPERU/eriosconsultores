@@ -8,15 +8,17 @@ import TextInput from '@/Components/TextInput.vue';
 import Keypad from '@/Components/Keypad.vue';
 import Swal2 from 'sweetalert2';
 import { ref, watch, onMounted } from 'vue';
-import Editor from '@tinymce/tinymce-vue'
-import { 
+import EditorAracode from '@/Components/EditorAracode.vue'
+
+const editorImageUploadUrl = route('even_editor_upload_image')
+import {
     ConfigProvider,
-    Select, 
+    Select,
     InputNumber,
     Textarea,
     RangePicker,
-    Switch, 
-    Input, 
+    Switch,
+    TreeSelect,
     Upload,
     Flex
 } from 'ant-design-vue';
@@ -39,10 +41,6 @@ const props = defineProps({
         type: Object,
         default: () => ({}),
     },
-    tiny_api_key: {
-        type: String,
-        default: null,
-    }
 });
 
 const form = useForm({
@@ -90,6 +88,10 @@ watch(() => form.just_transmit, (data) => {
         form.broadcast = true
     }
 });
+
+const treeLine = ref(true);
+const showLeafIcon = ref(false);
+
 </script>
 
 <template>
@@ -114,17 +116,45 @@ watch(() => form.just_transmit, (data) => {
                         </div>
                     </Flex>
                 </div>
-                <div v-if="form.just_transmit == 0" class="col-span-6 sm:col-span-2">
+                <div v-if="form.just_transmit == 0" class="col-span-6 sm:col-span-3">
                     <InputLabel for="category_id" value="Categoría *" class="mb-1" />
-                    <Select 
-                        style="width: 100%;"
-                        v-model:value="form.category_id" 
+                    <TreeSelect
+                        v-model:value="form.category_id"
+                        style="width: 100%"
+                        placeholder="Por favor seleccione"
+                        :tree-line="treeLine && { showLeafIcon }"
+                        :tree-data="categories.map((obj) => (
+                            {
+                                value: obj.id,
+                                title: obj.description,
+                                informations: obj.informations,
+                                children: obj.subcategories?.map((subObj) => (
+                                    {
+                                        value: subObj.id,
+                                        title: subObj.description,
+                                        informations: subObj.informations,
+                                        children: subObj.subcategories?.map((xSubObj) => (
+                                            {
+                                                value: xSubObj.id,
+                                                title: xSubObj.description,
+                                                informations: xSubObj.informations
+                                            })
+                                        )
+                                    })
+                                )
+                            })
+                        )"
+                        tree-node-filter-prop="title"
                         id="category_id"
-                        :options="categories.map((obj) => ({value:obj.id,label:obj.description}))"
-                    />
+                    >
+                        <template #title="{ value: val, title, informations }">
+                            <span>{{ title }}</span><br />
+                            <small v-if="informations" class="text-info">{{ informations }}</small>
+                        </template>
+                    </TreeSelect>
                     <InputError :message="form.errors.category_id" class="mt-2" />
                 </div>
-                <div v-if="form.just_transmit == 0" class="col-span-6 sm:col-span-4">
+                <div v-if="form.just_transmit == 0" class="col-span-6 sm:col-span-3">
                     <InputLabel for="dates" value="Fechas desde Hasta *" class="mb-1" />
                     <RangePicker id="dates" v-model:value="form.date" style="width: 100%;" :locale="esES" />
                     <InputError :message="form.errors.date" class="mt-2" />
@@ -136,13 +166,11 @@ watch(() => form.just_transmit, (data) => {
                 </div>
                 <div v-if="form.just_transmit == 0" class="col-span-6">
                     <InputLabel for="description" value="Descripción *" class="mb-1" />
-                    <Editor
-                        :api-key="tiny_api_key"
+                    <EditorAracode
                         v-model="form.description"
-                        :init="{
-                            plugins: 'anchor autolink charmap codesample emoticons link lists media searchreplace table visualblocks wordcount',
-                            language: 'es',
-                        }"
+                        minHeight="320px"
+                        placeholder="Descripción del evento..."
+                        :imageUploadUrl="editorImageUploadUrl"
                     />
                     <InputError :message="form.errors.description" class="mt-2" />
                 </div>
@@ -164,11 +192,11 @@ watch(() => form.just_transmit, (data) => {
                     <InputError :message="form.errors.iframe_transmission" class="mt-2" />
                 </div>
 
-                
+
                 <div v-if="form.just_transmit == 0" class="col-span-6">
                     <InputLabel for="file_input" value="Imagen *" />
                     <CropperImage
-                        :aspectRatio="1920 / 500"
+                        :aspectRatio="1920 / 809"
                         :viewMode="1"
                         ref="cropper"
                         @onCrop="cropImageAndSave"
@@ -180,7 +208,7 @@ watch(() => form.just_transmit, (data) => {
                     <Select
                         id="exhibitors"
                         v-model:value="form.exhibitors"
-                        :options="instructors.map((obj) => ({value: obj.person.id,label:obj.person.full_name}))"
+                        :options="instructors.map((obj) => ({value: obj.id,label:obj.full_name}))"
                         style="width: 100%;"
                         mode="multiple"
                     />

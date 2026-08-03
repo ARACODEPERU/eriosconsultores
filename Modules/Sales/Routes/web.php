@@ -14,6 +14,10 @@
 use App\Http\Controllers\ApisnetPeController;
 use App\Http\Controllers\LocalSaleController;
 use Illuminate\Support\Facades\Route;
+use Modules\Sales\Http\Controllers\AccountsReceivableController;
+use Modules\Sales\Http\Controllers\AccountsReceivableDashboardController;
+use Modules\Sales\Http\Controllers\Facturador3ImportController;
+use Modules\Sales\Http\Controllers\InvoiceReportsController;
 use Modules\Sales\Http\Controllers\PettyCashController;
 use Modules\Sales\Http\Controllers\ProductController;
 use Modules\Sales\Http\Controllers\ProviderController;
@@ -22,15 +26,19 @@ use Modules\Sales\Http\Controllers\SaleController;
 use Modules\Sales\Http\Controllers\SaleCreditNotesController;
 use Modules\Sales\Http\Controllers\SaleDocumentController;
 use Modules\Sales\Http\Controllers\SaleLowCommunicationController;
+use Modules\Sales\Http\Controllers\SalePaymentQuotaController;
 use Modules\Sales\Http\Controllers\SalePhysicalDocumentController;
 use Modules\Sales\Http\Controllers\SaleProductBrandController;
 use Modules\Sales\Http\Controllers\SaleProductCategoryController;
 use Modules\Sales\Http\Controllers\SalesController;
+use Modules\Sales\Http\Controllers\SalesPrintTemplateController;
 use Modules\Sales\Http\Controllers\SaleSummaryController;
 use Modules\Sales\Http\Controllers\SerieController;
 use Modules\Sales\Http\Controllers\ServicesController;
+use Modules\Sales\Http\Controllers\QuickSaleController;
+use Modules\Sales\Http\Controllers\QuickSaleStoreController;
 
-Route::middleware(['auth', 'verified'])->prefix('sales')->group(function () {
+Route::middleware(['auth', 'verified', 'user_activity_log'])->prefix('sales')->group(function () {
     route::get('dashboard', [SalesController::class, 'index'])->name('sales_dashboard');
     Route::resource('products', ProductController::class);
     Route::resource('pettycash', PettyCashController::class);
@@ -51,6 +59,10 @@ Route::middleware(['auth', 'verified'])->prefix('sales')->group(function () {
 
     Route::post('search/products/all', [ProductController::class, 'searchProductAll'])->name('search_product_all');
 
+    // TPV - Punto de Venta Rápido
+    Route::get('quick-sale', [QuickSaleController::class, 'index'])->name('sales_quick_sale');
+    Route::post('quick-sale', [QuickSaleStoreController::class, 'store'])->name('sales_quick_sale_store');
+
     Route::post('get/product/local/', [ProductController::class, 'getProductByLocal'])->name('get_product_by_local');
 
     Route::post('search/scaner/products', [ProductController::class, 'searchScanerProduct'])->name('search_scaner_product');
@@ -60,6 +72,13 @@ Route::middleware(['auth', 'verified'])->prefix('sales')->group(function () {
     Route::post('showdetails/products/{id}', [ProductController::class, 'showdetails'])->name('showdetails');
 
     Route::post('input/products', [ProductController::class, 'saveInput'])->name('input_products');
+
+    Route::middleware(['middleware' => 'permission:productos'])
+        ->get('administration/print-templates', [SalesPrintTemplateController::class, 'index'])
+        ->name('sales_print_templates_index');
+    Route::middleware(['middleware' => 'permission:productos'])
+        ->post('administration/print-templates', [SalesPrintTemplateController::class, 'update'])
+        ->name('sales_print_templates_update');
 
     Route::post('local/series', [LocalSaleController::class, 'series'])->name('localseriesbyid');
 
@@ -80,7 +99,11 @@ Route::middleware(['auth', 'verified'])->prefix('sales')->group(function () {
 
     Route::get('reports/inventory/report/products', [ReportController::class, 'inventoryReportProducts'])->name('inventory_report_products');
     Route::post('reports/inventory/report/products/data', [ReportController::class, 'inventoryReportProductsData'])->name('inventory_report_products_data');
-
+    Route::get('reports/inventory/kardex', [ReportController::class, 'inventoryKardexReport'])->name('inventory_kardex_report');
+    Route::post('reports/inventory/kardex/data', [ReportController::class, 'inventoryKardexReportData'])->name('inventory_kardex_report_data');
+    Route::post('reports/inventory/kardex/sizes', [ReportController::class, 'inventoryKardexReportSizes'])->name('inventory_kardex_report_sizes');
+    Route::post('reports/inventory/kardex/export', [ReportController::class, 'inventoryKardexReportExport'])->name('inventory_kardex_report_export');
+    Route::get('reports/inventory/kardex/export/{id}/status', [ReportController::class, 'inventoryKardexExportStatus'])->name('inventory_kardex_export_status');
 
     Route::get('reports/inventoryindate', [ReportController::class, 'inventory_report_export'])->name('inventory_report');
 
@@ -97,7 +120,17 @@ Route::middleware(['auth', 'verified'])->prefix('sales')->group(function () {
     Route::post('data/payment/method/motals', [ReportController::class, 'dataPaymentMethodTotals'])->name('data_payment_method_totals');
 
     Route::post('import/product/data', [ProductController::class, 'import'])->name('import_product_data');
-    //////reports//////////
+
+    Route::middleware(['permission:sale_importar_facturador3'])->group(function () {
+        Route::post('import/facturador3/preview', [Facturador3ImportController::class, 'preview'])->name('facturador3_import_preview');
+        Route::post('import/facturador3/search', [Facturador3ImportController::class, 'search'])->name('facturador3_import_search');
+        Route::post('import/facturador3/map', [Facturador3ImportController::class, 'saveEstablishmentMap'])->name('facturador3_import_save_map');
+        Route::post('import/facturador3/exclusions', [Facturador3ImportController::class, 'saveExclusions'])->name('facturador3_import_save_exclusions');
+        Route::delete('import/facturador3/exclusions', [Facturador3ImportController::class, 'removeExclusion'])->name('facturador3_import_remove_exclusion');
+        Route::post('import/facturador3/process', [Facturador3ImportController::class, 'process'])->name('facturador3_import_process');
+        Route::get('import/facturador3/status/{id}', [Facturador3ImportController::class, 'status'])->name('facturador3_import_status');
+    });
+    // ////reports//////////
     Route::get('reports/product/sellers/dates', [ReportController::class, 'reportProductSellersDates'])->name('report_product_sellers_dates');
     Route::post('reports/product/sellers/table', [ReportController::class, 'reportProductSellersTable'])->name('report_product_sellers_table');
     Route::get('reports/sales/expenses', [ReportController::class, 'reportSalesExpenses'])->name('report_sales_expenses');
@@ -106,11 +139,14 @@ Route::middleware(['auth', 'verified'])->prefix('sales')->group(function () {
 
     Route::get('sale_document_series/{id}', [SaleDocumentController::class, 'getSerieByDocumentType'])->name('sale_document_series');
 
-    ///rutas de docuemntos de ventas boletas y facturas
-    Route::get('saledocuments', [SaleDocumentController::class, 'create'])->name('saledocuments_create');
-    Route::post('saledocuments/store', [SaleDocumentController::class, 'store'])->name('saledocuments_store');
+    // /rutas de docuemntos de ventas boletas y facturas
+    Route::middleware(['middleware' => 'permission:invo_documento_nuevo'])
+        ->get('saledocuments', [SaleDocumentController::class, 'create'])->name('saledocuments_create');
+    Route::middleware(['middleware' => 'permission:invo_documento_nuevo'])
+        ->post('saledocuments/store', [SaleDocumentController::class, 'store'])->name('saledocuments_store');
     Route::post('saledocuments/store_from_ticket', [SaleDocumentController::class, 'storeFromTicket'])->name('saledocuments_store_from_ticket');
-    Route::get('saledocuments/list', [SaleDocumentController::class, 'index'])->name('saledocuments_list');
+    Route::middleware(['middleware' => 'permission:invo_documento_lista'])
+        ->get('saledocuments/list', [SaleDocumentController::class, 'index'])->name('saledocuments_list');
     Route::get('saledocuments/send/{id}/{type}', [SaleDocumentController::class, 'sendSunatDocument'])->name('saledocuments_send');
     Route::post('saledocuments/update/details', [SaleDocumentController::class, 'updateDetailsAndHeader'])->name('saledocuments_update_details');
     Route::get('saledocuments/create/fromticket/{id}', [SaleDocumentController::class, 'createFromFicket'])->name('saledocuments_create_from_ticket');
@@ -121,27 +157,30 @@ Route::middleware(['auth', 'verified'])->prefix('sales')->group(function () {
 
     Route::get('saledocuments/table', [SaleDocumentController::class, 'tableDocument'])->name('saledocuments_table_document');
 
-    ////rutas de resumen diario
+    // //rutas de resumen diario
     Route::get('salesummary/list', [SaleSummaryController::class, 'index'])->name('salesummaries_list');
     Route::get('salesummary/search/{date}', [SaleSummaryController::class, 'searchDocuments'])->name('salesummaries_search_date');
     Route::post('salesummary/store', [SaleSummaryController::class, 'store'])->name('salesummaries_store_date');
     Route::get('salesummary/check/{id}/{ticket}', [SaleSummaryController::class, 'checkSummary'])->name('salesummaries_store_check');
     Route::get('salesummary/destroy/{id}', [SaleSummaryController::class, 'destroySummary'])->name('salesummaries_destroy');
+    Route::get('salesummary/download/{id}/{type}', [SaleSummaryController::class, 'downloadFile'])->name('salesummaries_download');
+    Route::get('salesummary/retry/{id}', [SaleSummaryController::class, 'retrySummary'])->name('salesummaries_retry');
 
-    ////rutas de comunicacion de baja
+    // //rutas de comunicacion de baja
     Route::get('lowcommunication/list', [SaleLowCommunicationController::class, 'index'])->name('low_communication_list');
     Route::get('lowcommunication/search/{date}', [SaleLowCommunicationController::class, 'searchDocuments'])->name('low_communication_search_date');
     Route::post('lowcommunication/store', [SaleLowCommunicationController::class, 'store'])->name('low_communication_store');
     Route::get('lowcommunication/check/{id}/{ticket}', [SaleLowCommunicationController::class, 'check'])->name('low_communication_check');
     Route::get('lowcommunication/destroy/{id}', [SaleLowCommunicationController::class, 'destroy'])->name('low_communication_destroy');
-    ////rutas de notas de credito
+    Route::get('lowcommunication/download/{id}/{type}', [SaleLowCommunicationController::class, 'downloadFile'])->name('low_communication_download');
+    // //rutas de notas de credito
     Route::get('creditnote/list', [SaleCreditNotesController::class, 'index'])->name('sale_credit_notes_list');
     Route::get('creditnote/table', [SaleCreditNotesController::class, 'tableDocument'])->name('sale_credit_notes_table');
     Route::get('creditnote/create', [SaleCreditNotesController::class, 'create'])->name('sale_credit_notes_create');
     Route::post('creditnote/search/invoice', [SaleCreditNotesController::class, 'searchInvoice'])->name('sale_credit_notes_search_invoice');
     Route::post('creditnote/store', [SaleCreditNotesController::class, 'validateDocument'])->name('sale_all_notes_store');
 
-    ///////////nuevo cambios en productos
+    // /////////nuevo cambios en productos
     Route::middleware(['middleware' => 'permission:sale_categorias'])
         ->get('category/list', [SaleProductCategoryController::class, 'index'])
         ->name('sale_category_product_list');
@@ -171,14 +210,11 @@ Route::middleware(['auth', 'verified'])->prefix('sales')->group(function () {
     Route::post('brands/update', [SaleProductBrandController::class, 'update'])->name('sale_brand_product_update');
     Route::delete('brands/destroy/{id}', [SaleProductBrandController::class, 'destroy'])->name('sale_brand_product_destroy');
 
-
-
-    ///////documentos fisico o de otra plataforma
+    // /////documentos fisico o de otra plataforma
     Route::get('physicaldocument/list', [SalePhysicalDocumentController::class, 'index'])->name('sale_physical_document_list');
     Route::get('physicaldocument/create', [SalePhysicalDocumentController::class, 'create'])->name('sale_physical_document_create');
     Route::post('physicaldocument/store', [SalePhysicalDocumentController::class, 'store'])->name('sale_physical_document_store');
     Route::delete('physicaldocument/destroy/{id}', [SalePhysicalDocumentController::class, 'destroy'])->name('sale_physical_document_destroy');
-
 
     Route::get('services/list', [ServicesController::class, 'index'])->name('sales_services');
     Route::get('services/{id}/edit', [ServicesController::class, 'edit'])->name('sales_services_edit');
@@ -187,9 +223,73 @@ Route::middleware(['auth', 'verified'])->prefix('sales')->group(function () {
     Route::put('services/update/{id}', [ServicesController::class, 'update'])->name('update_service');
     Route::delete('services/destroy/{id}', [ServicesController::class, 'destroy'])->name('destroy_service');
 
-
     Route::get('dashboard/minimum/stock', [SalesController::class, 'minimumStock'])->name('sales_dashboard_minimum_stock');
     Route::post('dashboard/total/balance/table', [SalesController::class, 'totalBalanceTables'])->name('sales_dashboard_total_balance');
     Route::post('dashboard/total/summary/document', [SalesController::class, 'getSummaryTotals'])->name('sales_dashboard_total_summary');
-    Route::post('netapies/search/person', [ApisnetPeController::class, 'consult'])->name('sales_search_person_apies');
+    Route::post('netapies/search/person', [ApisnetPeController::class, 'consultMigo'])->name('sales_search_person_apies');
+
+    Route::middleware(['middleware' => 'permission:invo_dashboard'])
+        ->get('reports/invoice', [InvoiceReportsController::class, 'index'])
+        ->name('reports_invoice');
+
+    Route::middleware(['middleware' => 'permission:acco_dashboard'])
+        ->get('accountsreceivable/dashboard', [AccountsReceivableDashboardController::class, 'index'])
+        ->name('acco_dashboard');
+    Route::middleware(['middleware' => 'permission:acco_dashboard'])
+        ->get('accountsreceivable/document/list', [AccountsReceivableController::class, 'index'])
+        ->name('acco_document_list');
+    Route::middleware(['middleware' => 'permission:acco_dashboard'])
+        ->get('accountsreceivable/document/table', [AccountsReceivableController::class, 'tableDocument'])
+        ->name('acco_table_document');
+    Route::middleware(['middleware' => 'permission:acco_dashboard'])
+        ->post('accountsreceivable/document/payments/store', [SalePaymentQuotaController::class, 'store'])
+        ->name('acco_table_document_payment_store');
+    Route::middleware(['middleware' => 'permission:acco_dashboard'])
+        ->delete('accountsreceivable/document/payments/destroy/{id}', [SalePaymentQuotaController::class, 'destroy'])
+        ->name('acco_table_document_payment_destroy');
+    Route::middleware(['middleware' => 'permission:acco_dashboard'])
+        ->post('accountsreceivable/document/paymentsfull/store', [SalePaymentQuotaController::class, 'storePayFull'])
+        ->name('acco_table_document_payment_full_store');
+
+    Route::middleware(['middleware' => 'permission:acco_pagos_cuotas_especiales'])
+        ->get('accountsreceivable/special/rates', [AccountsReceivableController::class, 'specialRates'])
+        ->name('acco_sales_special_rates');
+    Route::middleware(['middleware' => 'permission:acco_pagos_cuotas_especiales_nuevo'])
+        ->get('accountsreceivable/special/rates/create', [AccountsReceivableController::class, 'specialRatesCreate'])
+        ->name('acco_sales_special_rates_create');
+    Route::middleware(['middleware' => 'permission:acco_pagos_cuotas_especiales_nuevo'])
+        ->post('accountsreceivable/special/rates/store', [AccountsReceivableController::class, 'specialRatesStore'])
+        ->name('acco_sales_special_rates_store');
+
+    Route::middleware(['middleware' => 'permission:acco_pagos_cuotas_especiales_nuevo'])
+        ->get('accountsreceivable/special/rates/quota/{id}/form/{fromId}', [AccountsReceivableController::class, 'spaceSalesCreate'])
+        ->name('acco_sales_special_rates_quota_create');
+
+    Route::middleware(['middleware' => 'permission:acco_pagos_cuotas_especiales_nuevo'])
+        ->get('accountsreceivable/special/rates/quota/{id}/data', [AccountsReceivableController::class, 'getFeeDocumentData'])
+        ->name('acco_sales_special_rates_quota_data');
+
+    Route::middleware(['middleware' => 'permission:acco_pagos_cuotas_especiales_nuevo'])
+        ->put('accountsreceivable/special/rates/quota/{id}/store', [AccountsReceivableController::class, 'storeSpacePayments'])
+        ->name('acco_sales_special_rates_quota_store');
+
+    Route::middleware(['middleware' => 'permission:acco_pagos_cuotas_especiales_nuevo'])
+        ->post('accountsreceivable/special/rates/auto-register', [AccountsReceivableController::class, 'autoRegisterStudent'])
+        ->name('acco_sales_special_rates_auto_register');
+
+    Route::middleware(['middleware' => 'permission:acco_pagos_cuotas_especiales'])
+        ->put('accountsreceivable/special/rates/quota/{id}/update', [AccountsReceivableController::class, 'updateSchedules'])
+        ->name('acco_sales_special_rates_update');
+
+    Route::middleware(['middleware' => 'permission:acco_pagos_cuotas_especiales_excel'])
+        ->post('accountsreceivable/special/rates/quota/export/excel', [AccountsReceivableController::class, 'paymentDestinationsExportExcel'])
+        ->name('acco_sales_special_rates_quota_excel');
+
+    Route::middleware(['middleware' => 'permission:acco_dashboard'])
+        ->get('accountsreceivable/special/rates/quota/export/{id}/excel', [AccountsReceivableController::class, 'exportStatus'])
+        ->name('acco_export_status');
+
+    Route::post('accountsreceivable/quota/unlink-document', [AccountsReceivableController::class, 'unlinkDocumentFromQuota'])
+        ->name('acco_quota_unlink_document');
+
 });

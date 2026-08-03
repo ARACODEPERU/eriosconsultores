@@ -2,11 +2,13 @@
 
 namespace App\Helpers\Invoice\Documents;
 
+use App\Helpers\Invoice\QrCodeGenerator;
 use Carbon\Carbon;
 use DateTime;
 use App\Models\Company as MyCompany;
 use App\Models\User;
 use App\Helpers\Invoice\Util;
+use App\Models\District;
 use App\Models\LocalSale;
 use App\Models\SaleDocument;
 use App\Models\SaleDocumentItem;
@@ -88,11 +90,25 @@ class NotaDebito
         $province = $establishment->district->province;
 
         $department = $province->department;
+
+        $clientCity = District::with('province.department')->where('id',$document->client_ubigeo_code)->first();
+
         $client = (new Client())
             ->setTipoDoc($document->client_type_doc)
             ->setNumDoc($document->client_number)
             ->setRznSocial($document->client_rzn_social);
 
+        if($clientCity ){
+            $clientAddress = (new Address())
+                ->setUbigueo($document->client_ubigeo_code)
+                ->setDepartamento($clientCity->province->department->name)
+                ->setProvincia($clientCity->province->name)
+                ->setDistrito($clientCity->name)
+                ->setUrbanizacion('-')
+                ->setDireccion($document->client_address);
+
+            $client->setAddress($clientAddress);
+        }
 
         // Emisor
         $address = (new Address())
@@ -193,5 +209,65 @@ class NotaDebito
         //dd($note);
 
         return $note;
+    }
+
+    public function getNotaDebitoPdf($id, $format = 'A4')
+    {
+        try {
+            $document = SaleDocument::find($id);
+            $invoice = SaleDocument::where('id', $document->document_id)->with('sale')->first();
+            $note = $this->setDocument($document, $invoice);
+
+            $generator = new QrCodeGenerator(300);
+            $dir = public_path() . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'tmp_qr';
+            $cadenaqr = $this->stringQr($document);
+            $qr_path = $generator->generateQR($cadenaqr, $dir, $note->getName() . '.png', 8, 2);
+
+            $seller = User::find($document->user_id);
+            $pdf = $this->util->generatePdf($note, $seller, $qr_path, $format, $document->status);
+
+            $document->invoice_pdf = $pdf;
+            $document->save();
+
+            return [
+                'fileName' => $note->getName() . '.pdf',
+                'filePath' => $document->invoice_pdf,
+            ];
+        } catch (\Exception $e) {
+            var_dump($e);
+        }
+    }
+
+    public function getNotaDebitoXML($id)
+    {
+        try {
+            $document = SaleDocument::find($id);
+
+            return [
+                'fileName' => $document->invoice_document_name . '.xml',
+                'filePath' => $document->invoice_xml,
+            ];
+        } catch (\Exception $e) {
+            var_dump($e);
+        }
+    }
+
+    public function getNotaDebitoCDR($id)
+    {
+        try {
+            $document = SaleDocument::find($id);
+
+            return [
+                'fileName' => $document->invoice_document_name . '.zip',
+                'filePath' => $document->invoice_cdr,
+            ];
+        } catch (\Exception $e) {
+            var_dump($e);
+        }
+    }
+
+    public function stringQr($document)
+    {
+        return $this->mycompany->ruc . '|' . $document->invoice_type_doc . '|' . $document->invoice_serie . '|' . $document->invoice_correlative . '|' . $document->invoice_mto_imp_sale . '|' . $document->invoice_broadcast_date . '|' . $document->client_type_doc . '|' . $document->client_number;
     }
 }

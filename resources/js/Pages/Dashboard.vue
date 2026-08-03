@@ -13,7 +13,7 @@ import SalesSummary from 'Modules/Sales/Resources/assets/js/Components/SalesSumm
 import SubscriptionPrices from 'Modules/Academic/Resources/assets/js/Components/SubscriptionPrices.vue';
 import CoursesTotalStudents from 'Modules/Academic/Resources/assets/js/Components/CoursesTotalStudents.vue';
 import BirthDays from './Person/Partials/BirthDays.vue';
-
+import NumberSubscriptionsExpire from 'Modules/Academic/Resources/assets/js/Components/NumberSubscriptionsExpire.vue';
 
 const userData = usePage().props.auth.user;
 
@@ -44,12 +44,12 @@ const hasAnyRole = (rolesToCheck) => {
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <!--modulo seguridad -->
-                <div v-if="hasAnyRole(['admin', 'webAdmin', 'Administrador'])" class="space-y-6">
+                <div v-if="hasAnyRole(['admin', 'webAdmin', 'Administrador', 'Ventas'])" class="space-y-6">
                     <BirthDays />
                     <StorageIndicator />
                 </div>
                 <!-- ventas stock Minimo -->
-                <!-- modulo ventas -->
+                <!-- modulo ventas productos-->
                 <template v-if="P000009 == 2">
                     <MinimumStockNotice v-if="hasAnyRole(['admin', 'webAdmin', 'Administrador'])" />
                     <StatusProducts v-if="hasAnyRole(['admin', 'webAdmin', 'Administrador'])" />
@@ -58,9 +58,17 @@ const hasAnyRole = (rolesToCheck) => {
                         <SalesSummary v-if="hasAnyRole(['admin', 'webAdmin', 'Administrador','Contabilidad'])" />
                     </div>
                 </template>
+                <!-- modulo ventas servicios -->
+                <template v-if="P000009 == 4">
+                    <div class="space-y-6">
+                        <TotalBalance v-if="hasAnyRole(['admin', 'webAdmin', 'Administrador','Contabilidad'])" />
+                        <SalesSummary v-if="hasAnyRole(['admin', 'webAdmin', 'Administrador','Contabilidad'])" />
+                    </div>
+                </template>
                 <!--modulo academico -->
-                <div v-if="hasAnyRole(['admin', 'webAdmin', 'Administrador'])" class="col-span-3 sm:col-span-2 space-y-6">
+                <div v-if="hasAnyRole(['admin', 'webAdmin', 'Administrador', 'Ventas'])" class="col-span-3 sm:col-span-2 space-y-6">
                     <template v-if="P000009 == 1">
+                        <NumberSubscriptionsExpire />
                         <StudentsEnrolledMonth />
                         <CoursesTotalStudents />
                     </template>

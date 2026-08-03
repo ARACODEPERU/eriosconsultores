@@ -2,10 +2,12 @@
 
 namespace Modules\CMS\Database\Seeders;
 
+use App\Models\Modulo;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -21,6 +23,8 @@ class SeedPermissionsUsersTableSeeder extends Seeder
     {
         $role = Role::create(['name' => 'webAdmin']);
         $admin = Role::find(1);
+
+        $modulo = Modulo::create(['identifier' => 'M005', 'description' => 'CMS']);
 
         $permissions = [];
 
@@ -45,10 +49,18 @@ class SeedPermissionsUsersTableSeeder extends Seeder
         array_push($permissions, Permission::create(['name' => 'cms_testimonios_editar']));
         array_push($permissions, Permission::create(['name' => 'cms_testimonios_eliminar']));
         array_push($permissions, Permission::create(['name' => 'cms_publicidad']));
+        array_push($permissions, Permission::create(['name' => 'cms_landings']));
+        array_push($permissions, Permission::create(['name' => 'cms_landing_curso_gratis']));
+        array_push($permissions, Permission::create(['name' => 'cms_suscriptores_exportar_excel']));
 
         foreach ($permissions as $permission) {
             $role->givePermissionTo($permission->name);
             $admin->givePermissionTo($permission->name);
+            DB::table('model_has_permissions')->insert([
+                'permission_id' => $permission->id,
+                'model_type' => Modulo::class,
+                'model_id' => $modulo->identifier
+            ]);
         }
 
         $user = User::create([

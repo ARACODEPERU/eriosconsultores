@@ -22,6 +22,7 @@ const props = defineProps({
 
 const form = useForm({
     title: null,
+    usine: '',
     description: null,
     details: [{
         label: null
@@ -102,13 +103,24 @@ const removePrice = (indexToRemove) => {
                     id="title"
                     v-model="form.title"
                     type="text"
-                    
+
                 />
                 <InputError :message="form.errors.title" class="mt-2" />
             </div>
             <div class="col-span-6 sm:col-span-3">
-                <InputLabel for="title" value="Título *" />
-                <select v-model="form.period" class="form-select text-white-dark">
+                <InputLabel for="usine" value="Código SUNAT" />
+                <TextInput
+                    id="usine"
+                    v-model="form.usine"
+                    type="text"
+                    placeholder="Según catálogo de SUNAT"
+                />
+                <p class="text-xs text-gray-500 mt-1">Código UCE. Consulte el catálogo de SUNAT Peru</p>
+                <InputError :message="form.errors.usine" class="mt-2" />
+            </div>
+            <div class="col-span-6 sm:col-span-3">
+                <InputLabel for="period" value="Periodo *" />
+                <select v-model="form.period" id="period" class="form-select text-white-dark">
                     <template v-for="period in periods">
                         <option :value="period">{{ period }}</option>
                     </template>
@@ -116,7 +128,7 @@ const removePrice = (indexToRemove) => {
                 <InputError :message="form.errors.period" class="mt-2" />
             </div>
             <div class="col-span-2">
-                <InputLabel for="title" value="Número de orden *" />
+                <InputLabel value="Número de orden *" />
                 <div class="flex">
                     <button
                         type="button"
@@ -166,7 +178,7 @@ const removePrice = (indexToRemove) => {
                                     <icon-x class="w-4 h-4" />
                                 </button>
                             </div>
-                            <InputError :message="form.errors[`details.${key}.label`]" class="mt-2" />
+                            <InputError :message="form.errors[`details.${ixdex}.label`]" class="mt-2" />
                         </template>
                     </div>
                 </div>
@@ -198,7 +210,7 @@ const removePrice = (indexToRemove) => {
                             </div>
                             <InputError :message="form.errors[`prices.${isdex}.amount`]" class="mt-2" />
                             <InputError :message="form.errors[`prices.${isdex}.detail`]" class="mt-2" />
-                            
+
                         </template>
                     </div>
                 </div>
@@ -206,7 +218,7 @@ const removePrice = (indexToRemove) => {
         </template>
 
         <template #actions>
-            
+
             <Keypad>
                 <template #botones>
                     <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">

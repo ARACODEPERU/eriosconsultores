@@ -1,7 +1,7 @@
 <script setup>
     import AppLayout from "@/Layouts/Vristo/AppLayout.vue";
     import Navigation from '@/Components/vristo/layout/Navigation.vue';
-    import IconArrowleft from '@/Components/vristo/icon/icon-arrow-left.vue';
+    import iconArrowLeft from '@/Components/vristo/icon/icon-arrow-left.vue';
     import { Link, router } from '@inertiajs/vue3';
     import Swal from 'sweetalert2';
 
@@ -37,7 +37,7 @@
         }).then((result) => {
             if (result.isConfirmed) {
                 router.visit(route('aca_subscriptions_list'), {
-                    replace: false, 
+                    replace: false,
                     method: 'get',
                     preserveState: true,
                     preserveScroll: true,
@@ -84,13 +84,13 @@
                                     <div class="border-t border-black dark:border-white-dark w-1/5 mx-auto my-6 group-hover:border-primary"></div>
                                     <p class="text-[15px]">{{ subscription.description }}</p>
                                     <p class="text-[15px]">{{ subscription.period }}</p>
-                                    <template v-for="price in JSON.parse(subscription.prices)" >
+                                    <template v-for="price in subscription.prices" >
                                         <div v-if="price.amount && price.amount != '' && price.amount > 0" class="my-7 p-2.5 text-center text-lg group-hover:text-primary">
                                             <strong class="text-[#3b3f5c] dark:text-white-dark text-3xl lg:text-5xl group-hover:text-primary">{{ price.currency == 'PEN' ? 'S/' : '$' }}{{ price.amount }}</strong> / {{ price.detail }}
                                         </div>
                                     </template>
                                     <ul class="space-y-2.5 mb-5 font-semibold group-hover:text-primary">
-                                        <li v-for="detail in JSON.parse(subscription.details)" class="flex justify-center items-center">
+                                        <li v-for="detail in subscription.details" class="flex justify-center items-center">
                                             <icon-arrow-left class="w-3.5 h-3.5 ltr:mr-1 rtl:ml-1 rtl:rotate-180 shrink-0" />
                                             {{ detail.label }}
                                         </li>

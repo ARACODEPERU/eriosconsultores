@@ -2,29 +2,34 @@
 
 namespace App\Helpers\Invoice\Documents;
 
-
 use App\Helpers\Invoice\Util;
-use Carbon\Carbon;
-use DateTime;
 use App\Models\Company as MyCompany;
+use App\Models\Parameter;
 use App\Models\SaleDocument;
-use Greenter\Model\Summary\Summary;
-use Greenter\Model\Summary\SummaryDetail;
+use DateTime;
 use Greenter\Model\Company\Address;
 use Greenter\Model\Company\Company;
+use Greenter\Model\Summary\Summary;
+use Greenter\Model\Summary\SummaryDetail;
 use Modules\Sales\Entities\SaleSummary;
 
 class Resumen
 {
     protected $see;
+
     protected $util;
+
     protected $mycompany;
+
+    private $igv;
 
     public function __construct()
     {
         $this->util = Util::getInstance();
         $this->mycompany = MyCompany::first();
+        $this->igv = Parameter::where('parameter_code', 'P000001')->value('value_default');
     }
+
     public function create($summary, $documents)
     {
         try {
@@ -51,9 +56,19 @@ class Resumen
                 $error = $res->getError();
                 $codeError = $error->getCode();
                 $messageError = $error->getMessage();
-                $status = 'Rechazado';
-                //return array('success' => $res->isSuccess(), 'details' => $this->util->getErrorResponse($res->getError()));
 
+                if ($codeError === '0109' || stripos($messageError, '0109') !== false) {
+                    $status = 'sunat_disponible';
+                } elseif ($codeError === '2223' || stripos($messageError, '2223') !== false) {
+                    $status = 'fue_enviado';
+
+                    $ticket = $res->getTicket();
+                    if ($ticket) {
+                        $summary->ticket = $ticket;
+                    }
+                } else {
+                    $status = 'Rechazado';
+                }
             }
             $summary->response_code = $codeError;
             $summary->response_description = $messageError;
@@ -62,14 +77,25 @@ class Resumen
 
             $summary->save();
 
-            return array('success' => $res->isSuccess(), 'code' => $codeError, 'message' => $messageError, 'notes' => $notes);
+            $isSunatUnavailable = $status === 'sunat_disponible';
+            $isAlreadySent = $status === 'fue_enviado';
+
+            return [
+                'success' => $res->isSuccess(),
+                'code' => $codeError,
+                'message' => $messageError,
+                'notes' => $notes,
+                'is_sunat_unavailable' => $isSunatUnavailable,
+                'is_already_sent' => $isAlreadySent,
+            ];
         } catch (\Exception $e) {
-            return array('success' => false, 'code' => 0, 'message' => $e->getMessage(), 'notes' => 'Error de falta de datos en el sistema');
+            return ['success' => false, 'code' => 0, 'message' => $e->getMessage(), 'notes' => 'Error de falta de datos en el sistema'];
         }
     }
 
     public function checkSummary($id, $ticket)
     {
+
         try {
             $summary = SaleSummary::find($id);
             $documents = SaleDocument::join('sale_summary_details', 'sale_summary_details.document_id', 'sale_documents.id')
@@ -87,11 +113,39 @@ class Resumen
             $messageError = null;
 
             $res = $see->getStatus($ticket);
-            if (!$res->isSuccess()) {
+            dd($res);
+            if (! $res->isSuccess()) {
                 $error = $res->getError();
                 $codeError = $error->getCode();
                 $messageError = $error->getMessage();
-                $status = 'Rechazado';
+
+                // Error 0109 - SUNAT autenticación no disponible
+                if ($codeError === '0109' || stripos($messageError, '0109') !== false) {
+                    $isSunatUnavailable = true;
+                    $status = 'sunat_disponible';
+                }
+                // Error 2223 - Archivo ya presentado previamente
+                elseif ($codeError === '2223' || stripos($messageError, '2223') !== false) {
+                    $isAlreadySent = true;
+                    $status = 'fue_enviado';
+                }
+                // Otros errores - detectar conexión o rechazo real
+                else {
+                    $isConnectionError =
+                        empty($codeError)
+                        || stripos($messageError, 'connection') !== false
+                        || stripos($messageError, 'timeout') !== false
+                        || stripos($messageError, '505') !== false
+                        || stripos($messageError, 'soap') !== false
+                        || stripos($messageError, 'servidor') !== false
+                        || stripos($messageError, 'HTTP') !== false;
+
+                    if ($isConnectionError) {
+                        $status = 'Enviado';
+                    } else {
+                        $status = 'Rechazado';
+                    }
+                }
             } else {
                 $cdr = $res->getCdrResponse();
                 $codeError = $cdr->getCode();
@@ -104,7 +158,7 @@ class Resumen
                         ->update([
                             'invoice_status' => 'Aceptada',
                             'invoice_response_code' => 0,
-                            'invoice_response_description' => 'Enviado en resumen ' . $summary->summary_name . ' Número ticket: ' . $ticket
+                            'invoice_response_description' => 'Enviado en resumen '.$summary->summary_name.' Número ticket: '.$ticket,
                         ]);
                 }
                 $status = $cdr->getCode() == 0 ? 'Aceptado' : null;
@@ -112,14 +166,33 @@ class Resumen
             }
 
             $summary->response_code = $codeError;
-            $summary->response_description = $codeError == '0127' ? 'El ticket no existe' : $messageError;
+
+            // Mensaje personalizado según tipo de error
+            if (isset($isSunatUnavailable) && $isSunatUnavailable) {
+                $summary->response_description = 'Los servidores de SUNAT no están disponibles temporalmente. Puede reintentar el envío manualmente. Detalle: '.$messageError;
+            } elseif (isset($isAlreadySent) && $isAlreadySent) {
+                $summary->response_description = 'El archivo ya fue presentado anteriormente ante SUNAT. Detalle: '.$messageError;
+            } elseif (isset($isConnectionError) && $isConnectionError) {
+                $summary->response_description = 'Error de conexión con SUNAT. Intenta consultar más tarde. Detalle: '.$messageError;
+            } else {
+                $summary->response_description = $codeError == '0127' ? 'El ticket no existe' : $messageError;
+            }
+
             $summary->notes = $notes;
             $summary->status = $status;
             $summary->save();
 
-            return array('success' => $res->isSuccess(), 'code' => $codeError, 'message' => $messageError, 'notes' => $notes);
+            return [
+                'success' => $res->isSuccess(),
+                'code' => $codeError,
+                'message' => $messageError,
+                'notes' => $notes,
+                'is_connection_error' => isset($isConnectionError) ? $isConnectionError : false,
+                'is_sunat_unavailable' => isset($isSunatUnavailable) ? $isSunatUnavailable : false,
+                'is_already_sent' => isset($isAlreadySent) ? $isAlreadySent : false,
+            ];
         } catch (\Exception $e) {
-            return array('success' => false, 'code' => 0, 'message' => $e->getMessage(), 'notes' => 'Error de falta de datos en el sistema');
+            return ['success' => false, 'code' => 0, 'message' => $e->getMessage(), 'notes' => 'Error de falta de datos en el sistema'];
         }
     }
 
@@ -127,7 +200,7 @@ class Resumen
     {
         $items = [];
 
-        $company = new Company();
+        $company = new Company;
 
         $province = $this->mycompany->district->province;
         $department = $province->department;
@@ -135,7 +208,7 @@ class Resumen
         $company->setRuc($this->mycompany->ruc)
             ->setRazonSocial($this->mycompany->business_name)
             ->setNombreComercial($this->mycompany->tradename)
-            ->setAddress((new Address())
+            ->setAddress((new Address)
                 ->setUbigueo($this->mycompany->ubigeo)
                 ->setDepartamento($department->name)
                 ->setProvincia($province->name)
@@ -144,13 +217,13 @@ class Resumen
                 ->setDireccion($this->mycompany->fiscal_address));
 
         foreach ($documents as $document) {
-            $detiail = new SummaryDetail();
+            $detiail = new SummaryDetail;
             if ($document['invoice_type_doc'] == '03') {
-                $serie_number = $document['invoice_serie'] . '-' . $document['invoice_correlative'];
-                ///estados de boleta
-                ///1= Se esta informando por primera vez.
-                ///2= Se informó previamente y se quiere editar sus valores.
-                ///3= Se quiere anular el comprobante
+                $serie_number = $document['invoice_serie'].'-'.$document['invoice_correlative'];
+                // /estados de boleta
+                // /1= Se esta informando por primera vez.
+                // /2= Se informó previamente y se quiere editar sus valores.
+                // /3= Se quiere anular el comprobante
                 $detiail->setTipoDoc($document['invoice_type_doc'])
                     ->setSerieNro($serie_number)
                     ->setEstado($document['status'])
@@ -162,14 +235,14 @@ class Resumen
                     ->setMtoOperExoneradas($document['invoice_mto_oper_exonerated'])
                     ->setMtoOperExportacion($document['invoice_mto_oper_export'])
                     ->setMtoOtrosCargos($document['invoice_mto_oper_other_charges'])
-                    ->setMtoIGV($document['invoice_total_taxes']);
+                    ->setMtoIGV($document['invoice_total_taxes'])
+                    ->setPorcentajeIgv((int) $this->igv);
             }
-
 
             array_push($items, $detiail);
         }
 
-        $sum = new Summary();
+        $sum = new Summary;
         // Fecha Generacion menor que Fecha Resumen
         $generation_date = new DateTime($summary->generation_date);
         $summary_date = new DateTime($summary->summary_date);

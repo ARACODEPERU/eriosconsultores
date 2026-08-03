@@ -8,7 +8,7 @@
     import { useForm } from '@inertiajs/vue3';
     import InputError from '@/Components/InputError.vue';
     import InputLabel from '@/Components/InputLabel.vue';
-    import { ref, onMounted } from 'vue';
+    import { ref, onMounted, computed, watch } from 'vue';
     import Swal from 'sweetalert2';
     import { Link, router } from '@inertiajs/vue3';
     import Navigation from '@/Components/vristo/layout/Navigation.vue';
@@ -55,9 +55,27 @@
     });
 
     const formSeDoc = ref({
-        serie: 1000,
+        docType: 'invoice',
+        serie: null,
         number: null,
         loading: false
+    });
+
+    const documentTypes = ref([
+        { id: 'invoice', label: 'Factura', typeId: 1 },
+        { id: 'ticket', label: 'Boleta', typeId: 2 },
+        { id: 'debit_note', label: 'Nota de Débito', typeId: 4 }
+    ]);
+
+    const filteredSeries = computed(() => {
+        const selectedType = documentTypes.value.find(t => t.id === formSeDoc.value.docType);
+        return (props.series || []).filter(s => s.document_type_id === selectedType?.typeId);
+    });
+
+    watch(() => formSeDoc.value.docType, () => {
+        formSeDoc.value.serie = null;
+        formSeDoc.value.number = null;
+        applyNoteSeriesFilter();
     });
 
     const formNote = useForm({
@@ -138,6 +156,29 @@
 
     const dataTypeNote = ref([]);
     const dataNoteSeries = ref([]);
+    const allNoteSeries = ref([]);
+
+    const getAllowedNoteSeriePrefixes = () => {
+        if (formNote.note_type == 4 || formSeDoc.value.docType === 'debit_note') {
+            return ['ND'];
+        }
+
+        if (formSeDoc.value.docType === 'ticket') {
+            return ['B'];
+        }
+
+        return ['F'];
+    };
+
+    const applyNoteSeriesFilter = () => {
+        const prefixes = getAllowedNoteSeriePrefixes();
+
+        dataNoteSeries.value = (allNoteSeries.value || []).filter((serie) => {
+            return prefixes.some((prefix) => serie.description?.toUpperCase().startsWith(prefix));
+        });
+
+        formNote.note_serie = dataNoteSeries.value[0]?.id ?? null;
+    };
 
     const selectTypeNote = () => {
         dataTypeNote.value = [];
@@ -154,7 +195,8 @@
 
     onMounted(() => {
         selectTypeNote();
-        dataNoteSeries.value = props.noteSeries;
+        allNoteSeries.value = props.noteSeries;
+        applyNoteSeriesFilter();
         formNote.note_issue_date = fechaLima;
         startTaxes();
     });
@@ -163,9 +205,15 @@
         let did = formNote.note_type;
         axios.get(route('sale_document_series',did)).then((res) => {
             if (res.data.status) {
-                dataNoteSeries.value = res.data.series;
-                formNote.note_serie = dataNoteSeries.value[0].id;
+                allNoteSeries.value = res.data.series;
+                applyNoteSeriesFilter();
             } else {
+                applyNoteSeriesFilter();
+
+                if (dataNoteSeries.value.length > 0) {
+                    return;
+                }
+
                 Swal.fire({
                     title: 'Información Importante',
                     text: 'No existe serie para este local o tipo de documento',
@@ -338,11 +386,11 @@
 </script>
 <template>
     <AppLayout title="Punto de Ventas">
-        <Navigation :routeModule="route('sales_dashboard')" :titleModule="'Facturación Electrónica'">
-            <li class="before:content-['/'] ltr:before:mr-2 rtl:before:ml-2">
-                <span>Crear Nota</span>
-            </li>
-        </Navigation>
+        <Navigation :routeModule="route('sales_dashboard')" :titleModule="'Facturación Electrónica'"
+            :data="[
+                {title: 'Crear Nota'}
+            ]"
+        />
         <div class="mt-5 space-y-6">
             <div class="panel flex items-center overflow-x-auto whitespace-nowrap p-3 text-primary">
                 <div class="rounded-full p-1.5 text-blue-600 ring-2 ring-primary/30 ltr:mr-3 rtl:ml-3">
@@ -353,9 +401,14 @@
                 <span class="ltr:mr-3 rtl:ml-3">Documento: </span>
                 <form @submit.prevent="submitFormSearch">
                     <div class="flex flex-col md:flex-row gap-4 items-center max-w-[900px] mx-auto">
+                        <select v-model="formSeDoc.docType" id="docType" class="form-select text-white-dark flex-1" required>
+                            <template v-for="dtype in documentTypes">
+                                <option :value="dtype.id">{{ dtype.label }}</option>
+                            </template>
+                        </select>
                         <select v-model="formSeDoc.serie" id="ctnSelect1" class="form-select text-white-dark flex-1" required>
-                            <option value="1000">Seleccionar serie</option>
-                            <template v-for="(serie, index) in series">
+                            <option :value="null">Seleccionar serie</option>
+                            <template v-for="(serie, index) in filteredSeries">
                                 <option :value="serie.id">{{ serie.description }}</option>
                             </template>
                         </select>

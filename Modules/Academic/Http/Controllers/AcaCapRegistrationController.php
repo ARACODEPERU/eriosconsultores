@@ -2,24 +2,36 @@
 
 namespace Modules\Academic\Http\Controllers;
 
+use App\Models\Parameter;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Contracts\Support\Renderable;
+use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Modules\Academic\Entities\AcaCapRegistration;
 use Modules\Academic\Entities\AcaCourse;
 use Modules\Academic\Entities\AcaStudent;
-use Illuminate\Foundation\Validation\ValidatesRequests;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Modules\Academic\Entities\AcaStudentSubscription;
+use Modules\Academic\Entities\AcaSubscriptionPayment;
 use Modules\Academic\Entities\AcaSubscriptionType;
 
 class AcaCapRegistrationController extends Controller
 {
     use ValidatesRequests;
+
+    protected $P000021;
+
+    public function __construct()
+    {
+        $this->P000021 = filter_var(
+            Parameter::where('parameter_code', 'P000021')->value('value_default') ?? true,
+            FILTER_VALIDATE_BOOLEAN
+        );
+    }
 
     public function index()
     {
@@ -28,6 +40,7 @@ class AcaCapRegistrationController extends Controller
 
     /**
      * Show the form for creating a new resource.
+     *
      * @return Renderable
      */
     public function create($id)
@@ -40,24 +53,31 @@ class AcaCapRegistrationController extends Controller
         $registrations = AcaCapRegistration::with('course')
             ->where('student_id', $id)->get();
 
+        // Convertir campo unlimited a booleano para el checkbox
+        $registrations->transform(function ($registration) {
+            $registration->unlimited = (bool) $registration->unlimited;
+
+            return $registration;
+        });
+
         $subscriptionStudent = AcaStudentSubscription::with('subscription')
             ->where('student_id', $student->id)->get();
 
         $subscriptions = AcaSubscriptionType::where('status', true)->get();
 
-
         return Inertia::render('Academic::Registrations/Create', [
-            'student'   => $student,
-            'courses'   => $courses,
+            'student' => $student,
+            'courses' => $courses,
             'registrations' => $registrations,
             'subscriptions' => $subscriptions,
-            'subscriptionStudent' => $subscriptionStudent
+            'subscriptionStudent' => $subscriptionStudent,
+            'P000021' => $this->P000021,
         ]);
     }
 
     /**
      * Store a newly created resource in storage.
-     * @param Request $request
+     *
      * @return Renderable
      */
     public function store(Request $request)
@@ -68,8 +88,8 @@ class AcaCapRegistrationController extends Controller
         $this->validate(
             $request,
             [
-                'student_id'  => 'required',
-                'course_id'   => 'required',
+                'student_id' => 'required',
+                'course_id' => 'required',
             ]
         );
 
@@ -77,12 +97,14 @@ class AcaCapRegistrationController extends Controller
 
         if ($true) {
             AcaStudent::find($student_id)->update([
-                'new_student' => false
+                'new_student' => false,
             ]);
             AcaCapRegistration::create([
-                'student_id'        => $student_id,
-                'course_id'         => $course_id,
-                'status'             => true
+                'student_id' => $student_id,
+                'course_id' => $course_id,
+                'status' => true,
+                'date_start' => Carbon::now()->format('Y-m-d'),
+                'unlimited' => true,
             ]);
         }
 
@@ -102,7 +124,7 @@ class AcaCapRegistrationController extends Controller
 
             DB::commit();
 
-            $message =  'Matricula eliminado correctamente';
+            $message = 'Matricula eliminado correctamente';
             $success = true;
         } catch (\Exception $e) {
             DB::rollback();
@@ -112,7 +134,45 @@ class AcaCapRegistrationController extends Controller
 
         return response()->json([
             'success' => $success,
-            'message' => $message
+            'message' => $message,
+        ]);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $message = null;
+        $success = false;
+
+        try {
+            DB::beginTransaction();
+
+            $request->validate([
+                'date_start' => 'required|date',
+                'date_end' => 'nullable|date',
+                'unlimited' => 'boolean',
+            ]);
+
+            $registration = AcaCapRegistration::findOrFail($id);
+
+            $registration->update([
+                'date_start' => $request->get('date_start'),
+                'date_end' => $request->get('date_end'),
+                'unlimited' => $request->get('unlimited') ? true : false,
+            ]);
+
+            DB::commit();
+
+            $message = 'Matrícula actualizada correctamente';
+            $success = true;
+        } catch (\Exception $e) {
+            DB::rollback();
+            $success = false;
+            $message = $e->getMessage();
+        }
+
+        return response()->json([
+            'success' => $success,
+            'message' => $message,
         ]);
     }
 
@@ -166,40 +226,50 @@ class AcaCapRegistrationController extends Controller
 
         $amount = 0;
         if ($subscription->prices) {
-            foreach (json_decode($subscription->prices) as $price) {
-                if ($price->currency == 'PEN') {
-                    $amount = $price->amount;
+            foreach ($subscription->prices as $price) {
+                if ($price['currency'] == 'PEN') {
+                    $amount = $price['amount'];
                 }
             }
         }
 
         if ($stsubscription) {
-            $stsubscription->update([
-                'student_id' => $student->id,
-                'subscription_id' => $subscription_id,
-                'date_start' => $dateStart,
-                'date_end' => $dateEnd,
-                'status' => true,
-                'notes' => null,
-                'renewals' => true,
-                'registration_user_id' => $user->id,
-                'onli_sale_id' => null,
-                'amount_paid' => $amount
-            ]);
+            $stsubscription = AcaStudentSubscription::where('student_id', $student->id)
+                ->where('subscription_id', $subscription_id)
+                ->update([
+                    'student_id' => $student->id,
+                    'subscription_id' => $subscription_id,
+                    'date_start' => $dateStart->format('Y-m-d'),
+                    'date_end' => $dateEnd->format('Y-m-d'),
+                    'status' => false,
+                    'notes' => null,
+                    'renewals' => true,
+                    'registration_user_id' => $user->id,
+                    // 'onli_sale_id' => null,
+                    'amount_paid' => $amount,
+                ]);
         } else {
             AcaStudentSubscription::create([
                 'student_id' => $student->id,
                 'subscription_id' => $subscription_id,
-                'date_start' => $dateStart,
-                'date_end' => $dateEnd,
+                'date_start' => $dateStart->format('Y-m-d'),
+                'date_end' => $dateEnd->format('Y-m-d'),
                 'status' => true,
                 'notes' => null,
-                'renewals' => 0,
+                'renewals' => false,
                 'registration_user_id' => $user->id,
                 'onli_sale_id' => null,
-                'amount_paid' => $amount
+                'amount_paid' => $amount,
             ]);
         }
+        AcaSubscriptionPayment::create([
+            'student_id' => $student->id,
+            'subscription_id' => $subscription_id,
+            'document_id' => null,
+            'date_start' => $dateStart->format('Y-m-d'),
+            'date_end' => $dateEnd ? $dateEnd->format('Y-m-d') : null,
+            'amount' => $amount,
+        ]);
     }
 
     public function subscriptionDestroy($student_id, $subscription_id)
@@ -215,14 +285,30 @@ class AcaCapRegistrationController extends Controller
 
             return response()->json([
                 'success' => $deleted > 0,
-                'message' => $deleted ? 'Suscripción eliminada correctamente' : 'No se encontró la suscripción'
+                'message' => $deleted ? 'Suscripción eliminada correctamente' : 'No se encontró la suscripción',
             ]);
         } catch (\Exception $e) {
             DB::rollback();
+
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ]);
         }
+    }
+
+    public function updateSubscriptionStudent(Request $request)
+    {
+        $student = $request->get('student_id');
+        $subscription = $request->get('subscription_id');
+
+        AcaStudentSubscription::where('student_id', $student)
+            ->where('subscription_id', $subscription)
+            ->update([
+                'date_start' => $request->get('date_start'),
+                'date_end' => $request->get('date_end'),
+                'status' => $request->get('status') ?? false,
+                'notes' => $request->get('notes'),
+            ]);
     }
 }

@@ -579,7 +579,9 @@ Constrain images and videos to the parent width and preserve their intrinsic asp
         .whitespace-nowrap {
             white-space: nowrap;
         }
-
+        .border {
+            border-width: 1px;
+        }
         .border-2 {
             border-width: 2px;
         }
@@ -757,10 +759,101 @@ Constrain images and videos to the parent width and preserve their intrinsic asp
             /* Rojo con opacidad */
             white-space: nowrap;
         }
+
+        .min-w-full {
+            min-width: 100%;
+        }
+        .divide-y > :not([hidden]) ~ :not([hidden]) {
+            --tw-divide-y-reverse: 0;
+            border-top-width: calc(1px * calc(1 - var(--tw-divide-y-reverse)));
+            border-bottom-width: calc(1px * var(--tw-divide-y-reverse));
+            border-color: #e5e7eb; /* de divide-gray-200 */
+        }
+        .x-table {
+            border-collapse: collapse !important;
+            text-indent: 0;
+        }
+        .x-table tr {
+            border-bottom: 1px solid #e5e7eb; /* Color de gray-200 */
+        }
+        /* Opcional: Quitar el borde de la última fila si no lo quieres */
+        .x-table tr:last-child {
+            border-bottom: none;
+        }
+        .mt-6 {
+            margin-top: 1.5rem; /* Esto es 24px si tu base es 16px */
+        }
+        .bg-gray-50 {
+            background-color: #f9fafb; /* Este es el color por defecto para gray-50 en Tailwind */
+        }
+        .px-6 {
+            padding-left: 1.5rem;   /* Equivale a 24px si 1rem = 16px */
+            padding-right: 1.5rem;  /* Equivale a 24px si 1rem = 16px */
+        }
+        .py-3 {
+            padding-top: 0.75rem;    /* Equivale a 12px si 1rem = 16px */
+            padding-bottom: 0.75rem; /* Equivale a 12px si 1rem = 16px */
+        }
+        .text-start {
+            text-align: start;
+        }
+        .text-xs {
+            font-size: 0.75rem; /* Equivale a 12px si 1rem = 16px */
+            line-height: 1rem;  /* Equivale a 16px si 1rem = 16px */
+        }
+        .font-medium {
+            font-weight: 500;
+        }
+        .text-gray-500 {
+            color: #6b7280; /* Este es el color por defecto para gray-500 en Tailwind */
+        }
+        .uppercase {
+            text-transform: uppercase;
+        }
+
+        .divide-y {
+            --tw-divide-y-reverse: 0;
+            border-top-width: calc(1px * calc(1 - var(--tw-divide-y-reverse)));
+            border-bottom-width: calc(1px * var(--tw-divide-y-reverse));
+        }
+        .divide-gray-200 {
+            --tw-divide-opacity: 1;
+            border-color: rgb(229 231 235 / var(--tw-divide-opacity, 1));
+        }
+        .text-gray-800 {
+            color: #1f2937; /* Este es el color por defecto para gray-800 en Tailwind CSS */
+        }
+        .border-gray-200 {
+            border-color: #e5e7eb; /* Este es el color por defecto para gray-200 en Tailwind */
+        }
+        .rounded-lg {
+            border-radius: 0.5rem; /* Equivale a 8px si 1rem = 16px */
+        }
+        .inline-block {
+            display: inline-block;
+        }
+        .align-middle {
+            vertical-align: middle;
+        }
+        .whitespace-nowrap {
+            white-space: nowrap;
+        }
+        .text-end {
+            text-align: right;
+        }
+        .border-none {
+            border-style: none;
+            border-width: 0px;
+        }
+        .border-b-none {
+            border-bottom-style: none;
+            border-bottom-width: 0px;
+        }
     </style>
 
 </head>
 @php
+
     $company = \App\Models\Company::first();
     $logo = '';
     if ($company->logo_document == '/img/logo176x32.png') {
@@ -769,15 +862,42 @@ Constrain images and videos to the parent width and preserve their intrinsic asp
         $logo = public_path('storage' . DIRECTORY_SEPARATOR . $company->logo_document);
     }
 
+    $bankAccounts = \App\Models\BankAccount::with('bank')->where('invoice_show',true)->get();
+
+    $documentCredito = \App\Models\Sale::whereHas('document', function ($query) use ($document) {
+                $query->where('invoice_serie', $document->getSerie())
+                    ->where('invoice_correlative',$document->getCorrelativo())
+                    ->where('forma_pago','Credito'); // Estado de la factura
+        })
+        ->with('document.quotas.payments')
+        ->first();
+
+    $paymentMethods = \App\Models\PaymentMethod::get();
+
+    function getPaymentMethodById($id, $paymentMethods) {
+
+        // Verifica que $paymentMethods sea un array
+        if (count($paymentMethods) > 0) {
+            foreach ($paymentMethods as $method) {
+                // Compara el 'id' del método actual con el ID buscado
+                if (isset($method->id) && $method->id == $id) {
+                    return $method->description; // Devuelve el array del método si coincide
+                }
+            }
+        }
+        return null; // Retorna null si no es un array o no se encuentra el ID
+    }
+
+
 @endphp
 
 <body>
     @if ($status == 3)
         <div class="watermark">ANULADO</div>
     @endif
-    <div>
+    <div class="relative">
         <div class="py-4">
-            <div class="px-14 py-6">
+            <div class="px-14 py-2">
                 <table class="w-full border-collapse border-spacing-0">
                     <tbody>
                         <tr>
@@ -789,7 +909,8 @@ Constrain images and videos to the parent width and preserve their intrinsic asp
                                     {{ $document->getCompany()->getRazonSocial() }}
                                 </p>
                                 <p class="whitespace-nowrap text-slate-400" style="font-size: 12px ">
-                                    {{ $document->getCompany()->getAddress()->getDireccion() }}
+                                    {{ $document->getCompany()->getAddress()->getDireccion() }} <br />
+                                    {{ $document->getCompany()->getAddress()->getDepartamento() }}-{{ $document->getCompany()->getAddress()->getProvincia() }}-{{ $document->getCompany()->getAddress()->getDistrito() }}
                                 </p>
                             </td>
 
@@ -859,23 +980,51 @@ Constrain images and videos to the parent width and preserve their intrinsic asp
                         </tr>
                         <tr>
                             <td class="w-1/2 align-top">
-                                <div class="text-neutral-600 text-xs">
-                                    <p>Razón Social: {{ $document->getClient()->getRznSocial() }}</p>
-                                    <p>
-                                        @if ($document->getTipoDoc() == '01')
-                                            <strong>RUC:</strong>
-                                        @elseif($document->getTipoDoc() == '03')
-                                            <strong>N/D:</strong>
+                                <table class="text-neutral-600 text-xs">
+                                    <tr>
+                                        <td>Nombre / Razón Social:</td> <td>{{ $document->getClient()->getRznSocial() }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            @if ($document->getTipoDoc() == '01')
+                                                <strong>RUC:</strong>
+                                            @elseif($document->getTipoDoc() == '03')
+                                                <strong>N/D:</strong>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            {{ $document->getClient()->getNumDoc() }}
+                                        </td>
+                                    </tr>
+                                    @php
+                                        $clientAddress = $document->getClient()->getAddress();
+                                        $clientAddressText = is_object($clientAddress) && method_exists($clientAddress, 'getDireccion')
+                                            ? $clientAddress->getDireccion()
+                                            : ($clientAddress ?? '');
+                                        $clientLocationText = is_object($clientAddress) && method_exists($clientAddress, 'getDepartamento')
+                                            ? trim(($clientAddress->getDepartamento() ?? '').'-'.($clientAddress->getProvincia() ?? '').'-'.($clientAddress->getDistrito() ?? ''), '-')
+                                            : '';
+                                    @endphp
+                                    @if($clientAddressText)
+                                        <tr>
+                                            <td>Dirección: </td>
+                                            <td>{{ $clientAddressText }}</td>
+                                        </tr>
+                                        @if($clientLocationText)
+                                            <tr>
+                                                <td></td>
+                                                <td>{{ $clientLocationText }}</td>
+                                            </tr>
                                         @endif
-                                        {{ $document->getClient()->getNumDoc() }}
-                                    </p>
-                                    <p>Dirección: {{ $document->getClient()->getAddress() }}</p>
-                                </div>
+                                    @endif
+                                </table>
                             </td>
                             <td class="w-1/2 align-top text-right">
                                 <div class="text-xs text-neutral-600">
                                     <p>Fecha Emisión: {{ $document->getFechaEmision()->format('d/m/Y') }}</p>
-                                    <p></p>
+                                    @if ($document->getFecVencimiento())
+                                        <p>Fecha de vencimiento: {{ $document->getFecVencimiento()->format('d/m/Y') }}</p>
+                                    @endif
                                     <p></p>
                                 </div>
                             </td>
@@ -884,7 +1033,15 @@ Constrain images and videos to the parent width and preserve their intrinsic asp
                 </table>
             </div>
 
-            <div class="px-14 py-10 text-xs text-neutral-700">
+            <div class="px-14 py-6 text-xs text-neutral-700">
+                @php
+                    $documentDiscountTotal = 0;
+                    foreach ($document->getDetails() as $detail) {
+                        $documentDiscountTotal += method_exists($detail, 'getDescuento')
+                            ? (float) ($detail->getDescuento() ?? 0)
+                            : 0;
+                    }
+                @endphp
                 <table class="w-full border-collapse border-spacing-0">
                     <thead>
                         <tr>
@@ -898,6 +1055,11 @@ Constrain images and videos to the parent width and preserve their intrinsic asp
                     </thead>
                     <tbody>
                         @foreach ($document->getDetails() as $item)
+                            @php
+                                $itemDiscount = method_exists($item, 'getDescuento')
+                                    ? (float) ($item->getDescuento() ?? 0)
+                                    : 0;
+                            @endphp
                             <tr>
                                 <td class="border-b py-2 pl-3 text-left">
                                     {{ $item->getCantidad() }}
@@ -910,6 +1072,11 @@ Constrain images and videos to the parent width and preserve their intrinsic asp
                                 </td>
                                 <td class="border-b py-2 pl-2 text-left">
                                     {{ $item->getDescripcion() }}
+                                    @if ($itemDiscount > 0)
+                                        <div class="text-[10px] text-slate-500">
+                                            Desc. SUNAT: S/ {{ number_format($itemDiscount, 2, '.', ',') }}
+                                        </div>
+                                    @endif
                                 </td>
                                 <td class="border-b py-2 pl-2 pr-3 text-right">
                                     S/ {{ number_format($item->getMtoPrecioUnitario(), 2, '.', ',') }}
@@ -951,6 +1118,21 @@ Constrain images and videos to the parent width and preserve their intrinsic asp
                                                                 </div>
                                                             </td>
                                                         </tr>
+                                                        @if ($documentDiscountTotal > 0)
+                                                            <tr>
+                                                                <td class="py-2 pl-2 pr-3">
+                                                                    <div class="whitespace-nowrap text-slate-400">
+                                                                        Descuento:
+                                                                    </div>
+                                                                </td>
+                                                                <td class="py-2 pl-2 pr-3 text-right">
+                                                                    <div class="whitespace-nowrap font-bold text-main">
+                                                                        S/
+                                                                        {{ number_format($documentDiscountTotal, 2, '.', ',') }}
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        @endif
                                                         <tr>
                                                             <td class="bg-main py-2 pl-2 pr-3">
                                                                 <div class="whitespace-nowrap font-bold text-white">
@@ -1025,6 +1207,117 @@ Constrain images and videos to the parent width and preserve their intrinsic asp
                         </tr>
                     </tbody>
                 </table>
+
+                @php
+                    $hasAnyPaymentsToShow = false;
+                    if($documentCredito){
+
+                        if($documentCredito->document->single_payment){
+                            foreach($documentCredito->document->quotas as $key => $quota){
+                                if(count($quota->payments) > 0){
+                                    $hasAnyPaymentsToShow = true;
+                                }
+                            }
+                            if($documentCredito->payments){
+                                $hasAnyPaymentsToShow = true;
+                            }
+                        } else {
+                            foreach($documentCredito->document->quotas as $key => $quota){
+                                if(count($quota->payments) > 0){
+                                    $hasAnyPaymentsToShow = true;
+                                }
+                            }
+                        }
+                    }
+                @endphp
+
+                @if($hasAnyPaymentsToShow))
+                <div class="p-1.5 min-w-full inline-block align-middle mt-6">
+                    <p class="text-sm font-medium uppercase px-2 py-2">PAGOS</p>
+                    <div class="border border-gray-200 border-b-none">
+                        <table class="x-table min-w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-2 text-start text-xs font-medium text-gray-500 uppercase">Descripción</th>
+                                    <th scope="col" class="px-2 text-start text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                                    <th scope="col" class="px-2 text-start text-xs font-medium text-gray-500 uppercase">Método</th>
+                                    <th scope="col" class="px-2 text-start text-xs font-medium text-gray-500 uppercase">Código de referencia</th>
+                                    <th scope="col" class="px-2 text-end text-xs font-medium text-gray-500 uppercase">Monto</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+
+                                @if($documentCredito->document->single_payment)
+                                    @foreach($documentCredito->document->quotas as $key => $quota)
+                                        @foreach($quota->payments as $index => $pay)
+                                            @if($pay->estado)
+                                                <tr>
+                                                    <td class="px-2 whitespace-nowrap text-xs font-medium text-gray-800 ">
+                                                        <p>Pago cuota: {{ $quota->quota_number }} <em>{{ $pay->description }}</em></p>
+                                                    </td>
+                                                    <td class="px-2 whitespace-nowrap text-xs text-center font-medium text-gray-800 ">
+                                                        {{ $pay->payment_date }}
+                                                    </td>
+                                                    <td class="px-2 whitespace-nowrap text-xs text-gray-800 ">
+                                                        {{ getPaymentMethodById($pay->payment_method_id, $paymentMethods) }}
+                                                    </td>
+                                                    <td class="px-2 whitespace-nowrap text-end text-xs text-gray-800 ">
+                                                        {{ $pay->reference }}
+                                                    </td>
+                                                    <td class="px-2 whitespace-nowrap text-end text-xs font-medium">
+                                                        {{ number_format($pay->amount_applied, 2, '.', '') }}
+                                                    </td>
+                                                </tr>
+                                            @endif
+                                        @endforeach
+                                    @endforeach
+                                    @foreach($documentCredito->payments as $key => $pay)
+                                        <tr class="bg-orange-100 px-6 py-4 whitespace-nowrap text-xs text-gray-800 ">
+                                            <td class="px-2 whitespace-nowrap text-xs font-medium text-gray-800 ">
+                                                <p class=""><em>{{ $pay['description'] }}</em></p>
+                                            </td>
+                                            <td class="px-2 whitespace-nowrap text-xs text-center font-medium text-gray-800 ">
+                                                {{ $pay['payment_date'] }}
+                                            </td>
+                                            <td class="px-2 whitespace-nowrap text-xs text-gray-800 ">
+                                                {{ getPaymentMethodById($pay['type'], $paymentMethods) }}
+                                            </td>
+                                            <td class="px-2 whitespace-nowrap text-end text-xs text-gray-800 ">
+                                                {{ $pay['reference'] }}
+                                            </td>
+                                            <td class="px-2 whitespace-nowrap text-end text-xs font-medium">
+                                                {{ number_format($pay['amount'], 2, '.', '') }}
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                @else
+                                    @foreach($documentCredito->document->quotas as $key => $quota)
+                                        @foreach($quota->payments as $index => $pay)
+                                            <tr>
+                                                <td class="px-2 whitespace-nowrap text-xs font-medium text-gray-800 ">
+                                                    <p class="">Pago cuota: {{ $quota->quota_number }} <em>{{ $pay->description }}</em></p>
+                                                </td>
+                                                <td class="px-2 whitespace-nowrap text-xs text-center font-medium text-gray-800 ">
+                                                    {{ $pay->payment_date }}
+                                                </td>
+                                                <td class="px-2 whitespace-nowrap text-xs text-gray-800 ">
+                                                    {{ getPaymentMethodById($pay->payment_method_id, $paymentMethods) }}
+                                                </td>
+                                                <td class="px-2 whitespace-nowrap text-xs text-end text-gray-800 ">
+                                                    {{ $pay->reference }}
+                                                </td>
+                                                <td class="px-2 whitespace-nowrap text-end text-xs font-medium">
+                                                    {{ number_format($pay->amount_applied, 2, '.', '') }}
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    @endforeach
+                                @endif
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                @endif
             </div>
             @if ($document->getMtoImpVenta() > 0 && $document->getDetraccion())
                 @php
@@ -1058,7 +1351,8 @@ Constrain images and videos to the parent width and preserve their intrinsic asp
                                                     Cta. Banco de la Nación
                                                 </td>
                                                 <td
-                                                    style="border: 1px solid #5c6ac4;border-collapse: collapse; padding: 4px">
+                                                    width="140px"
+                                                    style="border: 1px solid #5c6ac4;border-collapse: collapse; padding: 4px;">
                                                     {{ $document->getDetraccion()->getCtaBanco() }}
                                                 </td>
                                             </tr>
@@ -1108,16 +1402,84 @@ Constrain images and videos to the parent width and preserve their intrinsic asp
                     </p>
                 @endif
 
-                <div class="fixed bottom-0 left-0 bg-slate-100 w-full text-neutral-600 text-center text-xs py-3">
-                    {{ $document->getCompany()->getNombreComercial() }}
-                    <span class="text-slate-300 px-2">|</span>
-                    {{ $document->getCompany()->getEmail() }}
-                    <span class="text-slate-300 px-2">|</span>
-                    {{ $document->getCompany()->getTelephone() }}
-                </div>
+
             </div>
         </div>
+        <div class="relative fixed bottom-0 left-0 w-full">
+            <div class="pxy">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tbody>
+                        <tr>
+                            {{-- Inicializa el contador de columnas --}}
+                            @php $columnCount = 0; @endphp
+
+                            @foreach ($bankAccounts as $account)
+                                <td style="width: 33.33%; padding: 8px;"> {{-- Cada celda ocupa un tercio del ancho --}}
+                                    <div style="border: 1px solid #e2e8f0;"> {{-- Equivalente a border border-main --}}
+                                        <table style="width: 100%; font-size: 0.75rem; border-collapse: collapse;">
+                                            <thead>
+                                                <tr>
+                                                    <td style="border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; padding-left: 12px; font-weight: bold; color: #4a5568;">
+                                                        <table>
+                                                            <tr>
+                                                                <td style="vertical-align: middle; padding-right: 8px;" rowspan="2">
+                                                                    <img src="{{ public_path($account->bank->image) }}" style="width: 45px; display: block;">
+                                                                </td>
+                                                                <td style="font-size: 0.60rem; vertical-align: top;">
+                                                                    {{ $account->description }}
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td style="vertical-align: top;">
+                                                                    {{ $account->bank->full_name }}
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                    </td>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td style="border-bottom: 1px solid #e2e8f0; padding-top: 8px; padding-bottom: 8px; padding-left: 12px; text-align: left;">
+                                                        <b>Número de cuenta:</b> {{ $account->number }}
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="padding-top: 8px; padding-bottom: 8px; padding-left: 12px; text-align: left;">
+                                                        <b>N° de cuenta interbancario (cci):</b> {{ $account->cci }}
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </td>
+
+                                {{-- Incrementa el contador de columnas --}}
+                                @php $columnCount++; @endphp
+
+                                {{-- Si hemos añadido 3 columnas O es la última cuenta, cerramos la fila y abrimos una nueva (si no es la última cuenta) --}}
+                                @if ($columnCount % 3 === 0 && !$loop->last)
+                                    </tr><tr>
+                                @endif
+                            @endforeach
+
+                            {{-- Si la última fila no tiene exactamente 3 columnas, rellenar con celdas vacías para mantener el diseño --}}
+                            @while ($columnCount % 3 !== 0)
+                                <td style="width: 33.33%;"></td> {{-- Celda vacía --}}
+                                @php $columnCount++; @endphp
+                            @endwhile
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="bg-slate-100 w-full text-neutral-600 text-center text-xs py-3">
+                {{ $document->getCompany()->getNombreComercial() }}
+                <span class="text-slate-300 px-2">|</span>
+                {{ $document->getCompany()->getEmail() }}
+                <span class="text-slate-300 px-2">|</span>
+                {{ $document->getCompany()->getTelephone() }}
+            </div>
+        </div>
+    </div>
 </body>
-
-
 </html>

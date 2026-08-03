@@ -2,6 +2,7 @@
 import AppLayout from "@/Layouts/Vristo/AppLayout.vue";
 import CreateForm from './Partials/CreateForm.vue';
 import { Link } from '@inertiajs/vue3';
+import Navigation from "@/Components/vristo/layout/Navigation.vue";
 
 const props = defineProps({
     identityDocumentTypes: {
@@ -23,6 +24,10 @@ const props = defineProps({
     occupations: {
         type: Object,
         default: () => ({})
+    },
+    countries: {
+        type: Object,
+        default: () => ({})
     }
 });
 
@@ -30,17 +35,12 @@ const props = defineProps({
 
 <template>
     <AppLayout title="Crear Estudiante">
-        <ul class="flex space-x-2 rtl:space-x-reverse">
-            <li>
-                <a href="javascript:;" class="text-primary hover:underline">Académico</a>
-            </li>
-            <li class="before:content-['/'] ltr:before:mr-1 rtl:before:ml-1">
-                <span>Estudiantes</span>
-            </li>
-            <li class="before:content-['/'] ltr:before:mr-1 rtl:before:ml-1">
-                <span>Nuevo</span>
-            </li>
-        </ul>
+        <Navigation :routeModule="route('aca_dashboard')" :titleModule="'Académico'"
+            :data="[
+                {route: route('aca_students_list'), title: 'Estudiantes'},
+                {title: 'Nuevo'}
+            ]"
+        />
         <div class="pt-5">
             <CreateForm
                 :identityDocumentTypes="identityDocumentTypes"
@@ -48,6 +48,7 @@ const props = defineProps({
                 :industrias="industrias"
                 :professions="professions"
                 :occupations="occupations"
+                :countries="countries"
             />
         </div>
     </AppLayout>

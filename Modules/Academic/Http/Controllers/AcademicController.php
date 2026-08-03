@@ -2,11 +2,14 @@
 
 namespace Modules\Academic\Http\Controllers;
 
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
 use Modules\Academic\Entities\AcaCapRegistration;
 use Modules\Academic\Entities\AcaStudent;
 
@@ -18,7 +21,7 @@ class AcademicController extends Controller
      */
     public function index()
     {
-        return view('academic::index');
+        return Inertia::render('Academic::Dashboard');
     }
 
     /**
@@ -89,9 +92,17 @@ class AcademicController extends Controller
      * @param int $id
      * @return Renderable
      */
-    public function show($id)
+    public function updateTourUser()
     {
-        return view('academic::show');
+        //dd(Auth::id());
+        User::where('id', Auth::id())->update([
+            'tour_completed' => true
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'tour terminado'
+        ]);
     }
 
     /**
