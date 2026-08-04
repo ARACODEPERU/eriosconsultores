@@ -13,7 +13,7 @@
                 <!-- Columna de Texto -->
                 <div class="col-lg-12">
                     <div class="section-title mt-30">
-                        <h3><strong>Última actualización:</strong> 06/07/2025</h3>
+                        <h3><strong>Última actualización:</strong> {{ now()->format('d/m/Y') }}</h3>
                     </div>
                     <div class="about-cont">
                         <p>En <strong>ERIOS CONSULTORES</strong> (en adelante, "nosotros", "nuestro" o "la empresa"), valoramos tu
