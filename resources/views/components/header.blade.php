@@ -55,7 +55,7 @@
                 <div class="row">
                     <div class="col-lg-12">
                         <nav class="navbar navbar-expand-lg">
-                            <a class="navbar-brand" href="index-4.html">
+                            <a class="navbar-brand" href="{{ route('index_main') }}">
                                 <img style="width: 180px;" src="{{ asset('storage/' . $header[5]->content) }}"
                                     alt="Logo">
                             </a>

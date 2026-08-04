@@ -16,12 +16,12 @@
                         <h3><strong>Última actualización:</strong> 06/07/2025</h3>
                     </div>
                     <div class="about-cont">
-                        <p>En <strong>CPA ACADEMY</strong> (en adelante, "nosotros", "nuestro" o "la empresa"), valoramos tu
+                        <p>En <strong>ERIOS CONSULTORES</strong> (en adelante, "nosotros", "nuestro" o "la empresa"), valoramos tu
                             privacidad y nos comprometemos a proteger la información personal que compartes con nosotros.
                             Esta política de privacidad describe cómo recopilamos, usamos y protegemos tus datos personales
                             cuando accedes a nuestros cursos en línea a través de nuestro sitio web <a
-                                href="https://academy.globalcpaperu.com/" target="_blank"
-                                rel="noopener">https://academy.globalcpaperu.com/</a>.</p>
+                                href="https://www.eriosconsultores.com/" target="_blank"
+                                rel="noopener">https://www.eriosconsultores.com/</a>.</p>
 
                     </div>
                 </div>
@@ -79,7 +79,71 @@
                             3.1 Proveedores de Servicios: Podemos compartir tu información con terceros que prestan servicios en nuestro nombre, como procesadores de pagos, plataformas de correo electrónico y proveedores de análisis de datos. Estos terceros están obligados a proteger tu información y solo la utilizan en la medida en que sea necesario para realizar sus funciones.
                         </p>
                         <p>
-                            3.2 Cumplimiento Legal: Podemos divulgar tu información si es necesario para cumplir con la ley, responder a una orden judicial, o proteger los derechos, la propiedad o la seguridad de [Nombre de tu Empresa/Sitio Web], nuestros usuarios u otros.
+                            3.2 Cumplimiento Legal: Podemos divulgar tu información si es necesario para cumplir con la ley, responder a una orden judicial, o proteger los derechos, la propiedad o la seguridad de <strong>ERIOS CONSULTORES</strong>, nuestros usuarios u otros.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row align-items-center mb-2">
+                <!-- Columna de Texto -->
+                <div class="col-lg-12">
+                    <div class="section-title mt-30">
+                        <h3>4. Seguridad de la Información</h3>
+                    </div>
+                    <div class="about-cont">
+                        <p>
+                            Tomamos medidas razonables para proteger tu información personal de accesos no autorizados, uso indebido, pérdida o divulgación. Sin embargo, debes saber que ningún método de transmisión por Internet o de almacenamiento electrónico es 100% seguro.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row align-items-center mb-2">
+                <!-- Columna de Texto -->
+                <div class="col-lg-12">
+                    <div class="section-title mt-30">
+                        <h3>5. Tus Derechos</h3>
+                    </div>
+                    <div class="about-cont">
+                        <p>
+                            5.1 Acceso y Rectificación: Tienes derecho a acceder a la información personal que tenemos sobre ti y a solicitar su rectificación si es incorrecta o está desactualizada.
+                        </p>
+                        <p>
+                            5.2 Cancelación y Oposición: Puedes solicitar la eliminación de tu información personal o limitar el uso que hacemos de ella en cualquier momento. Sin embargo, esto puede afectar nuestra capacidad para proporcionarte algunos de nuestros servicios.
+                        </p>
+                        <p>
+                            5.3 Retiro del Consentimiento: Si has dado tu consentimiento para que usemos tu información para fines de marketing, puedes retirarlo en cualquier momento utilizando el enlace de "cancelar suscripción" en nuestros correos electrónicos.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row align-items-center mb-2">
+                <!-- Columna de Texto -->
+                <div class="col-lg-12">
+                    <div class="section-title mt-30">
+                        <h3>6. Cambios a Esta Política de Privacidad</h3>
+                    </div>
+                    <div class="about-cont">
+                        <p>
+                            Nos reservamos el derecho de actualizar esta política de privacidad en cualquier momento. Cualquier cambio será publicado en esta página y, si los cambios son significativos, te lo notificaremos a través de un aviso en nuestro sitio web o por correo electrónico.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row align-items-center mb-2">
+                <!-- Columna de Texto -->
+                <div class="col-lg-12">
+                    <div class="section-title mt-30">
+                        <h3>7. Contacto</h3>
+                    </div>
+                    <div class="about-cont">
+                        <p>
+                            Si tienes preguntas o inquietudes sobre nuestra política de privacidad o el 
+                            manejo de tu información personal, puedes contactarnos a través de 
+                            <a href="mailto:Info@eriosconsultores.com">Info@eriosconsultores.com</a>.
                         </p>
                     </div>
                 </div>
