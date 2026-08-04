@@ -20,18 +20,21 @@
                                 <span class="follow-us">Siguenos en :</span>
                                 <ul>
                                     <li>
-                                        <a style="padding: 0px 5px;" href="{{ $header[2]->content }}" target="_blank" rel="noopener noreferrer">
-                                        <i class="fab fa-facebook-f" aria-hidden="true"></i></a>
+                                        <a style="padding: 0px 5px;" href="{{ $header[2]->content }}" target="_blank"
+                                            rel="noopener noreferrer">
+                                            <i class="fab fa-facebook-f" aria-hidden="true"></i></a>
                                     </li>
                                     {{-- <li><a href="#"><i class="fa fa-youtube"></i></a></li>
                                     <li><a href="#"><i class="fa fa-twitter"></i></a></li> --}}
                                     <li>
-                                        <a style="padding: 0px 5px;" href="{{ $header[3]->content }}" target="_blank" rel="noopener noreferrer">
-                                        <i class="fab fa-instagram" aria-hidden="true"></i></a>
+                                        <a style="padding: 0px 5px;" href="{{ $header[3]->content }}" target="_blank"
+                                            rel="noopener noreferrer">
+                                            <i class="fab fa-instagram" aria-hidden="true"></i></a>
                                     </li>
                                     <li>
-                                        <a style="padding: 0px 5px;" href="{{ $header[4]->content }}" target="_blank" rel="noopener noreferrer">
-                                        <i class="fab fa-linkedin" aria-hidden="true"></i></a>
+                                        <a style="padding: 0px 5px;" href="{{ $header[4]->content }}" target="_blank"
+                                            rel="noopener noreferrer">
+                                            <i class="fab fa-linkedin" aria-hidden="true"></i></a>
                                     </li>
                                 </ul>
                             </div> <!-- social -->
@@ -46,16 +49,19 @@
                 </div> <!-- row -->
             </div> <!-- container -->
         </div> <!-- header top -->
-        
+
         <div class="navigation">
             <div class="container">
                 <div class="row">
                     <div class="col-lg-12">
                         <nav class="navbar navbar-expand-lg">
                             <a class="navbar-brand" href="index-4.html">
-                                <img style="width: 180px;" src="{{ asset('storage/'.$header[5]->content) }}" alt="Logo">
+                                <img style="width: 180px;" src="{{ asset('storage/' . $header[5]->content) }}"
+                                    alt="Logo">
                             </a>
-                            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                            <button class="navbar-toggler" type="button" data-toggle="collapse"
+                                data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
+                                aria-expanded="false" aria-label="Toggle navigation">
                                 <span class="icon-bar"></span>
                                 <span class="icon-bar"></span>
                                 <span class="icon-bar"></span>
@@ -64,22 +70,28 @@
                             <div class="collapse navbar-collapse sub-menu-bar" id="navbarSupportedContent">
                                 <ul class="navbar-nav ml-auto">
                                     <li class="nav-item">
-                                        <a class="active" href="{{ route('index_main') }}">Home</a>
+                                        <a class="{{ request()->routeIs('index_main') ? 'active' : '' }}"
+                                            href="{{ route('index_main') }}">Home</a>
                                     </li>
                                     <li class="nav-item">
-                                        <a href="{{ route('web_about') }}">Nosotros</a>
+                                        <a class="{{ request()->routeIs('web_about') ? 'active' : '' }}"
+                                            href="{{ route('web_about') }}">Nosotros</a>
                                     </li>
                                     <li class="nav-item">
-                                        <a href="{{ route('web_services') }}">Servicios</a>
+                                        <a class="{{ request()->routeIs('web_services') ? 'active' : '' }}"
+                                            href="{{ route('web_services') }}">Servicios</a>
                                     </li>
                                     {{-- <li class="nav-item">
-                                        <a href="{{ route('web_courses') }}">Cursos</a>
-                                    </li> --}}
+            <a class="{{ request()->routeIs('web_courses') ? 'active' : '' }}" href="{{ route('web_courses') }}">Cursos</a>
+        </li> --}}
                                     <li class="nav-item">
-                                        <a href="{{ route('web_contact_us') }}">Contactanos</a>
+                                        <a class="{{ request()->routeIs('web_contact_us') ? 'active' : '' }}"
+                                            href="{{ route('web_contact_us') }}">Contactanos</a>
                                     </li>
                                     <li class="nav-item">
-                                        <a href="{{ route('web_about') }}">Campus Virtual</a>
+                                        <!-- Nota: Esta ruta apunta a 'web_about', si tienes una ruta específica para el campus, cámbiala aquí también -->
+                                        <a class="{{ request()->routeIs('web_about') ? 'active' : '' }}"
+                                            href="{{ route('web_about') }}">Campus Virtual</a>
                                     </li>
                                 </ul>
                             </div>
