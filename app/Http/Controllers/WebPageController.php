@@ -154,6 +154,11 @@ class WebPageController extends Controller
         return view('pages/privacy-policies');
     }
 
+    public function returnpolicies()
+    {
+        return view('pages/return-policy');
+    }
+
 
     public function carrito()
     {

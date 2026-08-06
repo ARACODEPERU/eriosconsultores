@@ -23,7 +23,18 @@
                                 <h6>Políticas</h6>
                             </div>
                             <ul>
-                                <li><a href="{{ route('web_privacy_policies') }}"><i class="fa fa-angle-right"></i>Politicas de Privacidad</a></li>
+                                <li>
+                                    <a href="{{ route('web_privacy_policies') }}">
+                                        <i class="fa fa-angle-right"></i>
+                                        Politicas de Privacidad
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="{{ route('web_return_policies') }}">
+                                        <i class="fa fa-angle-right"></i>
+                                        Politicas de Devoluciones
+                                    </a>
+                                </li>
                             </ul>
                         </div> <!-- support -->
                     </div>
