@@ -14,6 +14,7 @@
                                 <li><a href="{{ route('web_services') }}"><i class="fa fa-angle-right"></i>Servicios</a></li> 
                                 {{-- <li><a href="{{ route('web_courses') }}"><i class="fa fa-angle-right"></i>Cursos</a></li> --}}
                                 <li><a href="{{ route('web_contact_us') }}"><i class="fa fa-angle-right"></i>Contactanos</a></li>
+                                <li><a href="https://www.zoho.com/mail/login.html"><i class="fa fa-angle-right"></i>Web Mail</a></li>
                             </ul>
                         </div> <!-- footer link -->
                     </div>
