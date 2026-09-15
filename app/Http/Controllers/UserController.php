@@ -6,6 +6,7 @@ use App\Models\LocalSale;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use DataTables;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Role;
 
@@ -35,6 +36,24 @@ class UserController extends Controller
         return Inertia::render('Users/List', [
             'users' => $users
         ]);
+    }
+
+    public function getUsers()
+    {
+        $users = (new User())->newQuery()
+            ->leftJoin('people', 'users.person_id', '=', 'people.id')
+            ->select(
+                'users.id',
+                'users.name',
+                'users.email',
+                'users.status',
+                'people.full_name',
+                'people.number',
+                'people.image',
+                'users.created_at AS created_at'
+            );
+
+        return DataTables::of($users)->toJson();
     }
 
     public function create()
