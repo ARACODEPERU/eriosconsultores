@@ -1,5 +1,8 @@
 @extends('layouts.webpage')
 
+@section('meta_title', 'Políticas de Privacidad')
+@section('meta_description', 'Conoce cómo ERIOS CONSULTORES recopila, usa y protege tus datos personales conforme a la normativa vigente de protección de datos.')
+
 @section('content')
 
     <!--====== PAGE BANNER PART START ======-->

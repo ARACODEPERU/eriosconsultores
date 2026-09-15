@@ -1,5 +1,8 @@
 @extends('layouts.webpage')
 
+@section('meta_title', 'Contáctanos')
+@section('meta_description', 'Escríbenos y resolvemos tus dudas sobre cursos, diplomados y servicios de ERIOS CONSULTORES. Atención personalizada por teléfono, WhatsApp y correo.')
+
 @section('content')
 
 

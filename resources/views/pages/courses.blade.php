@@ -1,5 +1,8 @@
 @extends('layouts.webpage')
 
+@section('meta_title', 'Cursos')
+@section('meta_description', 'Catálogo de cursos y diplomados de ERIOS CONSULTORES: modalidades presencial y virtual, horarios flexibles y certificación incluida. ¡Inscríbete ya!')
+
 @section('content')
 
 

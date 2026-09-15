@@ -7,13 +7,34 @@
     <!--====== Required meta tags ======-->
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
-    <meta name="description" content="">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    
-    <!--====== Title ======-->
-    <title>ERIOS CONSULTORES | Home</title>
-    <!--====== Favicon Icon ======-->
-    <link rel="shortcut icon" href="{{ asset('themes/webpage/images/Logo_Icon.png') }}" type="image/png">
+
+    {{-- SEO: title, description, canonical, robots, Open Graph y Twitter Cards --}}
+    <x-seo-meta
+        :title="$__env->yieldContent('meta_title')"
+        :description="$__env->yieldContent('meta_description')"
+        :robots="$__env->yieldContent('meta_robots')"
+    />
+
+    {{-- Favicon --}}
+    <link rel="icon" type="image/png" href="{{ asset('themes/webpage/images/Logo_Icon.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('themes/webpage/images/Logo_Icon.png') }}">
+
+    {{-- Datos estructurados: Organización --}}
+    <script type="application/ld+json">
+    <?php echo json_encode([
+        '@context' => 'https://schema.org',
+        '@type' => 'Organization',
+        'name' => 'ERIOS CONSULTORES',
+        'url' => url('/'),
+        'logo' => url(asset('themes/webpage/images/Logo_Web.jpg')),
+        'contactPoint' => [
+            '@type' => 'ContactPoint',
+            'contactType' => 'customer service',
+            'availableLanguage' => ['es'],
+        ],
+    ]); ?>
+    </script>
 
     <!--====== Slick css ======-->
     <link rel="stylesheet" href="{{ asset('themes/webpage/css/slick.css') }}">
@@ -43,11 +64,10 @@
     <link rel="stylesheet" href="{{ asset('themes/webpage/css/style.css') }}">
 
     <!--====== Responsive css ======-->
-    <link rel="stylesheet" href="{{ asset('themes/webpage/css/responsive.css') }}">
-
-    <!--====== Sky-Tabs css ======-->
+    <link rel="stylesheet" href="{{ asset('themes/webpage/css/responsive.css') }}">    <!--====== Sky-Tabs css ======-->
     <link rel="stylesheet" href="{{ asset('themes/webpage/css/sky-tabs.css') }}">
 
+    @yield('page_styles')
   
 </head>
 

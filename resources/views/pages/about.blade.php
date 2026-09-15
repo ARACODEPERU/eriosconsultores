@@ -1,5 +1,8 @@
 @extends('layouts.webpage')
 
+@section('meta_title', 'Nosotros')
+@section('meta_description', 'Conoce a ERIOS CONSULTORES: quiénes somos, nuestra misión, visión y valores. Más de una década formando profesionales y acompañando a empresas.')
+
 @section('content')
 
     <!--====== PAGE BANNER PART START ======-->

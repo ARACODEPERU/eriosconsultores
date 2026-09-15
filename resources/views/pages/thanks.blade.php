@@ -1,5 +1,8 @@
 @extends('layouts.webpage')
 
+@section('meta_title', 'Gracias por tu compra')
+@section('meta_robots', 'noindex, follow')
+
 @section('content')
 
 

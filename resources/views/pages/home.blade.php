@@ -1,5 +1,8 @@
 @extends('layouts.webpage')
 
+@section('meta_title', 'Inicio')
+@section('meta_description', 'ERIOS CONSULTORES: instituto de capacitación profesional. Cursos, diplomados y consultoría para potenciar tu carrera e impulsar tu empresa.')
+
 @section('content')
 
     <!--====== SLIDER PART START ======-->

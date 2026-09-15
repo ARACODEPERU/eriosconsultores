@@ -1,5 +1,8 @@
 @extends('layouts.webpage')
 
+@section('meta_title', 'Políticas de Devoluciones')
+@section('meta_description', 'Políticas de devoluciones y reembolsos de ERIOS CONSULTORES para cursos, diplomados y servicios: condiciones, plazos y procedimiento.')
+
 @section('content')
 
     <!--====== PAGE BANNER PART START ======-->
