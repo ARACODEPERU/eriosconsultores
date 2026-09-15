@@ -118,6 +118,11 @@ class WebPageController extends Controller
     }
 
 
+    public function teachers()
+    {
+        return view('pages.teachers');
+    }
+
     public function contact()
     {
         // $banner = CmsSection::where('component_id', 'nosotros_banner_area_11')  //siempre cambiar el id del componente

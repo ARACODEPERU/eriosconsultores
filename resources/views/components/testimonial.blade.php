@@ -1,77 +1,35 @@
 <div>
-    <section id="testimonial" class="bg_cover pt-115 pb-120" data-overlay="8" style="background-image: url({{ asset('themes/webpage/images/bg-2.jpg') }})">
+    <section id="testimonial" class="erc-testi-band">
         <div class="container">
-            <div class="row">
-                <div class="col-lg-6">
-                    <div class="section-title pb-40">
-                        <h5>{{ $testimonial_presentation[0]->content }}</h5>
-                        <h2>{{ $testimonial_presentation[1]->content }}</h2>
-                    </div> <!-- section title -->
-                </div>
-            </div> <!-- row -->
-            <div class="row testimonial-slide mt-40">
+
+            <div class="erc-sec-head" data-reveal>
+                <span class="erc-sec-eyebrow">{{ $testimonial_presentation[0]->content }}</span>
+                <h2>{{ $testimonial_presentation[1]->content }}</h2>
+            </div>
+
+            <div class="erc-testi-grid">
                 @foreach ($testimonial_information as $k => $testimonial)
-                <div class="col-lg-6">
-                    <div class="single-testimonial">
-                        <div class="testimonial-thum">
-                            <img src="{{ asset('storage/' . $testimonial->item->items[0]->content) }}" alt="Testimonial">
-                            <div class="quote">
-                                <i class="fa fa-quote-right"></i>
+                    @php
+                        $photo = $testimonial->item->items[0]->content ?? '';
+                        $text = $testimonial->item->items[1]->content ?? '';
+                        $name = $testimonial->item->items[2]->content ?? '';
+                        $place = $testimonial->item->items[3]->content ?? '';
+                    @endphp
+                    <article class="erc-testi-card" data-reveal data-reveal-delay="{{ $k * 120 }}">
+                        <span class="erc-testi-card__quote"><i class="fa fa-quote-right" aria-hidden="true"></i></span>
+                        <p class="erc-testi-card__text">“{{ $text }}”</p>
+                        <div class="erc-testi-card__author">
+                            <img src="{{ $photo ? asset('storage/' . $photo) : asset('themes/webpage/images/logo-2.png') }}"
+                                alt="{{ $name }}" class="erc-testi-card__avatar"
+                                onerror="this.onerror=null;this.src='{{ asset('themes/webpage/images/logo-2.png') }}';this.classList.add('erc-testi-card__avatar--fallback');">
+                            <div>
+                                <h6 class="erc-testi-card__name">{{ $name }}</h6>
+                                <p class="erc-testi-card__place">{{ $place }}</p>
                             </div>
                         </div>
-                        <div class="testimonial-cont">
-                            <p>{{ $testimonial->item->items[1]->content }}</p>
-                            <h6>{{ $testimonial->item->items[2]->content }}</h6>
-                            <span>{{ $testimonial->item->items[3]->content }}</span>
-                        </div>
-                    </div>
-                </div>
+                    </article>
                 @endforeach
-                {{-- <div class="col-lg-6">
-                    <div class="single-testimonial">
-                        <div class="testimonial-thum">
-                            <img src="{{ asset('themes/webpage/images/testimonial/t-1.jpg') }}" alt="Testimonial">
-                            <div class="quote">
-                                <i class="fa fa-quote-right"></i>
-                            </div>
-                        </div>
-                        <div class="testimonial-cont">
-                            <p>Aliquetn sollicitudirem quibibendum auci elit cons equat ipsutis sem nibh id elit. Duis sed odio sit amet sem nibh id elit sollicitudirem </p>
-                            <h6>Rubina Helen</h6>
-                            <span>Bsc, Engineering</span>
-                        </div>
-                    </div> <!-- single testimonial -->
-                <div class="col-lg-6">
-                    <div class="single-testimonial">
-                        <div class="testimonial-thum">
-                            <img src="{{ asset('themes/webpage/images/testimonial/t-2.jpg') }}" alt="Testimonial">
-                            <div class="quote">
-                                <i class="fa fa-quote-right"></i>
-                            </div>
-                        </div>
-                        <div class="testimonial-cont">
-                            <p>Aliquetn sollicitudirem quibibendum auci elit cons equat ipsutis sem nibh id elit. Duis sed odio sit amet sem nibh id elit sollicitudirem </p>
-                            <h6>Rubina Helen</h6>
-                            <span>Bsc, Engineering</span>
-                        </div>
-                    </div> <!-- single testimonial -->
-                </div>
-                <div class="col-lg-6">
-                    <div class="single-testimonial">
-                        <div class="testimonial-thum">
-                            <img src="{{ asset('themes/webpage/images/testimonial/t-3.jpg') }}" alt="Testimonial">
-                            <div class="quote">
-                                <i class="fa fa-quote-right"></i>
-                            </div>
-                        </div>
-                        <div class="testimonial-cont">
-                            <p>Aliquetn sollicitudirem quibibendum auci elit cons equat ipsutis sem nibh id elit. Duis sed odio sit amet sem nibh id elit sollicitudirem </p>
-                            <h6>Rubina Helen</h6>
-                            <span>Bsc, Engineering</span>
-                        </div>
-                    </div> <!-- single testimonial -->
-                </div> --}}
-            </div> <!-- testimonial slide -->
+            </div>
         </div> <!-- container -->
     </section>
 </div>

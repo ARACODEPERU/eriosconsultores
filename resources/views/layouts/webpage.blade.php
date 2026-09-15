@@ -169,7 +169,66 @@
     <script src="{{ asset('themes/webpage/js/map-script.js') }}"></script>
 
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDC3Ip9iVC0nIxC6V14CKLQ1HZNF_65qEQ"></script>
-    
+
+    {{-- ====== ERIOS · Reveal on scroll (fade-in) ====== --}}
+    <style>
+        html.erc-js [data-reveal] {
+            opacity: 0;
+            transform: translateY(28px);
+            transition: opacity .7s ease, transform .7s ease;
+            will-change: opacity, transform;
+        }
+        html.erc-js [data-reveal].is-visible {
+            opacity: 1;
+            transform: none;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            html.erc-js [data-reveal] {
+                opacity: 1;
+                transform: none;
+                transition: none;
+            }
+        }
+    </style>
+    <script>
+        (function () {
+            var els = document.querySelectorAll('[data-reveal]');
+            if (!els.length) return;
+
+            document.documentElement.classList.add('erc-js');
+
+            function showAll() {
+                for (var i = 0; i < els.length; i++) els[i].classList.add('is-visible');
+            }
+
+            var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (reduced || !('IntersectionObserver' in window)) { showAll(); return; }
+
+            try {
+                var io = new IntersectionObserver(function (entries) {
+                    entries.forEach(function (entry) {
+                        if (!entry.isIntersecting) return;
+                        var el = entry.target;
+                        var delay = parseInt(el.getAttribute('data-reveal-delay') || '0', 10);
+                        setTimeout(function () { el.classList.add('is-visible'); }, delay);
+                        io.unobserve(el);
+                    });
+                }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+
+                for (var j = 0; j < els.length; j++) io.observe(els[j]);
+
+                /* Red de seguridad: revela lo que esté en pantalla si algo falla */
+                setTimeout(function () {
+                    var vh = window.innerHeight || document.documentElement.clientHeight;
+                    for (var k = 0; k < els.length; k++) {
+                        if (els[k].classList.contains('is-visible')) continue;
+                        var r = els[k].getBoundingClientRect();
+                        if (r.top < vh && r.bottom > 0) els[k].classList.add('is-visible');
+                    }
+                }, 3000);
+            } catch (e) { showAll(); }
+        })();
+    </script>
 
 </body>
 

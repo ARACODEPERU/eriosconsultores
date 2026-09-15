@@ -10,11 +10,12 @@ use Modules\CMS\Entities\CmsSectionItem;
 
 class Teachers extends Component
 {
-
     protected $teachers_presentation;
     protected $teachers_information;
+    protected $limit;
+    protected $showButton;
 
-    public function __construct()
+    public function __construct($limit = 6, $showButton = false)
     {
         $this->teachers_presentation = CmsSection::where('component_id', 'docentes_presemtacion_7')
             ->join('cms_section_items', 'section_id', 'cms_sections.id')
@@ -25,15 +26,24 @@ class Teachers extends Component
             )
             ->orderBy('cms_section_items.position')
             ->get();
-            
-        $this->teachers_information = CmsSectionItem::with('item.items')->where('section_id', 8)->get();
+
+        $this->teachers_information = CmsSectionItem::with('item.items')
+            ->where('section_id', 8)
+            ->take((int) $limit)
+            ->get();
+
+        $this->showButton = (bool) $showButton;
     }
-    
+
+    /**
+     * Get the view / contents that represent the component.
+     */
     public function render(): View|Closure|string
     {
         return view('components.teachers', [
             'teachers_presentation' => $this->teachers_presentation,
-            'teachers_information' => $this->teachers_information
+            'teachers_information' => $this->teachers_information,
+            'showButton' => $this->showButton,
         ]);
     }
 }

@@ -63,7 +63,7 @@
 
                             <a href="{{ $link ?: route('web_contact_us') }}" class="erc-service-card__link" target="_blank" rel="noopener">
                                 {{ $link ? 'Más información' : 'Solicitar este servicio' }}
-                                <i class="fa fa-long-arrow-right erc-anim-arrow" aria-hidden="true"></i>
+                                <i class="fa fa-arrow-right erc-anim-arrow" aria-hidden="true"></i>
                             </a>
                         </div>
                     </article>
@@ -81,7 +81,7 @@
                     <p>Agenda una reunión con nuestros especialistas y recibe una propuesta a la medida de tu negocio.</p>
                 </div>
                 <a href="{{ route('web_contact_us') }}" class="erc-cta-band__btn">
-                    Contáctanos <i class="fa fa-long-arrow-right erc-anim-arrow" aria-hidden="true"></i>
+                    Contáctanos <i class="fa fa-arrow-right erc-anim-arrow" aria-hidden="true"></i>
                 </a>
             </div>
         </div>

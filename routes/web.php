@@ -41,6 +41,7 @@ Route::get('/pagar', [WebPageController::class, 'pay'])->name('web_pay');
 Route::get('/gracias', [WebPageController::class, 'thanks'])->name('web_thanks');
 Route::get('/email', [WebPageController::class, 'email'])->name('web_email');
 Route::get('/contactanos', [WebPageController::class, 'contact'])->name('web_contact_us');
+Route::get('/docentes', [WebPageController::class, 'teachers'])->name('web_teachers');
 Route::get('/politicas-privacidad', [WebPageController::class, 'privacypolicies'])->name('web_privacy_policies');
 Route::get('/politicas-de-devoluciones', [WebPageController::class, 'returnpolicies'])->name('web_return_policies');
 Route::get('/prices/academic', [LandingController::class, 'academicPrices'])->name('academic_prices');
