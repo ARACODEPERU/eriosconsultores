@@ -250,7 +250,8 @@
 @section('content')
 
     <!--====== PAGE BANNER PART START ======-->
-    <x-hero-services />
+    <x-page-hero heroComponent="hero_servicios_13"
+        subtitle="Asesoría, fiscalización, auditoría y contencioso tributario para el crecimiento de tu empresa." />
     
     <!--====== PAGE BANNER PART ENDS ======-->
 

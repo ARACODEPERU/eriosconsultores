@@ -3,28 +3,174 @@
 @section('meta_title', 'Contáctanos')
 @section('meta_description', 'Escríbenos y resolvemos tus dudas sobre cursos, diplomados y servicios de ERIOS CONSULTORES. Atención personalizada por teléfono, WhatsApp y correo.')
 
+@section('page_styles')
+<style>
+    /* ============ ERIOS · Página de contacto ============ */
+    .erc-contact { padding: 90px 0 110px; background: #f4f7fb; }
+    .erc-contact__head { text-align: center; max-width: 680px; margin: 0 auto 52px; padding: 0 15px; }
+    .erc-contact__head .erc-contact__eyebrow {
+        display: inline-block;
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 700;
+        font-size: 14px;
+        letter-spacing: 2.5px;
+        text-transform: uppercase;
+        color: #004aad;
+        position: relative;
+        padding-bottom: 12px;
+        margin-bottom: 12px;
+    }
+    .erc-contact__head .erc-contact__eyebrow::before,
+    .erc-contact__head .erc-contact__eyebrow::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        width: 35px;
+        height: 2px;
+        background: #ffc600;
+    }
+    .erc-contact__head .erc-contact__eyebrow::before { left: 50%; transform: translateX(calc(-100% - 8px)); }
+    .erc-contact__head .erc-contact__eyebrow::after { left: 50%; transform: translateX(8px); }
+    .erc-contact__head h2 {
+        font-family: 'Montserrat', sans-serif;
+        font-size: 36px;
+        font-weight: 700;
+        color: #1d2025;
+        margin: 0;
+    }
+    .erc-contact__head p {
+        font-size: 16px;
+        line-height: 28px;
+        color: #505050;
+        margin: 14px 0 0;
+    }
+
+    /* ---- Tarjeta del formulario ---- */
+    .erc-form-card {
+        background: #fff;
+        border: 1px solid #eceff5;
+        border-radius: 16px;
+        padding: 38px 36px 42px;
+        box-shadow: 0 10px 34px rgba(14, 23, 38, 0.07);
+        height: 100%;
+    }
+    @media (max-width: 575px) { .erc-form-card { padding: 28px 22px 34px; } }
+    .erc-form-card__eyebrow {
+        display: inline-block;
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 700;
+        font-size: 14px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: #004aad;
+        position: relative;
+        padding-bottom: 10px;
+        margin-bottom: 10px;
+    }
+    .erc-form-card__eyebrow::before {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 35px;
+        height: 2px;
+        background: #ffc600;
+    }
+    .erc-form-card h2 {
+        font-family: 'Montserrat', sans-serif;
+        font-size: 32px;
+        font-weight: 700;
+        color: #1d2025;
+        line-height: 1.25;
+        margin: 0 0 28px;
+    }
+
+    .erc-form .single-form { margin-top: 18px; }
+    .erc-form .form-group { margin: 0; }
+    .erc-form input,
+    .erc-form textarea {
+        width: 100%;
+        height: 54px;
+        padding: 0 18px;
+        background: #f8fafd;
+        border: 2px solid #e6ecf5;
+        border-radius: 12px;
+        color: #1d2025;
+        font-size: 15px;
+        outline: none;
+        transition: all .3s ease;
+    }
+    .erc-form textarea { height: 140px; padding: 14px 18px; resize: vertical; }
+    .erc-form input::placeholder,
+    .erc-form textarea::placeholder { color: #9aa5b5; }
+    .erc-form input:focus,
+    .erc-form textarea:focus {
+        background: #fff;
+        border-color: #004aad;
+        box-shadow: 0 0 0 4px rgba(0, 74, 173, 0.1);
+    }
+    .erc-form .help-block.with-errors { color: #e5484d; font-size: 12.5px; margin-top: 6px; }
+    .erc-form .list-unstyled { margin: 0; }
+
+    .erc-submit {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        background: #ffc600;
+        color: #07294d;
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 700;
+        font-size: 15px;
+        padding: 14px 34px;
+        border-radius: 50px;
+        border: none;
+        cursor: pointer;
+        transition: all .35s ease;
+        box-shadow: 0 8px 22px rgba(255, 198, 0, 0.35);
+    }
+    .erc-submit:hover {
+        background: #004aad;
+        color: #ffc600;
+        transform: translateY(-2px);
+        box-shadow: 0 12px 26px rgba(0, 74, 173, 0.3);
+    }
+    .erc-submit[disabled] { opacity: .45; cursor: not-allowed; transform: none; }
+
+    @media (max-width: 767px) {
+        .erc-contact { padding: 60px 0 80px; }
+        .erc-contact__head h2 { font-size: 27px; }
+        .erc-form-card h2 { font-size: 26px; }
+    }
+</style>
+@endsection
+
 @section('content')
 
 
     <!--====== PAGE BANNER PART START ======-->
 
-    <x-hero-contact />
+    <x-page-hero heroComponent="hero_contactanos_14"
+        subtitle="Estamos listos para atenderte: escríbenos y agenda una asesoría con nuestro equipo." />
 
     <!--====== PAGE BANNER PART ENDS ======-->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <!--====== CONTACT PART START ======-->
 
-    <section id="contact-page" class="pt-90 pb-120 gray-bg">
+    <section id="contact-page" class="erc-contact">
         <div class="container">
+
+            <div class="erc-contact__head" data-reveal>
+                <span class="erc-contact__eyebrow">Contactanos</span>
+                <h2>Mantente en contacto</h2>
+                <p>Cuéntanos tu necesidad y nuestro equipo te responderá a la brevedad.</p>
+            </div>
+
             <div class="row">
                 <div class="col-lg-7">
-                    <div class="contact-from mt-30">
-                        <div class="section-title">
-                            <h5>Contactanos</h5>
-                            <h2>Mantenerse en contacto</h2>
-                        </div> <!-- section title -->
-                        <div class="main-form pt-45">
-                            <form id="pageContactForm" name="contact_form" action="{{ route('apisubscriber') }}" method="post" data-toggle="validator">
+                    <div class="erc-form-card" data-reveal>
+                        <span class="erc-form-card__eyebrow">Formulario</span>
+                        <h2>Envíanos un mensaje</h2>
+                            <form id="pageContactForm" name="contact_form" action="{{ route('apisubscriber') }}" method="post" data-toggle="validator" class="erc-form">
                                 @csrf
                                 <div class="row">
                                     <div class="col-md-12">
@@ -60,19 +206,15 @@
                                     <p class="form-message"></p>
                                     <div class="col-md-12">
                                         <div class="single-form">
-                                            <button id="submitPageContactButton" type="submit" class="main-btn">Enviar</button>
+                                            <button id="submitPageContactButton" type="submit" class="erc-submit">Enviar <i class="fa fa-paper-plane" aria-hidden="true"></i></button>
                                         </div> <!-- single form -->
                                     </div>
                                 </div> <!-- row -->
                             </form>
-                        </div> <!-- main form -->
-                    </div> <!--  contact from -->
+                    </div> <!-- erc-form-card -->
                 </div>
                 <div class="col-lg-5">
                     <x-contact-data />
-                    <div class="map mt-30">
-                        <div id="contact-map"></div>
-                    </div> 
                 </div>
             </div> <!-- row -->
         </div> <!-- container -->

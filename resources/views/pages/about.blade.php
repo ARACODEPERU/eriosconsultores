@@ -278,13 +278,12 @@
 </style>
 @endsection
 
-@section('content')
+@section('content')    <!--====== PAGE BANNER PART START ====== -->
 
-    <!--====== PAGE BANNER PART START ======-->
-    
-    <x-hero-about />
-    
-    <!--====== PAGE BANNER PART ENDS ======-->
+    <x-page-hero heroComponent="hero_nosotros_11"
+        subtitle="Más de una década acompañando a empresas y profesionales en el cumplimiento tributario." />
+
+    <!--====== PAGE BANNER PART ENDS ====== -->
 
    <!--====== ABOUT PART START ======-->
     <x-about-two />

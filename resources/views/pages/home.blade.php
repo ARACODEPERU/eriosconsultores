@@ -126,33 +126,7 @@
     @media (max-width: 991px) { .erc-teachers { grid-template-columns: repeat(2, minmax(0,1fr)) !important; } }
     @media (max-width: 575px) { .erc-teachers { grid-template-columns: 1fr !important; } }
 
-    /* ---- Testimonios ---- */
-    .erc-testi-band { position: relative; background: linear-gradient(135deg, #004aad 0%, #2f6fd6 60%, #4a86e8 100%); padding: 90px 0; overflow: hidden; }
-    .erc-testi-band::before { content: ''; position: absolute; width: 380px; height: 380px; border-radius: 50%; border: 2px solid rgba(255,255,255,.15); top: -140px; left: -100px; }
-    .erc-testi-band .erc-sec-eyebrow { color: #ffc600; }
-    .erc-testi-band .erc-sec-head h2 { color: #fff; }
-    .erc-testi-band .erc-sec-head p { color: rgba(255,255,255,.78); }
-    .erc-testi-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 26px; }
-    @media (max-width: 991px) { .erc-testi-grid { grid-template-columns: 1fr; } }
-    .erc-testi-card {
-        background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.15);
-        border-radius: 16px; padding: 28px 26px; position: relative;
-        display: flex; flex-direction: column; transition: all .35s ease;
-    }
-    .erc-testi-card:hover { transform: translateY(-6px); background: rgba(255,255,255,.11); border-color: rgba(255,198,0,.5); }
-    .erc-testi-card__quote {
-        position: absolute; top: -18px; right: 24px; width: 44px; height: 44px; border-radius: 12px;
-        background: #ffc600; color: #07294d; display: flex; align-items: center; justify-content: center; font-size: 18px;
-        box-shadow: 0 8px 20px rgba(255,198,0,.4);
-    }
-    .erc-testi-card__text { color: #fff; font-size: 14.5px; line-height: 25px; margin: 0 0 18px; font-style: italic; }
-    .erc-testi-card__author { display: flex; align-items: center; gap: 12px; margin-top: auto; }
-    .erc-testi-card__avatar {
-        flex: none; width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,.5);
-    }
-    .erc-testi-card__avatar--fallback { padding: 12px; filter: brightness(0) invert(1); background: rgba(255,255,255,.15); }
-    .erc-testi-card__name { color: #fff; font-size: 15px; font-weight: 700; margin: 0; }
-    .erc-testi-card__place { color: rgba(255,255,255,.7); font-size: 13px; margin: 0; }
+    /* Testimonios: el CSS vive dentro del componente (autocontenido) */
 
     @media (max-width: 575px) {
         .erc-hero__title { font-size: 34px; }

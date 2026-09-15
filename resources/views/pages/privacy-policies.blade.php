@@ -6,7 +6,8 @@
 @section('content')
 
     <!--====== PAGE BANNER PART START ======-->
-    <x-hero-privacy />
+    <x-page-hero heroComponent="hero_politicas_de_privacidad_16"
+        subtitle="Conoce cómo protegemos y tratamos tus datos personales." />
 
     <!--====== PAGE BANNER PART ENDS ======-->
 
