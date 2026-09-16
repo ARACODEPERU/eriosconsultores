@@ -71,7 +71,7 @@
                                     href="{{ route('web_contact_us') }}">Contáctanos</a>
                             </li>
                             <li class="nav-item erc-nav__cta-item">
-                                <a class="erc-nav__cta" href="{{ config('website.campus_url') }}" target="_blank" rel="noopener">
+                                <a class="erc-nav__cta" href="{{ route('login') }}" target="_blank" rel="noopener">
                                     <i class="fa fa-graduation-cap" aria-hidden="true"></i> Campus Virtual
                                 </a>
                             </li>
