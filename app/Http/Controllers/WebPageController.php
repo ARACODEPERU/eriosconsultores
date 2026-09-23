@@ -52,7 +52,23 @@ class WebPageController extends Controller
 
     public function courses()
     {
-        return view('pages.courses');
+        $courses = OnliItem::with('course.category', 'course.modality')
+            ->where('status', true)
+            ->orderBy('id', 'desc')
+            ->get();
+
+        $categories = $courses
+            ->map(function ($c) {
+                return $c->category_description ?: optional(optional($c->course)->category)->description;
+            })
+            ->filter()
+            ->unique()
+            ->values();
+
+        return view('pages.courses', [
+            'courses'    => $courses,
+            'categories' => $categories,
+        ]);
     }
 
     public function coursedescription()

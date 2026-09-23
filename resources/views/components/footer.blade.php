@@ -42,6 +42,7 @@
                                 <li><a href="{{ route('index_main') }}"><i class="fa fa-angle-right" aria-hidden="true"></i>Home</a></li>
                                 <li><a href="{{ route('web_about') }}"><i class="fa fa-angle-right" aria-hidden="true"></i>Nosotros</a></li>
                                 <li><a href="{{ route('web_services') }}"><i class="fa fa-angle-right" aria-hidden="true"></i>Servicios</a></li>
+                                <li><a href="{{ route('web_courses') }}"><i class="fa fa-angle-right" aria-hidden="true"></i>Cursos</a></li>
                                 <li><a href="{{ route('web_teachers') }}"><i class="fa fa-angle-right" aria-hidden="true"></i>Docentes</a></li>
                                 <li><a href="{{ route('web_contact_us') }}"><i class="fa fa-angle-right" aria-hidden="true"></i>Contáctanos</a></li>
                                 <li><a href="https://www.zoho.com/mail/login.html" target="_blank" rel="noopener noreferrer"><i class="fa fa-angle-right" aria-hidden="true"></i>Web Mail</a></li>
