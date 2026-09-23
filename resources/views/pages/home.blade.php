@@ -45,7 +45,7 @@
     .erc-btn--outline:hover { background: #004aad; color: #fff; }
 
     /* ---- Hero slider ---- */
-    .erc-hero__content { position: relative; z-index: 2; padding: 150px 0 170px; }
+    .erc-hero__content { position: relative; z-index: 2; padding: 76px 0 78px; }
     .erc-hero__badge {
         display: inline-flex; align-items: center; gap: 9px;
         background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.25);
@@ -69,9 +69,20 @@
 
     .erc-hero__overlay {
         position: absolute; inset: 0;
-        background: linear-gradient(100deg, rgba(7, 41, 77, 0.92) 0%, rgba(7, 41, 77, 0.72) 45%, rgba(7, 41, 77, 0.25) 100%);
+        /* Izquierda sólida para legibilidad; derecha casi transparente para ver la imagen completa */
+        background: linear-gradient(100deg, rgba(7, 41, 77, 0.93) 0%, rgba(7, 41, 77, 0.78) 34%, rgba(7, 41, 77, 0.30) 62%, rgba(7, 41, 77, 0.04) 100%);
     }
-    .single-slider { position: relative; }
+    /* Altura contenida: siempre se nota que hay más secciones debajo */
+    #slider-part { height: clamp(430px, 62vh, 560px); overflow: hidden; }
+    .single-slider {
+        position: relative;
+        padding: 0 !important; /* anula el padding-bottom:300px de la plantilla Edubin */
+        height: 100% !important;
+        background-position: center;
+        background-size: cover;
+    }
+    #slider-part .slick-list, #slider-part .slick-track,
+    #slider-part .slick-slide, #slider-part .slick-slide > div { height: 100%; }
 
     /* ---- Sobre (home) ---- */
     .erc-habout { display: grid; grid-template-columns: minmax(0,5fr) minmax(0,6fr); gap: 50px; align-items: center; }
