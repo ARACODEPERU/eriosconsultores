@@ -20,6 +20,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Cache;
 use Modules\Integrationhub\Entities\IntegrationError;
 use Modules\Integrationhub\Jobs\ProcessWhatsappFlow;
+use Modules\Integrationhub\Support\TrafficSourceResolver;
 
 class CmsSubscriberController extends Controller
 {
@@ -73,15 +74,13 @@ class CmsSubscriberController extends Controller
         }
         $country_phone = $request->get('country_phone');
 
-        // Limpiar y validar teléfono según el país (por defecto Perú +51 si no se envía country_phone)
-        $countryCode = ltrim((string) ($request->get('country_phone') ?: '51'), '+');
+        // Limpiar y validar teléfono según el país
+        $countryCode = ltrim((string) $country_phone, '+');
         $phoneRaw = preg_replace('/[^0-9]/', '', (string) $request->get('phone') ?? '');
 
         // Si el número ya contiene el código de país al inicio, quitarlo para evitar duplicación
-        if ($countryCode !== '') {
-            while (str_starts_with($phoneRaw, $countryCode)) {
-                $phoneRaw = substr($phoneRaw, strlen($countryCode));
-            }
+        while (str_starts_with($phoneRaw, $countryCode)) {
+            $phoneRaw = substr($phoneRaw, strlen($countryCode));
         }
 
         if ($countryCode === '51') {
@@ -114,6 +113,8 @@ class CmsSubscriberController extends Controller
             'utm_campaign'  => $request->get('utm_campaign'),
             'utm_term'      => $request->get('utm_term'),
             'utm_content'   => $request->get('utm_content'),
+            'utm_id'        => $request->get('utm_id'),
+            'fbclid'        => $request->get('fbclid'),
             'gclid'         => $request->get('gclid'),
             'referer'       => $request->get('referer'),
             'landing_url'   => $request->get('landing_url'),
@@ -140,7 +141,8 @@ class CmsSubscriberController extends Controller
                         $firstName,
                         $cleanPhone,
                         $request->get('email'),
-                        $flowId
+                        $flowId,
+                        $request->only(TrafficSourceResolver::KEYS)
                     );
                 }
             } catch (\Throwable $th) {

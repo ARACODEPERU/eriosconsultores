@@ -22,6 +22,8 @@ use Modules\CMS\Http\Controllers\CmsSectionItemController;
 use Modules\CMS\Http\Controllers\CmsSubscriberController;
 use Modules\CMS\Http\Controllers\CmsTestimonyController;
 use Modules\CMS\Http\Controllers\OneFreeCourseController;
+use Modules\CMS\Http\Controllers\CmsContactMessageController;
+use Modules\CMS\Http\Controllers\CmsBlogSubscribersController;
 
 Route::middleware(['auth', 'verified', 'user_activity_log'])->prefix('cms')->group(function () {
     Route::get('dashboard', [CMSController::class, 'dashboard'])->name('cms_dashboard');
@@ -79,6 +81,16 @@ Route::middleware(['auth', 'verified', 'user_activity_log'])->prefix('cms')->gro
     Route::middleware(['permission:cms_testimonios_editar'])->get('testimonies/edit/{id}', [CmsTestimonyController::class, 'edit'])->name('cms_testimonies_edit');
     Route::middleware(['permission:cms_testimonios_eliminar'])->delete('testimonies/destroy/{id}', [CmsTestimonyController::class, 'destroy'])->name('cms_testimonies_destroy');
 
+    // Testimonios de alumnos: aprobacion/rechazo y creacion manual por el admin.
+    Route::middleware(['permission:cms_testimonios_aprobar'])->post('testimonies/approve/{id}', [CmsTestimonyController::class, 'approve'])->name('cms_testimonies_approve');
+    Route::middleware(['permission:cms_testimonios_aprobar'])->post('testimonies/reject/{id}', [CmsTestimonyController::class, 'reject'])->name('cms_testimonies_reject');
+    Route::middleware(['permission:cms_testimonios_nuevo'])->get('testimonies/students/create', [CmsTestimonyController::class, 'createStudent'])->name('cms_testimonies_students_create');
+    Route::middleware(['permission:cms_testimonios_nuevo'])->post('testimonies/students/store', [CmsTestimonyController::class, 'storeStudent'])->name('cms_testimonies_students_store');
+
+    // Correccion con IA y modificacion completa desde el panel.
+    Route::middleware(['permission:cms_testimonios_editar'])->post('testimonies/ia/correct', [CmsTestimonyController::class, 'correctWithIa'])->name('cms_testimonies_ia_correct');
+    Route::middleware(['permission:cms_testimonios_editar'])->post('testimonies/admin-update', [CmsTestimonyController::class, 'adminUpdate'])->name('cms_testimonies_admin_update');
+
     Route::middleware(['permission:cms_publicidad'])->get('advertising', [CmsAdvertisingController::class, 'index'])->name('cms_advertising_list');
     Route::middleware(['permission:cms_publicidad'])->get('advertising/create', [CmsAdvertisingController::class, 'create'])->name('cms_advertising_create');
 
@@ -88,6 +100,27 @@ Route::middleware(['auth', 'verified', 'user_activity_log'])->prefix('cms')->gro
     Route::middleware(['permission:cms_landing_curso_gratis'])
         ->post('one/free/course/store', [OneFreeCourseController::class, 'store'])
         ->name('cms_landing_course_free_store');
+
+    // Mensajes de Contacto
+    Route::middleware(['permission:cms_mensajes_contacto'])
+        ->get('contact-messages', [CmsContactMessageController::class, 'index'])->name('cms_contact_messages_list');
+    Route::middleware(['permission:cms_mensajes_contacto_ver'])
+        ->get('contact-messages/{id}', [CmsContactMessageController::class, 'show'])->name('cms_contact_messages_show');
+    Route::middleware(['permission:cms_mensajes_contacto_editar'])
+        ->put('contact-messages/{id}', [CmsContactMessageController::class, 'update'])->name('cms_contact_messages_update');
+    Route::middleware(['permission:cms_mensajes_contacto_editar'])
+        ->post('contact-messages/{id}/reply', [CmsContactMessageController::class, 'reply'])->name('cms_contact_messages_reply');
+
+    // Blog Subscribers (nueva versión Inertia)
+    Route::middleware(['permission:cms_blog_suscriptores'])
+        ->get('blog-subscribers-admin', [CmsBlogSubscribersController::class, 'index'])->name('cms_blog_subscribers_list');
+    Route::middleware(['permission:cms_blog_suscriptores'])
+        ->delete('blog-subscribers-admin/{id}', [CmsBlogSubscribersController::class, 'destroy'])->name('cms_blog_subscribers_destroy');
+    Route::middleware(['permission:cms_blog_suscriptores_exportar'])
+        ->get('blog-subscribers-admin/export', [CmsBlogSubscribersController::class, 'export'])->name('cms_blog_subscribers_export');
+
+    Route::get('sitemap', [CMSController::class, 'sitemap'])->name('cms_sitemap');
+    Route::post('sitemap/generate', [CMSController::class, 'sitemapGenerate'])->name('cms_sitemap_generate');
 
 });
 
