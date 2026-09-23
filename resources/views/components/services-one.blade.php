@@ -15,7 +15,6 @@
                     @php
                         $title = $service->item->items[1]->content ?? '';
                         $intro = trim($service->item->items[2]->content ?? '');
-                        $link = trim($service->item->items[4]->content ?? '');
                         $num = str_pad($loop->iteration, 2, '0', STR_PAD_LEFT);
                         $icon = match ($loop->iteration) {
                             1 => 'fa-calculator',
@@ -34,12 +33,14 @@
                         @if ($intro)
                             <p class="erc-hs-card__text">{{ \Illuminate\Support\Str::limit($intro, 110, '…') }}</p>
                         @endif
-                        {{-- <a href="{{ $link ?: route('web_contact_us') }}" class="erc-hs-card__btn" target="_blank" rel="noopener">
-                            <i class="fab fa-whatsapp" aria-hidden="true"></i> Más Información
-                        </a> --}}
-                        <a href="{{ route('web_services') }}" class="erc-btn erc-btn--yellow">
-                            Más Información <i class="fa fa-arrow-right" aria-hidden="true"></i>
-                        </a>
+                        <div class="erc-hs-card__actions">
+                            <a href="{{ route('web_services') }}" class="erc-hs-card__btn erc-hs-card__btn--info">
+                                Más información <i class="fa fa-arrow-right" aria-hidden="true"></i>
+                            </a>
+                            <a href="https://wa.link/9q9g9v" target="_blank" rel="noopener" class="erc-hs-card__btn erc-hs-card__btn--wa">
+                                <i class="fab fa-whatsapp" aria-hidden="true"></i> Consultar
+                            </a>
+                        </div>
                     </article>
                 @endforeach
             </div>
@@ -178,28 +179,44 @@
             line-height: 25px;
             margin: 0 0 18px;
         }
-        .erc-hs-card__btn {
+        .erc-hs-card__actions {
             margin-top: auto;
-            align-self: flex-start;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .erc-hs-card__btn {
             display: inline-flex;
             align-items: center;
-            gap: 9px;
-            background: #ffc600;
-            color: #07294d;
+            gap: 8px;
             font-family: 'Montserrat', sans-serif;
             font-weight: 700;
-            font-size: 14px;
-            padding: 12px 24px;
+            font-size: 13.5px;
+            padding: 11px 20px;
             border-radius: 5px;
             text-decoration: none;
             transition: all .35s ease;
         }
-        .erc-hs-card__btn i { font-size: 17px; }
-        .erc-hs-card__btn:hover {
+        .erc-hs-card__btn i { font-size: 15px; }
+        .erc-hs-card__btn:hover { text-decoration: none; transform: translateY(-2px); }
+        .erc-hs-card__btn--info {
+            background: #ffc600;
+            color: #07294d;
+            box-shadow: 0 6px 18px rgba(255, 198, 0, 0.22);
+        }
+        .erc-hs-card__btn--info:hover {
+            background: #004aad;
+            color: #ffc600;
+            box-shadow: 0 10px 24px rgba(0, 74, 173, 0.4);
+        }
+        .erc-hs-card__btn--wa {
+            border: 2px solid rgba(37, 211, 102, 0.6);
+            color: #25D366;
+        }
+        .erc-hs-card__btn--wa:hover {
             background: #25D366;
+            border-color: #25D366;
             color: #fff;
-            text-decoration: none;
-            transform: translateY(-2px);
             box-shadow: 0 10px 24px rgba(37, 211, 102, 0.35);
         }
         @media (max-width: 575px) {

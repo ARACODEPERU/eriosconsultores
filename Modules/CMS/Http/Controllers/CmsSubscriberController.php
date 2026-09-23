@@ -73,13 +73,15 @@ class CmsSubscriberController extends Controller
         }
         $country_phone = $request->get('country_phone');
 
-        // Limpiar y validar teléfono según el país
-        $countryCode = ltrim((string) $country_phone, '+');
+        // Limpiar y validar teléfono según el país (por defecto Perú +51 si no se envía country_phone)
+        $countryCode = ltrim((string) ($request->get('country_phone') ?: '51'), '+');
         $phoneRaw = preg_replace('/[^0-9]/', '', (string) $request->get('phone') ?? '');
 
         // Si el número ya contiene el código de país al inicio, quitarlo para evitar duplicación
-        while (str_starts_with($phoneRaw, $countryCode)) {
-            $phoneRaw = substr($phoneRaw, strlen($countryCode));
+        if ($countryCode !== '') {
+            while (str_starts_with($phoneRaw, $countryCode)) {
+                $phoneRaw = substr($phoneRaw, strlen($countryCode));
+            }
         }
 
         if ($countryCode === '51') {
