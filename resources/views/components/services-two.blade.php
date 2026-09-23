@@ -6,7 +6,8 @@
             <div class="erc-services-head">
                 <span class="erc-eyebrow">Lo que hacemos</span>
                 <h2>Servicios pensados para el crecimiento de tu empresa</h2>
-                <p>Asesoría tributaria especializada, defensa ante SUNAT y auditoría preventiva con un equipo de profesionales con amplia trayectoria.</p>
+                <p>Asesoría tributaria especializada, defensa ante SUNAT y auditoría preventiva con un equipo de
+                    profesionales con amplia trayectoria.</p>
             </div>
 
             {{-- ======== Grid de tarjetas grandes ======== --}}
@@ -38,7 +39,8 @@
 
                         <div class="erc-service-card__body">
                             <div class="erc-service-card__head">
-                                <span class="erc-service-card__icon"><i class="fa {{ $icon }}" aria-hidden="true"></i></span>
+                                <span class="erc-service-card__icon"><i class="fa {{ $icon }}"
+                                        aria-hidden="true"></i></span>
                                 <span class="erc-service-card__num">{{ $num }}</span>
                             </div>
 
@@ -54,17 +56,19 @@
                                 @endphp
                                 <ul class="erc-service-card__list">
                                     @foreach ($bullets as $bullet)
-                                        <li><i class="fa fa-check-circle" aria-hidden="true"></i><span>{{ $bullet }}</span></li>
+                                        <li><i class="fa fa-check-circle"
+                                                aria-hidden="true"></i><span>{{ $bullet }}</span></li>
                                     @endforeach
                                 </ul>
                             @elseif ($details)
                                 <p class="erc-service-card__text">{{ $details }}</p>
                             @endif
-
-                            <a href="{{ $link ?: route('web_contact_us') }}" class="erc-service-card__link" target="_blank" rel="noopener">
-                                {{ $link ? 'Más información' : 'Solicitar este servicio' }}
-                                <i class="fa fa-arrow-right erc-anim-arrow" aria-hidden="true"></i>
+                            
+                            <a href="{{ route('web_contact_us') }}" class="erc-cta-band__btn">
+                                Solicitar este servicio <i class="fa fa-arrow-right erc-anim-arrow"
+                                    aria-hidden="true"></i>
                             </a>
+
                         </div>
                     </article>
                 @endforeach
@@ -78,7 +82,8 @@
             <div class="erc-cta-band__inner">
                 <div class="erc-cta-band__text">
                     <h3>¿Necesitas asesoría tributaria para tu empresa?</h3>
-                    <p>Agenda una reunión con nuestros especialistas y recibe una propuesta a la medida de tu negocio.</p>
+                    <p>Agenda una reunión con nuestros especialistas y recibe una propuesta a la medida de tu negocio.
+                    </p>
                 </div>
                 <a href="{{ route('web_contact_us') }}" class="erc-cta-band__btn">
                     Contáctanos <i class="fa fa-arrow-right erc-anim-arrow" aria-hidden="true"></i>

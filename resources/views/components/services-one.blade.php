@@ -34,8 +34,11 @@
                         @if ($intro)
                             <p class="erc-hs-card__text">{{ \Illuminate\Support\Str::limit($intro, 110, '…') }}</p>
                         @endif
-                        <a href="{{ $link ?: route('web_contact_us') }}" class="erc-hs-card__btn" target="_blank" rel="noopener">
-                            <i class="fab fa-whatsapp" aria-hidden="true"></i> Me interesa
+                        {{-- <a href="{{ $link ?: route('web_contact_us') }}" class="erc-hs-card__btn" target="_blank" rel="noopener">
+                            <i class="fab fa-whatsapp" aria-hidden="true"></i> Más Información
+                        </a> --}}
+                        <a href="{{ route('web_services') }}" class="erc-btn erc-btn--yellow">
+                            Más Información <i class="fa fa-arrow-right" aria-hidden="true"></i>
                         </a>
                     </article>
                 @endforeach

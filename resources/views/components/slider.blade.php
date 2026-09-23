@@ -9,7 +9,7 @@
                     <div class="col-xl-8 col-lg-9">
                         <div class="erc-hero__content">
                             <span class="erc-hero__badge" data-animation="fadeInUp" data-delay="0.9s">
-                                <i class="fa fa-balance-scale" aria-hidden="true"></i> ERIOS Consultores
+                                <i class="fa fa-balance-scale" aria-hidden="true"></i> ERIOS CONSULTORES TRIBUTARIOS
                             </span>
                             <h1 class="erc-hero__title" data-animation="fadeInLeft" data-delay="1.1s">
                                 {{ $slide->item->items[1]->content }}
