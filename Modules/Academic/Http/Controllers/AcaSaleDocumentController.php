@@ -31,6 +31,7 @@ use App\Helpers\Invoice\Documents\Factura;
 use Modules\Academic\Entities\AcaCourse;
 use Modules\Academic\Entities\AcaSubscriptionType;
 use Modules\Academic\Jobs\SendBoletaJob;
+use Modules\Academic\Jobs\SendStudentElectronicTicketJob;
 
 class AcaSaleDocumentController extends Controller
 {
@@ -78,6 +79,17 @@ class AcaSaleDocumentController extends Controller
                     $client_address = $sale->invoice_direccion;
                     $client_ubigeo_code = $sale->invoice_ubigeo;
                     $client_ubigeo_description = $sale->invoice_ruc;
+                } elseif (! empty($pedido['client_override'])) {
+                    // Boleta emitida a nombre de una tercera persona (negociaciones):
+                    // el cliente confirmo pero pidió que el comprobante salga a nombre de otro.
+                    $override = $pedido['client_override'];
+
+                    $client_type_doc = $override['client_type_doc'] ?? $person->document_type_id;
+                    $client_number = $override['client_number'] ?? $person->number;
+                    $client_rzn_social = $override['client_rzn_social'] ?? $person->full_name;
+                    $client_address = $person->address;
+                    $client_ubigeo_code = $person->ubigeo ?? null;
+                    $client_ubigeo_description = $person->ubigeo_description ?? null;
                 } else {
                     $client_type_doc = $person->document_type_id;
                     $client_number = $person->number;
@@ -363,8 +375,8 @@ class AcaSaleDocumentController extends Controller
 
 
         $data = [
-            'from_mail' => env('MAIL_FROM_ADDRESS', "informes@globalcpaperu.com"),
-            'from_name' => env('MAIL_FROM_NAME', "CPA Academy"),
+            'from_mail' => config('mail.from.address'),
+            'from_name' => config('mail.from.name'),
             'title' => 'Hola! Llegó tu comprobante electrónico',
             'for_mail' => $person_email,
             'for_name' => $person_name,
@@ -373,23 +385,14 @@ class AcaSaleDocumentController extends Controller
             'xml_file_path' => $dataFile["xml"] ? $dataFile["xml"]['filePath'] : null,
             'xml_file_name' => $dataFile["xml"] ? $dataFile["xml"]['fileName'] : null,
             'document_id'   => $document_id,
+            'onlisale_id'   => $onlisale_id,
         ];
 
         try {
 
-            Mail::to(trim($person_email))->send(new StudentElectronicTicket($data));
+            dispatch(new SendStudentElectronicTicketJob($data, $onlisale_id ? (int) $onlisale_id : null));
 
             $success = true;
-
-            if ($onlisale_id) {
-                $onlisale = OnliSale::findOrFail($onlisale_id);
-
-                if ($onlisale) {
-                    $onlisale->update([
-                        'email_sent' => true
-                    ]);
-                }
-            }
 
             $correosMessage = [
                 'email' => $person_email,
@@ -429,11 +432,11 @@ class AcaSaleDocumentController extends Controller
                 $resF = $factura->getFacturaXML($id);
             }elseif($document->invoice_type_doc == '03'){
                 $boleta = new Boleta();
-                $resb = $boleta->getBoletatDomPdf($id, $format);
+                $resb = $boleta->getBoletatDomPdf($id, $format); //metodo para generar pdf
+                $resF = $boleta->getBoletaXML($id);
             }
 
             // Intentar obtener la boleta
-            // para generar el xml
             // Verificar si se obtuvo un resultado válido
             if (!$resb) {
                 throw new \Exception("No se pudo generar la documento de venta.");
