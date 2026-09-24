@@ -1,5 +1,8 @@
 @extends('layouts.webpage')
 
+@section('meta_title', 'Mi carrito')
+@section('meta_robots', 'noindex, follow')
+
 @section('content')
 
 

@@ -75,6 +75,17 @@ class BlogArticlesController extends Controller
      * @param Request $request
      * @return Renderable
      */
+    /**
+     * Genera un nombre aleatorio para la imagen del artículo.
+     * Formato: randomstring-DDMMYYYY.ext
+     */
+    private function generateImageName($extension)
+    {
+        $random = Str::random(8);
+        $date = date('dmY');
+        return strtolower($random . '-' . $date . '.' . $extension);
+    }
+
     public function store(Request $request)
     {
         $this->validate($request, [
@@ -89,10 +100,8 @@ class BlogArticlesController extends Controller
         $file = $request->file('file');
 
         if ($file) {
-            $original_name = strtolower(trim($file->getClientOriginalName()));
-            $original_name = str_replace(" ", "_", $original_name);
             $extension = $file->getClientOriginalExtension();
-            $file_name = $request->get('id') . '.' . $extension;
+            $file_name = $this->generateImageName($extension);
             $path = $request->file('file')->storeAs(
                 $destination,
                 $file_name,
@@ -147,9 +156,8 @@ class BlogArticlesController extends Controller
      */
     public function update(Request $request, BlogArticle $blogArticle)
     {
-        //dd($request->all());
         $this->validate($request, [
-            'title' => 'required|max:255|unique:blog_articles,url,' . $blogArticle->id,
+            'title' => 'required|max:255|unique:blog_articles,title,' . $blogArticle->id,
             'content_text' => 'required',
             'description' => 'required|max:255',
             'category_id' => 'required'
@@ -160,10 +168,8 @@ class BlogArticlesController extends Controller
         $file = $request->file('file');
 
         if ($file) {
-            $original_name = strtolower(trim($file->getClientOriginalName()));
-            $original_name = str_replace(" ", "_", $original_name);
             $extension = $file->getClientOriginalExtension();
-            $file_name = $request->get('id') . '.' . $extension;
+            $file_name = $this->generateImageName($extension);
             $path = $request->file('file')->storeAs(
                 $destination,
                 $file_name,
@@ -171,9 +177,15 @@ class BlogArticlesController extends Controller
             );
         }
 
+        $baseUrl = env('APP_URL');
+        $content = $request->get('content_text');
+        $contentWithAbsoluteImagePaths = preg_replace('/src="\/storage\/articles\/([^"]+)"/', 'src="' . $baseUrl . '/storage/articles/$1"', $content);
+        $contentWithAbsoluteImagePaths = preg_replace('/src="..\/..\/storage\/articles\/([^"]+)"/', 'src="' . $baseUrl . '/storage/articles/$1"', $contentWithAbsoluteImagePaths);
+        $contentWithAbsoluteImagePaths = preg_replace('/src="..\/..\/..\/storage\/articles\/([^"]+)"/', 'src="' . $baseUrl . '/storage/articles/$1"', $contentWithAbsoluteImagePaths);
+
         $blogArticle->update([
             'title'         => $request->get('title'),
-            'content_text'  => htmlentities($request->get('content_text'), ENT_QUOTES, "UTF-8"),
+            'content_text'  => htmlentities($contentWithAbsoluteImagePaths, ENT_QUOTES, "UTF-8"),
             'short_description'   => $request->get('description'),
             'url'           => Str::slug($request->get('title')),
             'status'        => $request->get('status'),
@@ -184,7 +196,7 @@ class BlogArticlesController extends Controller
         ]);
 
         return redirect()->route('blog-article.edit', $blogArticle->id)
-            ->with('message', 'Categoria updated successfully.');
+            ->with('message', 'Artículo actualizado con éxito.');
     }
 
     /**
@@ -229,10 +241,8 @@ class BlogArticlesController extends Controller
         $file = $request->file('file');
 
         if ($file) {
-            $original_name = strtolower(trim($file->getClientOriginalName()));
-            $original_name = str_replace(" ", "_", $original_name);
             $extension = $file->getClientOriginalExtension();
-            $file_name = $request->get('id') . '.' . $extension;
+            $file_name = $this->generateImageName($extension);
             $path = $request->file('file')->storeAs(
                 $destination,
                 $file_name,
@@ -247,16 +257,14 @@ class BlogArticlesController extends Controller
         $blogArticle->save();
 
         return redirect()->route('blog-article.edit', $blogArticle->id)
-            ->with('message', 'Categoria updated successfully.');
+            ->with('message', 'Artículo actualizado con éxito.');
     }
 
     public function uploadImageCkeditor(Request $request)
     {
-        //dd($request->all());
         $file = $request->file('file');
         $file_name = str_replace(' ', '_', $file->getClientOriginalName());
 
-        //indicamos que queremos guardar un nuevo archivo en el disco local
         $path = $request->file('file')->storeAs(
             'articles',
             $file_name,
@@ -268,6 +276,33 @@ class BlogArticlesController extends Controller
         return response()->json(['location' =>  $url]);
     }
 
+    public function updateImage(Request $request)
+    {
+        $this->validate($request, [
+            'id' => 'required',
+            'file' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:2048'
+        ]);
+
+        $blogArticle = BlogArticle::find($request->get('id'));
+
+        if (!$blogArticle) {
+            return response()->json(['message' => 'Artículo no encontrado.'], 404);
+        }
+
+        $file = $request->file('file');
+        $extension = $file->getClientOriginalExtension();
+        $file_name = $blogArticle->id . '.' . $extension;
+
+        $path = $file->storeAs(
+            'uploads/blog/articles',
+            $file_name,
+            'public'
+        );
+
+        $blogArticle->update(['imagen' => $path]);
+
+        return response()->json(['imagen' => asset('storage/' . $path)]);
+    }
 
     public function show($url)
     {

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\IdentityDocumentType;
 use App\Models\Parameter;
 use App\Models\Person;
 use App\Models\User;
@@ -13,6 +14,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
 use GuzzleHttp\Client;
+use Illuminate\Validation\Rule;
+use Modules\Security\Rules\ValidationPersonUser;
 
 class PersonController extends Controller
 {
@@ -27,50 +30,75 @@ class PersonController extends Controller
     public function searchByNumberType(Request $request)
     {
         $document_type = $request->input('document_type');
-        $number = $request->input('number');
-        $full_name = $request->input('full_name');
+        $number        = $request->input('number');
+        $full_name     = $request->input('full_name');
+        $searchBy      = $request->input('searchBy') ?? 1; // 1 = number, 2 = full_name
 
         $msg1 = '';
         $msg2 = '';
         $status = true;
-        $person = [];
-        $alert = 'No existen datos para la busqueda';
-
-        if ($document_type == '') {
-            $msg1 = 'Elija Tipo docuemnto';
-        }
-        if (!$number && !$full_name) {
-            $msg2 = 'Ingrese numero de documento o nombre';
-        }
-
-
-        $person = Person::leftJoin('districts', 'ubigeo', 'districts.id')
-            ->leftJoin('provinces', 'districts.province_id', 'provinces.id')
-            ->leftJoin('departments', 'provinces.department_id', 'departments.id')
-            ->select(
-                'people.*',
-                'districts.id AS district_id',
-                DB::raw('CONCAT(departments.name,"-",provinces.name,"-",districts.name) AS city')
-            )
-            ->where('people.document_type_id', $document_type)
-            ->where(function ($query) use ($number, $full_name) {
-                $query->where('people.number', $number);
-            })
-            ->first();
-        //dd($person);
+        $alert  = 'No existen datos para la búsqueda';
         $ubigeo = [];
 
-        if ($person) {
-            $status = true;
-            $alert = null;
-            $ubigeo = array(
-                'district_id' => $person->district_id,
-                'city_name' => $person->city
-            );
+        // Validación usando Laravel
+        $this->validate($request, [
+            'searchBy'      => 'nullable|in:1,2',
+
+            // Obligatorio solo si searchBy = 1
+            'document_type' => 'required_if:searchBy,1',
+
+            // Obligatorio si la búsqueda es por número
+            'number'        => 'required_if:searchBy,1',
+
+            // Obligatorio si la búsqueda es por nombre
+            'full_name'     => 'required_if:searchBy,2',
+        ],[
+            // Mensajes personalizados
+            'document_type.required_if' => 'Para la búsqueda por número es necesario elegir el tipo de documento.',
+            'number.required_if'        => 'Para la búsqueda por número es necesario ingresar un número.',
+            'full_name.required_if'     => 'Para la búsqueda por nombre o razón social es obligatorio ingresar un nombre o razón social.',
+        ]);
+
+        // Base query
+        $query = Person::query()->with(['teacher', 'student']);
+
+
+        // Ejecutar búsqueda según tipo
+        if ($searchBy == 1) {
+            // SOLO 1 RESULTADO
+            $person = $query->where('people.document_type_id', $document_type)
+                ->where('people.number', $number)
+                ->first();
         } else {
-            $status = false;
-            $alert = 'No existen datos para la busqueda';
-            $ubigeo = [];
+            // VARIOS RESULTADOS
+            $person = $query->where('people.full_name', 'LIKE', "%{$full_name}%")->get();
+        }
+
+        // Si buscó por DNI → verificar objeto
+        if ($searchBy == 1) {
+            if ($person) {
+                $status = true;
+                $alert = null;
+
+                // construir ubigeo
+                $ubigeo = [
+                    'district_id' => $person->ubigeo,
+                    'city_name'   => $person->ubigeo_description
+                ];
+            } else {
+                $status = false;
+            }
+        }
+
+        // Si buscó por nombre → verificar colección
+        if ($searchBy == 2) {
+            if ($person->count() > 0) {
+                $status = true;
+                $alert  = null;
+                $ubigeo = []; // no devolver ubigeo porque hay varios resultados
+            } else {
+                $status = false;
+            }
         }
 
         return response()->json([
@@ -79,7 +107,7 @@ class PersonController extends Controller
             'document_type' => $msg1,
             'number'        => $msg2,
             'alert'         => $alert,
-            'ubigeo' => $ubigeo
+            'ubigeo'        => $ubigeo
         ]);
     }
 
@@ -90,25 +118,38 @@ class PersonController extends Controller
             'number' => 'required',
             'full_name' => 'required|max:255',
             'address'   => 'required|max:255',
-            'ubigeo'   => 'required'
+            'ubigeo'   => 'required',
+            'email' => [
+                'nullable',
+                'email',
+                Rule::unique('people')->where(function ($query) use ($request) {
+                    return $query
+                        ->where('document_type_id', '!=', $request->input('document_type'))
+                        ->orWhere('number', '!=', $request->input('number'));
+                })
+            ],
         ]);
 
         $ubigeo = $request->input('ubigeo');
+        $ubigeo_description = $request->input('ubigeo_description');
 
         $person = Person::updateOrCreate(
             [
                 'document_type_id' => $request->input('document_type'),
-                'number' => $request->input('number')
-            ], // Buscamos a la persona
+                'number' => $request->input('number'),
+            ],
             [
                 'full_name' => trim($request->input('full_name')),
                 'telephone' => $request->input('telephone'),
                 'email' => $request->input('email'),
                 'address' => $request->input('address'),
-                'is_client' => $request->input('is_client') ? true : false,
-                'is_provider' => $request->input('is_provider') ? true : false,
-                'ubigeo' => is_array($ubigeo) ? $ubigeo['district_id'] : $ubigeo
-                // otros campos que quieras actualizar o crear
+                'is_client' => $request->boolean('is_client'),
+                'is_provider' => $request->boolean('is_provider'),
+                'ubigeo' => is_array($ubigeo) ? $ubigeo['district_id'] : $ubigeo,
+                'ubigeo_description' => is_array($ubigeo) ? $ubigeo['city_name'] : $ubigeo_description,
+                'names' => $request->input('names') ?? null,
+                'father_lastname' => $request->input('father_lastname') ?? null,
+                'mother_lastname' => $request->input('mother_lastname') ?? null
             ]
         );
 
@@ -150,31 +191,34 @@ class PersonController extends Controller
 
     public function updateInformationPerson(Request $request)
     {
-        //dd($request->get('birthdate'));
         $person_id = $request->get('id');
         $student_id = $request->get('student_id');
 
         $user = User::where('person_id', $person_id)->first();
 
-        $this->validate(
+        $isForeign = IdentityDocumentType::isForeign($request->get('document_type_id'));
 
-            $request,
-            [
-                'document_type_id'  => 'required',
-                'number'            => 'required|max:12',
-                'number'            => 'unique:people,number,' . $person_id . ',id,document_type_id,' . $request->get('document_type_id'),
-                'telephone'         => 'required|max:12',
-                'email'             => 'required|max:255',
-                'email'             => 'unique:people,email,' . $person_id . ',id',
-                'email'             => 'unique:users,email,' . $user->id . ',id',
-                'address'           => 'required|max:255',
-                'ubigeo'            => 'required|max:255',
-                'birthdate'         => 'required|',
-                'names'             => 'required|max:255',
-                'father_lastname'   => 'required|max:255',
-                'mother_lastname'   => 'required|max:255',
-            ]
-        );
+        $rules = [
+            'document_type_id'  => 'required',
+            'number'            => ['required', 'max:12', \Illuminate\Validation\Rule::unique('people', 'number')->ignore($person_id, 'id')],
+            'telephone'         => 'required|max:12',
+            'email'             => ['required', 'max:255', \Illuminate\Validation\Rule::unique('people', 'email')->ignore($person_id, 'id')],
+            'address'           => 'required|max:255',
+            'birthdate'         => 'required',
+            'names'             => 'required|max:255',
+            'father_lastname'   => 'required|max:255',
+            'mother_lastname'   => 'required|max:255',
+        ];
+
+        if ($isForeign) {
+            $rules['foreign_country_id'] = 'required';
+            $rules['foreign_state'] = 'required|max:255';
+            $rules['foreign_city'] = 'required|max:255';
+        } else {
+            $rules['ubigeo'] = 'required|max:255';
+        }
+
+        $this->validate($request, $rules);
 
         $path = null;
         $destination = 'uploads/students';
@@ -193,10 +237,7 @@ class PersonController extends Controller
             $name = uniqid('', true) . '.' . str_replace('image/', '', $mime);
             $file = new UploadedFile(realpath($tempFile), $name, $mime, null, true);
 
-
             if ($file) {
-                // $original_name = strtolower(trim($file->getClientOriginalName()));
-                // $file_name = time() . rand(100, 999) . $original_name;
                 $original_name = strtolower(trim($file->getClientOriginalName()));
                 $original_name = str_replace(" ", "_", $original_name);
                 $extension = $file->getClientOriginalExtension();
@@ -205,7 +246,7 @@ class PersonController extends Controller
             }
         }
 
-        Person::find($person_id)->update([
+        $updateData = [
             'document_type_id'      => $request->get('document_type_id'),
             'short_name'            => trim($request->get('names')),
             'full_name'             => trim($request->get('father_lastname') . ' ' .  $request->get('mother_lastname') . ' ' . $request->get('names')),
@@ -217,12 +258,28 @@ class PersonController extends Controller
             'address'               => $request->get('address'),
             'is_provider'           => false,
             'is_client'             => true,
-            'ubigeo'                => $request->get('ubigeo'),
             'birthdate'             => $request->get('birthdate'),
             'names'                 => trim($request->get('names')),
             'father_lastname'       => trim($request->get('father_lastname')),
-            'mother_lastname'       => trim($request->get('mother_lastname'))
-        ]);
+            'mother_lastname'       => trim($request->get('mother_lastname')),
+        ];
+
+        if ($isForeign) {
+            $country = \App\Models\Country::find($request->get('foreign_country_id'));
+            $countryName = $country ? $country->description : '';
+            $updateData['ubigeo'] = null;
+            $updateData['ubigeo_description'] = trim($countryName . ' - ' . $request->get('foreign_state') . ' - ' . $request->get('foreign_city'));
+            $updateData['foreign_country_id'] = $request->get('foreign_country_id');
+            $updateData['foreign_state'] = $request->get('foreign_state');
+            $updateData['foreign_city'] = $request->get('foreign_city');
+        } else {
+            $updateData['ubigeo'] = $request->get('ubigeo');
+            $updateData['foreign_country_id'] = null;
+            $updateData['foreign_state'] = null;
+            $updateData['foreign_city'] = null;
+        }
+
+        Person::find($person_id)->update($updateData);
 
         $user->update([
             'name'          => $request->get('names'),
@@ -246,37 +303,64 @@ class PersonController extends Controller
         $person_id = $request->get('id');
         $user = Auth::user();
 
-        $this->validate(
+        $isForeign = IdentityDocumentType::isForeign($request->get('document_type_id'));
 
-            $request,
-            [
-                'document_type_id'  => 'required',
-                'number'            => 'required|max:12',
-                'number'            => 'unique:people,number,' . $person_id . ',id,document_type_id,' . $request->get('document_type_id'),
-                'telephone'         => 'required|max:12',
-                'email'             => 'required|max:255',
-                'email'             => 'unique:people,email,' . $person_id . ',id',
-                'email'             => 'unique:users,email,' . $user->id . ',id',
-                'address'           => 'required|max:255',
-                'ubigeo'            => 'required|max:255',
-                'birthdate'         => 'required|',
-                'names'             => 'required|max:255',
-                'father_lastname'   => 'required|max:255',
-                'mother_lastname'   => 'required|max:255',
-            ]
-        );
+        $rules = [
+            'document_type_id'  => 'required',
+            'number'            => 'required|max:12',
+            'telephone'         => 'nullable|max:12',
+            'email'             => 'nullable|max:255',
+            'address'           => 'nullable|max:255',
+            'birthdate'         => 'nullable',
+            'names'             => 'required|max:255',
+            'father_lastname'   => 'required|max:255',
+            'mother_lastname'   => 'required|max:255',
+        ];
+
+        if ($isForeign) {
+            $rules['foreign_country_id'] = 'required';
+            $rules['foreign_state'] = 'required|max:255';
+            $rules['foreign_city'] = 'required|max:255';
+        } else {
+            $rules['ubigeo'] = 'required';
+        }
+
+        $this->validate($request, $rules);
+
+        // Always use the authenticated user's email (field is disabled, not editable)
+        $email = $user->email;
+
+        // Construir datos de ubicación
+        if ($isForeign) {
+            $country = \App\Models\Country::find($request->input('foreign_country_id'));
+            $countryName = $country ? $country->description : '';
+            $ubigeoValue = null;
+            $ubigeoDescription = trim($countryName . ' - ' . $request->input('foreign_state') . ' - ' . $request->input('foreign_city'));
+            $foreignCountryId = $request->input('foreign_country_id');
+            $foreignState = $request->input('foreign_state');
+            $foreignCity = $request->input('foreign_city');
+        } else {
+            $ubigeoData = $request->input('ubigeo');
+            $ubigeoValue = is_array($ubigeoData) ? ($ubigeoData['district_id'] ?? null) : $ubigeoData;
+            $ubigeoDescription = is_array($ubigeoData) ? ($ubigeoData['name_city'] ?? null) : ($request->input('ubigeo_description') ?? null);
+            $foreignCountryId = null;
+            $foreignState = null;
+            $foreignCity = null;
+        }
 
         if ($person_id) {
-            Person::find($person_id)->update([
+            $person = Person::find($person_id);
+            if ($person) {
+            $person->update([
                 'document_type_id' => $request->get('document_type_id'),
                 'number' => trim($request->input('number')),
                 'short_name' => trim($request->input('names')),
                 'full_name' => trim($request->get('father_lastname') . ' ' .  $request->get('mother_lastname') . ' ' . $request->get('names')),
                 'description' => trim($request->input('description')),
                 'telephone' => $request->input('telephone'),
-                'email' => trim($request->input('email')),
+                'email' => $email,
                 'address' => trim($request->input('address')),
-                'ubigeo' => $request->input('ubigeo')['district_id'],
+                'ubigeo' => $ubigeoValue,
                 'birthdate' => $request->input('birthdate'),
                 'names' => trim($request->input('names')),
                 'father_lastname' => trim($request->input('father_lastname')),
@@ -288,14 +372,18 @@ class PersonController extends Controller
                 'is_client'             => true,
                 'status' => true,
                 'social_networks' => json_encode($request->input('social_networks')),
-                'ubigeo_description' => $request->input('ubigeo')['name_city']
+                'ubigeo_description' => $ubigeoDescription,
+                'foreign_country_id' => $foreignCountryId,
+                'foreign_state' => $foreignState,
+                'foreign_city' => $foreignCity,
             ]);
 
             User::find(Auth::id())->update([
-                'email' => trim($request->input('email')),
+                'email' => $email,
                 'name' => trim($request->input('names')),
                 'updated_information' => true
             ]);
+            }
         } else {
             $person = Person::updateOrCreate(
                 [
@@ -307,9 +395,9 @@ class PersonController extends Controller
                     'full_name' => trim($request->get('father_lastname') . ' ' .  $request->get('mother_lastname') . ' ' . $request->get('names')),
                     'description' => $request->input('description'),
                     'telephone' => $request->input('telephone'),
-                    'email' => trim($request->input('email')),
+                    'email' => $email,
                     'address' => trim($request->input('address')),
-                    'ubigeo' => $request->input('ubigeo')['district_id'],
+                    'ubigeo' => $ubigeoValue,
                     'birthdate' => $request->input('birthdate'),
                     'names' => trim($request->input('names')),
                     'father_lastname' => trim($request->input('father_lastname')),
@@ -319,7 +407,10 @@ class PersonController extends Controller
                     'gender' => $request->input('gender'),
                     'status' => true,
                     'social_networks' => json_encode($request->input('social_networks')),
-                    'ubigeo_description' => $request->input('ubigeo')['name_city']
+                    'ubigeo_description' => $ubigeoDescription,
+                    'foreign_country_id' => $foreignCountryId,
+                    'foreign_state' => $foreignState,
+                    'foreign_city' => $foreignCity,
                 ]
             );
 
@@ -362,41 +453,156 @@ class PersonController extends Controller
 
     public function getBirthdays()
     {
-        $startDate = Carbon::now()->subDays(2)->format('m-d'); // Hace 2 días (MM-DD)
-        $endDate = Carbon::now()->addWeek()->format('m-d'); // Próxima semana (MM-DD)
+        $today = Carbon::today();
+        $start = $today->copy()->subDays(2);
+        $end   = $today->copy()->addWeek();
 
-        $persons = Person::whereRaw("DATE_FORMAT(birthdate, '%m-%d') BETWEEN ? AND ?", [$startDate, $endDate])
-            ->orderByRaw("DATE_FORMAT(birthdate, '%m-%d')")
-            ->get()
-            ->map(function ($person) {
+        $startDay = $start->dayOfYear;
+        $endDay   = $end->dayOfYear;
+        $daysInYear = $today->isLeapYear() ? 366 : 365;
+
+        $persons = Person::all()
+            ->filter(function ($person) use ($startDay, $endDay, $daysInYear) {
+                if (!$person->birthdate) {
+                    return false;
+                }
+
+                $birthday = Carbon::parse($person->birthdate)->dayOfYear;
+
+                // 🔥 Rango normal
+                if ($startDay <= $endDay) {
+                    return $birthday >= $startDay && $birthday <= $endDay;
+                }
+
+                // 🔥 Cruza fin de año
+                return $birthday >= $startDay || $birthday <= $endDay;
+            })
+            ->sortBy(function ($person) use ($startDay, $endDay) {
+                $birthday = Carbon::parse($person->birthdate)->dayOfYear;
+
+                // Ajuste para ordenar bien cuando cruza el año
+                return $birthday < $startDay ? $birthday + 366 : $birthday;
+            })
+            ->values()
+            ->map(function ($person) use ($today) {
+
                 $birthdate = Carbon::parse($person->birthdate);
-                $currentYear = Carbon::now()->year;
-                $today = Carbon::now()->format('m-d');
-                $birthdayThisYear = Carbon::createFromDate($currentYear, $birthdate->month, $birthdate->day)->format('m-d');
+                $currentYear = $today->year;
 
-                // Determinar el estado (status)
-                if ($birthdayThisYear < $today) {
+                $birthdayThisYear = Carbon::create(
+                    $currentYear,
+                    $birthdate->month,
+                    $birthdate->day
+                );
+
+                $todayDOY = $today->dayOfYear;
+                $birthdayDOY = $birthdayThisYear->dayOfYear;
+
+                if ($birthdayDOY < $todayDOY) {
                     $status = 'pasado';
-                } elseif ($birthdayThisYear > $today) {
+                } elseif ($birthdayDOY > $todayDOY) {
                     $status = 'proximo';
                 } else {
                     $status = 'hoy';
                 }
 
-                $day = Carbon::createFromDate($currentYear, $birthdate->month, $birthdate->day)->format('Y-m-d');
-
                 return [
                     'image' => $person->image,
                     'name' => $person->full_name,
-                    'birthdate' => Carbon::parse($day)->translatedFormat('d \d\e F'),
+                    'birthdate' => $birthdayThisYear->translatedFormat('d \d\e F'),
                     'age' => $currentYear - $birthdate->year,
                     'status' => $status,
                     'id' => $person->id,
                     'email' => $person->email,
-                    'telephone' => $person->telephone
+                    'telephone' => $person->telephone,
                 ];
             });
 
+            //dd($persons);
         return $persons;
+    }
+
+    public function updateInfoPersonByUser(Request $request)
+    {
+        $person_id = $request->get('id');
+        $user = User::findOrFail($request->get('user_id'));
+
+        $isForeign = IdentityDocumentType::isForeign($request->get('document_type'));
+
+        $rules = [
+            'document_type'     => 'required',
+            'number'            => [
+                'required', 'max:12',
+                "unique:people,number,{$person_id},id,document_type_id," . $request->get('document_type')
+            ],
+            'email'             => [
+                'required', 'email', 'max:255',
+                "unique:people,email,{$person_id},id",
+                "unique:users,email,{$user->id},id"
+            ],
+            'names'             => 'required|max:255',
+            'father_lastname'   => 'required|max:255',
+            'mother_lastname'   => 'required|max:255',
+            'telephone'         => 'required|max:12',
+            'address'           => 'required|max:255',
+            'birthdate'         => 'required',
+        ];
+
+        if ($isForeign) {
+            $rules['foreign_country_id'] = 'required';
+            $rules['foreign_state'] = 'required|max:255';
+            $rules['foreign_city'] = 'required|max:255';
+        } else {
+            $rules['ubigeo'] = 'required';
+        }
+
+        $this->validate($request, $rules);
+
+        \DB::transaction(function () use ($request, $person_id, $user, $isForeign) {
+
+            $person = Person::find($person_id);
+
+            $data = [
+                'document_type_id'   => $request->get('document_type'),
+                'number'             => $request->get('number'),
+                'telephone'          => $request->get('telephone'),
+                'email'              => $request->get('email'),
+                'address'            => $request->get('address'),
+                'birthdate'          => $request->get('birthdate'),
+                'names'              => $request->get('names'),
+                'father_lastname'    => $request->get('father_lastname'),
+                'mother_lastname'    => $request->get('mother_lastname'),
+                'gender'             => $request->get('gender') ?? 'M',
+            ];
+
+            if ($isForeign) {
+                $country = \App\Models\Country::find($request->get('foreign_country_id'));
+                $countryName = $country ? $country->description : '';
+                $data['ubigeo'] = null;
+                $data['ubigeo_description'] = trim($countryName . ' - ' . $request->get('foreign_state') . ' - ' . $request->get('foreign_city'));
+                $data['foreign_country_id'] = $request->get('foreign_country_id');
+                $data['foreign_state'] = $request->get('foreign_state');
+                $data['foreign_city'] = $request->get('foreign_city');
+            } else {
+                $data['ubigeo'] = $request->get('ubigeo');
+                $data['ubigeo_description'] = $request->get('ubigeo_description');
+                $data['foreign_country_id'] = null;
+                $data['foreign_state'] = null;
+                $data['foreign_city'] = null;
+            }
+
+            if ($person) {
+                $person->update($data);
+            } else {
+                $person = Person::create($data);
+                $user->person_id = $person->id;
+            }
+
+            $user->name = $request->get('names');
+            $user->email = $request->get('email');
+            $user->save();
+        });
+
+        return response()->json(['message' => 'Datos actualizados correctamente']);
     }
 }

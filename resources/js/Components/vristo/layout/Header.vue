@@ -19,7 +19,8 @@
 
     import IconCaretDown from '@/Components/vristo/icon/icon-caret-down.vue';
 
-    import { faCartPlus, faUserGroup, faChartPie } from  '@fortawesome/free-solid-svg-icons';
+    import { faCartPlus, faUserGroup, faChartPie, faDna } from  '@fortawesome/free-solid-svg-icons';
+    import SuperEditorToggle from 'Modules/Security/Resources/assets/js/Components/SuperEditor/Toggle.vue';
     import ChatNotifications from 'Modules/CRM/Resources/assets/js/Components/ChatNotifications.vue';
     import ShoppingCartMenu from 'Modules/Onlineshop/Resources/assets/js/Components/ShoppingCartMenu.vue';
     import menuData from './MenuData.js'
@@ -168,6 +169,10 @@
                                 <span>Calendario</span>
                             </Link>
                         </li>
+                        <!-- Modo Super Editor (solo rol admin; el servidor decide) -->
+                        <li>
+                            <SuperEditorToggle />
+                        </li>
                         <!-- <li v-can="'empresa'">
                             <Link :href="route('company_show')"
                                 class="flex items-center px-4 py-1.5 text-sm font-medium text-slate-600 bg-slate-100 border border-slate-200 rounded-full hover:bg-white hover:text-blue-600 hover:shadow-sm dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-700 transition-all">
@@ -255,6 +260,15 @@
                                         <Link :href="route('profile.edit')" class="dark:hover:text-white" @click="close()">
                                             <icon-user class="w-4.5 h-4.5 ltr:mr-2 rtl:ml-2 shrink-0" />
                                             Perfil
+                                        </Link>
+                                    </li>
+                                    <!-- Acceso directo a Configuraciones > Parametros del sistema:
+                                         la entrada del menu lateral vive dentro del modulo
+                                         "Configuraciones" y es facil no encontrarla. -->
+                                    <li v-can="'parametros'">
+                                        <Link :href="route('parameters')" class="dark:hover:text-white" @click="close()">
+                                            <font-awesome-icon :icon="faDna" class="w-4.5 h-4.5 ltr:mr-2 rtl:ml-2 shrink-0" />
+                                            Parámetros del sistema
                                         </Link>
                                     </li>
                                     <li>

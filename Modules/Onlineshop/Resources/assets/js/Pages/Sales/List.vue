@@ -5,11 +5,56 @@
     import ModalLarge from '@/Components/ModalLarge.vue';
     import Swal from "sweetalert2";
     import { useForm, Link, usePage, router } from '@inertiajs/vue3';
-    import { faMagnifyingGlass, faRotate } from "@fortawesome/free-solid-svg-icons";
+    import { faGears } from "@fortawesome/free-solid-svg-icons";
     import { ref, watch, onMounted, nextTick } from "vue";
     import Navigation from '@/Components/vristo/layout/Navigation.vue';
     import { TransitionRoot, TransitionChild, Dialog, DialogPanel, DialogOverlay } from '@headlessui/vue';
     import textWriting from '@/Components/loader/text-writing.vue';
+
+    const trafficColors = {
+        facebook_ads: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 border-blue-400',
+        google_ads: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-400',
+        cpc: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400 border-orange-400',
+        social: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400 border-purple-400',
+        organic: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400 border-teal-400',
+        email: 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-400 border-pink-400',
+        referrer: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400 border-cyan-400',
+        direct: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400 border-gray-400',
+    };
+
+    const trafficIcons = {
+        facebook_ads: 'fa-brands fa-facebook',
+        google_ads: 'fa-brands fa-google',
+        cpc: 'fa-solid fa-dollar-sign',
+        social: 'fa-solid fa-share-nodes',
+        organic: 'fa-solid fa-magnifying-glass',
+        email: 'fa-solid fa-envelope',
+        referrer: 'fa-solid fa-arrow-up-right-from-square',
+        direct: 'fa-solid fa-link',
+    };
+
+    const trafficLabels = {
+        facebook_ads: 'Facebook Ads',
+        google_ads: 'Google Ads',
+        cpc: 'CPC',
+        social: 'Social',
+        organic: 'Orgánico',
+        email: 'Email',
+        referrer: 'Otra página',
+        direct: 'Orgánico',
+    };
+
+    const getHost = (url) => {
+        if (!url) return '';
+        try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; }
+    };
+
+    const getOrigenLabel = (item) => {
+        if (item.traffic_source === 'referrer') {
+            return getHost(item.referer) || trafficLabels.referrer;
+        }
+        return trafficLabels[item.traffic_source] || (item.traffic_source ? item.traffic_source : trafficLabels.organic);
+    };
 
     const props = defineProps({
         sales: {
@@ -208,12 +253,15 @@
                             <div class="col-span-3 sm:col-span-2">
                                 <Keypad>
                                     <template #botones>
-                                        <button v-can="'onli_pedidos_enviar_boletas'" @click="sendOnliEmails" class="btn btn-primary uppercase text-xs">
+                                        <button v-can="'onli_pedidos_enviar_boletas'" @click="sendOnliEmails" class="btn btn-success uppercase text-xs">
                                             <svg class="w-4 h-4 mr-2" fill="currentColor" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512">
                                                 <path d="M128 0C110.3 0 96 14.3 96 32l0 192 96 0 0-32c0-35.3 28.7-64 64-64l224 0 0-96c0-17.7-14.3-32-32-32L128 0zM256 160c-17.7 0-32 14.3-32 32l0 32 96 0c35.3 0 64 28.7 64 64l0 128 192 0c17.7 0 32-14.3 32-32l0-192c0-17.7-14.3-32-32-32l-320 0zm240 64l32 0c8.8 0 16 7.2 16 16l0 32c0 8.8-7.2 16-16 16l-32 0c-8.8 0-16-7.2-16-16l0-32c0-8.8 7.2-16 16-16zM64 256c-17.7 0-32 14.3-32 32l0 13L187.1 415.9c1.4 1 3.1 1.6 4.9 1.6s3.5-.6 4.9-1.6L352 301l0-13c0-17.7-14.3-32-32-32L64 256zm288 84.8L216 441.6c-6.9 5.1-15.3 7.9-24 7.9s-17-2.8-24-7.9L32 340.8 32 480c0 17.7 14.3 32 32 32l256 0c17.7 0 32-14.3 32-32l0-139.2z"/>
                                             </svg>
                                             Crear Comprobante Electrónico y Enviar correos
                                         </button>
+                                        <Link v-can="'onli_pedidos_nuevo'" :href="route('onlineshop_sales_create')" class="btn btn-primary uppercase text-xs">
+                                            Nuevo
+                                        </Link>
                                     </template>
                                 </Keypad>
                             </div>
@@ -251,18 +299,34 @@
                                     <th >
                                         Estado
                                     </th>
+                                    <th >
+                                        Origen
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <template v-for="(item, index) in sales.data" :key="item.id">
                                     <tr >
                                         <td class="text-center">
-                                            <button @click="openModalDetails(item)" type="button" title="ver detalles" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-full text-sm p-2.5 text-center inline-flex items-center me-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
-                                                <font-awesome-icon :icon="faMagnifyingGlass" />
-                                            </button>
-                                            <!-- <button @click="destroyItem(item.id)" type="button" title="Consultar a mercado pago" class="text-white bg-gray-700 hover:bg-gray-800 focus:ring-4 focus:outline-none focus:ring-gray-300 font-medium rounded-full text-sm p-2.5 text-center inline-flex items-center me-2 dark:bg-gray-600 dark:hover:bg-gray-700 dark:focus:ring-gray-800">
-                                                <font-awesome-icon :icon="faRotate" />
-                                            </button> -->
+                                            <div class="flex gap-4 items-center justify-center">
+                                                <div class="dropdown">
+                                                    <Popper :placement="'bottom-start'" offsetDistance="0" class="align-middle">
+                                                        <button type="button" class="btn btn-outline-primary px-2 py-2 dropdown-toggle">
+                                                            <font-awesome-icon :icon="faGears" />
+                                                        </button>
+                                                        <template #content="{ close }">
+                                                        <ul @click="close()" class="whitespace-nowrap">
+                                                            <li>
+                                                                <a @click="openModalDetails(item)" href="javascript:;">Ver detalles</a>
+                                                            </li>
+                                                            <li v-if="item.response_status != 'approved'">
+                                                                <Link v-if="item.student_id" :href="route('aca_student_space_sales_list', [item.student_id, item.installments])">Ir a realizar un pago</Link>
+                                                            </li>
+                                                        </ul>
+                                                        </template>
+                                                    </Popper>
+                                                </div>
+                                            </div>
                                         </td>
                                         <td >
                                             {{ item.clie_full_name }}
@@ -288,6 +352,7 @@
                                                         type="checkbox"
                                                         class="custom_switch absolute w-full h-full opacity-0 z-10 cursor-pointer peer" :id="`venta${index}`" />
                                                     <span :for="`venta${index}`" class="outline_checkbox bg-icon border-2 border-[#bcc8e0] dark:border-white-dark block h-full rounded-full before:absolute before:left-1 before:bg-[#ebedf2] dark:before:bg-white-dark before:bottom-1 before:w-4 before:h-4 before:rounded-full before:bg-[url(/themes/vristo/images/close.svg)] before:bg-no-repeat before:bg-center peer-checked:before:left-7 peer-checked:before:bg-[url(/themes/vristo/images/checked.svg)] peer-checked:border-primary peer-checked:before:bg-primary before:transition-all before:duration-300"></span>
+
                                                 </label>
                                                 <span v-else class="bg-blue-100 text-blue-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-gray-700 dark:text-blue-400 border border-blue-400">
                                                     <template v-if="item.invoice_type == 1">
@@ -314,8 +379,38 @@
                                         </td>
                                         <td class="text-center">
                                            <span v-if="item.response_status == 'pendiente'"  class="bg-red-100 text-red-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-gray-700 dark:text-red-400 border border-red-400">No completó el pago</span>
+                                           <span v-if="item.response_status == 'pago_en_cuotas'"
+                                                v-tippy="{ content: 'El alumno cuenta con acceso activo, pero tiene un saldo pendiente por completar dentro del plazo acordado para el pago de cuotas.', placement: 'bottom'}"
+                                                class="bg-red-100 text-red-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-gray-700 dark:text-red-400 border border-red-400">Venta activa con saldo pendiente</span>
                                            <span v-else-if="item.response_status == 'approved'" class="bg-blue-100 text-blue-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-gray-700 dark:text-blue-400 border border-blue-400">Pago aprobado</span>
                                            <span v-else class="bg-yellow-100 text-yellow-800 text-xs font-medium me-2 px-2.5 py-0.5 rounded dark:bg-yellow-900 dark:text-yellow-300">Error en la transacción</span>
+                                        </td>
+                                        <td>
+                                            <span
+                                                :class="[trafficColors[item.traffic_source] || trafficColors.organic, 'inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded border']"
+                                                v-tippy="{
+                                                    content: [
+                                                        item.utm_source ? 'Source: ' + item.utm_source : '',
+                                                        item.utm_medium ? 'Medium: ' + item.utm_medium : '',
+                                                        item.utm_campaign ? 'Campaign: ' + item.utm_campaign : '',
+                                                        item.utm_term ? 'Term: ' + item.utm_term : '',
+                                                        item.utm_content ? 'Content: ' + item.utm_content : '',
+                                                        item.utm_id ? 'UTM ID: ' + item.utm_id : '',
+                                                        item.fbclid ? 'FBCLID: ' + item.fbclid : '',
+                                                        item.gclid ? 'GCLID: ' + item.gclid : '',
+                                                        item.referer ? 'Referer: ' + item.referer : '',
+                                                        item.landing_url ? 'URL: ' + item.landing_url : '',
+                                                    ].filter(Boolean).join('<br>'),
+                                                    allowHTML: true,
+                                                    placement: 'left'
+                                                }"
+                                            >
+                                                <i :class="trafficIcons[item.traffic_source] || trafficIcons.organic" class="text-xs"></i>
+                                                {{ getOrigenLabel(item) }}
+                                            </span>
+                                            <div class="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 max-w-[120px] truncate" v-if="item.utm_campaign">
+                                                {{ item.utm_campaign }}
+                                            </div>
                                         </td>
                                     </tr>
                                 </template>
@@ -332,12 +427,33 @@
             :icon="'/img/lupa-documento.png'"
         >
             <template v-if="saleDetails" #title>
-                VEN-{{ saleDetails.id }}
+                VEN-{{ saleDetails.id }} | {{ saleDetails.student_number }} - {{ saleDetails.student_name }}
             </template>
             <template #message>
                 Detalles de la venta
             </template>
             <template #content>
+                <div class="border rounded-lg py-4 px-4 dark:border-gray-700 mb-6">
+                    <h4 class="mb-4">Información para la Boleta o Factura</h4>
+                    <div class="space-y-3">
+                        <dl class="flex flex-col sm:flex-row gap-1">
+                            <dt class="min-w-40">
+                                <span class="block text-sm text-gray-500 dark:text-neutral-500">Nombre o Razón social:</span>
+                            </dt>
+                            <dd>
+                                <span>{{ saleDetails.invoice_razon_social }}</span>
+                            </dd>
+                        </dl>
+                        <dl class="flex flex-col sm:flex-row gap-1">
+                            <dt class="min-w-40">
+                                <span class="block text-sm text-gray-500 dark:text-neutral-500">DNI o RUC:</span>
+                            </dt>
+                            <dd>
+                                <span>{{ saleDetails.invoice_ruc }}</span>
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
                 <div  v-if="saleDetails" class="relative overflow-x-auto shadow-md sm:rounded-lg">
                     <table class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
                         <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
@@ -350,7 +466,7 @@
                                 </th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody v-if="saleDetails.details.length > 0">
                             <tr v-for="(row, key) in JSON.parse(saleDetails.details)" class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
                                 <td scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                                     <p v-if="row.product.title" class="text-lg">{{ row.product.title }}</p>
@@ -409,7 +525,7 @@
                                                     <template v-if="resEmail.status && resEmail.step == 1">
                                                         <div v-if="resEmail.status">
                                                             <code style="color: #60a5fa;">
-                                                                <span>BOLETA ELECTRONICA: <strong>{{ resEmail.data.document.invoice_serie }}-{{ resEmail.data.document.invoice_correlative }}</strong> CLIENTE:  <strong>{{ resEmail.data.document.client_rzn_social }}</strong>&nbsp;</span>
+                                                                <span>COMPROBANTE: <strong>{{ resEmail.data.document.invoice_serie }}-{{ resEmail.data.document.invoice_correlative }}</strong> CLIENTE:  <strong>{{ resEmail.data.document.client_rzn_social }}</strong>&nbsp;</span>
                                                                 <span style="color: #a9cdf7;">Creado correctamente</span>
                                                             </code>
                                                         </div>

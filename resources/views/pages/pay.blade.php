@@ -1,4 +1,8 @@
 @extends('layouts.webpage')
+
+@section('meta_title', 'Pagar')
+@section('meta_robots', 'noindex, follow')
+
 @section('heades')
     <script src="https://sdk.mercadopago.com/js/v2"></script>
 @endsection

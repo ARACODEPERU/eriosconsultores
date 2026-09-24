@@ -1,5 +1,8 @@
 @extends('layouts.webpage')
 
+@section('meta_title', 'Detalle del curso')
+@section('meta_description', 'Información detallada del curso: temario, docentes, duración, modalidad e inversión. Inscríbete en ERIOS CONSULTORES y certifica tus habilidades.')
+
 @section('content')
 
 

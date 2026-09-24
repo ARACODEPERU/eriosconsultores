@@ -22,6 +22,10 @@ import Popper from 'vue3-popper';
 import * as Maska from 'maska';
 import VueKonva from 'vue-konva';
 import { setCsrfToken } from '@/utils/csrf';
+import {
+    initSuperEditorState,
+    syncSuperEditorFromPage,
+} from 'Modules/Security/Resources/assets/js/stores/superEditor';
 
 const appName =
     window.document.getElementsByTagName("title")[0]?.innerText || "Laravel";
@@ -98,11 +102,20 @@ createInertiaApp({
         appSetting.init();
 
         router.on('success', (event) => {
-            const token = event.detail?.page?.props?.csrf_token ?? event.page?.props?.csrf_token;
+            const page = event.detail?.page ?? event.page;
+            const token = page?.props?.csrf_token;
             setCsrfToken(token);
+
+            // Modo Super Editor: segundo punto de sincronizacion, justo despues de
+            // actualizar la pagina y antes de que Vue repinte, para que las
+            // directivas que se vuelvan a montar ya vean el modo.
+            syncSuperEditorFromPage(page?.props);
         });
 
         setCsrfToken(props.initialPage?.props?.csrf_token);
+
+        // Modo Super Editor: primer punto de sincronizacion, antes de montar.
+        initSuperEditorState(pinia, props.initialPage?.props?.superEditor);
 
         return app.mount(el);
     },

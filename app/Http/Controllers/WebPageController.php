@@ -52,12 +52,62 @@ class WebPageController extends Controller
 
     public function courses()
     {
-        return view('pages.courses');
+        $courses = OnliItem::with('course.category', 'course.modality')
+            ->where('status', true)
+            ->orderBy('id', 'desc')
+            ->get();
+
+        $categories = $courses
+            ->map(function ($c) {
+                return $c->category_description ?: optional(optional($c->course)->category)->description;
+            })
+            ->filter()
+            ->unique()
+            ->values();
+
+        return view('pages.courses', [
+            'courses'    => $courses,
+            'categories' => $categories,
+        ]);
     }
 
-    public function coursedescription()
+    public function coursedescription(string $slug)
     {
-        return view('pages.course-description');
+        $item = OnliItem::where('status', true)
+            ->where(function ($q) use ($slug) {
+                $q->where('id', $slug)
+                    ->orWhereRaw('LOWER(REPLACE(REPLACE(REPLACE(TRIM(name), ".", ""), ",", ""), " ", "-")) = ?', [mb_strtolower($slug)])
+                    ->orWhereHas('course.landing', function ($lq) use ($slug) {
+                        $lq->where('url_slug', $slug)->where('is_published', true);
+                    });
+            })
+            ->first();
+
+        abort_unless($item, 404);
+
+        $course = AcaCourse::with('category')
+            ->with('modality')
+            ->with('modules.themes')
+            ->with('teachers.teacher.person')
+            ->with('brochure')
+            ->with('landing')
+            ->where('id', $item->item_id)
+            ->first();
+
+        $latest_courses = OnliItem::with('course')
+            ->orderBy('id', 'desc')
+            ->where('status', true)
+            ->where('id', '!=', $item->id)
+            ->take(6)
+            ->get()
+            ->shuffle()
+            ->take(3);
+
+        return view('pages.curso-descripcion', [
+            'course' => $course,
+            'item' => $item,
+            'latest_courses' => $latest_courses,
+        ]);
     }
 
     public function cursodescripcion($id)
@@ -118,6 +168,11 @@ class WebPageController extends Controller
     }
 
 
+    public function teachers()
+    {
+        return view('pages.teachers');
+    }
+
     public function contact()
     {
         // $banner = CmsSection::where('component_id', 'nosotros_banner_area_11')  //siempre cambiar el id del componente
@@ -145,7 +200,7 @@ class WebPageController extends Controller
         //     'banner' => $banner,
         //     'title' => $title
         // ]);
-        
+
         return view('pages.contact');
     }
 
@@ -162,8 +217,7 @@ class WebPageController extends Controller
 
     public function carrito()
     {
-
-        return view('pages.carrito');
+        return view('pages.shop-cart');
     }
 
     public function pagar(Request $request)

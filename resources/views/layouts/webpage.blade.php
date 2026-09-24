@@ -7,13 +7,34 @@
     <!--====== Required meta tags ======-->
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
-    <meta name="description" content="">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    
-    <!--====== Title ======-->
-    <title>ERIOS CONSULTORES | Home</title>
-    <!--====== Favicon Icon ======-->
-    <link rel="shortcut icon" href="{{ asset('themes/webpage/images/Logo_Icon.png') }}" type="image/png">
+
+    {{-- SEO: title, description, canonical, robots, Open Graph y Twitter Cards --}}
+    <x-seo-meta
+        :title="$__env->yieldContent('meta_title')"
+        :description="$__env->yieldContent('meta_description')"
+        :robots="$__env->yieldContent('meta_robots')"
+    />
+
+    {{-- Favicon --}}
+    <link rel="icon" type="image/png" href="{{ asset('themes/webpage/images/Logo_Icon.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('themes/webpage/images/Logo_Icon.png') }}">
+
+    {{-- Datos estructurados: Organización --}}
+    <script type="application/ld+json">
+    <?php echo json_encode([
+        '@context' => 'https://schema.org',
+        '@type' => 'Organization',
+        'name' => 'ERIOS CONSULTORES',
+        'url' => url('/'),
+        'logo' => url(asset('themes/webpage/images/Logo_Web.jpg')),
+        'contactPoint' => [
+            '@type' => 'ContactPoint',
+            'contactType' => 'customer service',
+            'availableLanguage' => ['es'],
+        ],
+    ]); ?>
+    </script>
 
     <!--====== Slick css ======-->
     <link rel="stylesheet" href="{{ asset('themes/webpage/css/slick.css') }}">
@@ -43,11 +64,10 @@
     <link rel="stylesheet" href="{{ asset('themes/webpage/css/style.css') }}">
 
     <!--====== Responsive css ======-->
-    <link rel="stylesheet" href="{{ asset('themes/webpage/css/responsive.css') }}">
-
-    <!--====== Sky-Tabs css ======-->
+    <link rel="stylesheet" href="{{ asset('themes/webpage/css/responsive.css') }}">    <!--====== Sky-Tabs css ======-->
     <link rel="stylesheet" href="{{ asset('themes/webpage/css/sky-tabs.css') }}">
 
+    @yield('page_styles')
   
 </head>
 
@@ -145,11 +165,65 @@
     <!--====== Main js ======-->
     <script src="{{ asset('themes/webpage/js/main.js') }}"></script>
 
-    <!--====== Map js ======-->
-    <script src="{{ asset('themes/webpage/js/map-script.js') }}"></script>
+    {{-- ====== ERIOS · Reveal on scroll (fade-in) ====== --}}
+    <style>
+        html.erc-js [data-reveal] {
+            opacity: 0;
+            transform: translateY(28px);
+            transition: opacity .7s ease, transform .7s ease;
+            will-change: opacity, transform;
+        }
+        html.erc-js [data-reveal].is-visible {
+            opacity: 1;
+            transform: none;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            html.erc-js [data-reveal] {
+                opacity: 1;
+                transform: none;
+                transition: none;
+            }
+        }
+    </style>
+    <script>
+        (function () {
+            var els = document.querySelectorAll('[data-reveal]');
+            if (!els.length) return;
 
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDC3Ip9iVC0nIxC6V14CKLQ1HZNF_65qEQ"></script>
-    
+            document.documentElement.classList.add('erc-js');
+
+            function showAll() {
+                for (var i = 0; i < els.length; i++) els[i].classList.add('is-visible');
+            }
+
+            var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (reduced || !('IntersectionObserver' in window)) { showAll(); return; }
+
+            try {
+                var io = new IntersectionObserver(function (entries) {
+                    entries.forEach(function (entry) {
+                        if (!entry.isIntersecting) return;
+                        var el = entry.target;
+                        var delay = parseInt(el.getAttribute('data-reveal-delay') || '0', 10);
+                        setTimeout(function () { el.classList.add('is-visible'); }, delay);
+                        io.unobserve(el);
+                    });
+                }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+
+                for (var j = 0; j < els.length; j++) io.observe(els[j]);
+
+                /* Red de seguridad: revela lo que esté en pantalla si algo falla */
+                setTimeout(function () {
+                    var vh = window.innerHeight || document.documentElement.clientHeight;
+                    for (var k = 0; k < els.length; k++) {
+                        if (els[k].classList.contains('is-visible')) continue;
+                        var r = els[k].getBoundingClientRect();
+                        if (r.top < vh && r.bottom > 0) els[k].classList.add('is-visible');
+                    }
+                }, 3000);
+            } catch (e) { showAll(); }
+        })();
+    </script>
 
 </body>
 

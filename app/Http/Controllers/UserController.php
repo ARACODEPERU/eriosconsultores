@@ -2,41 +2,37 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\District;
 use App\Models\LocalSale;
+use App\Models\Person;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Role;
+use DataTables;
+use Illuminate\Support\Facades\DB;
 
 class UserController extends Controller
 {
     public function index()
     {
-        $users = (new User())->newQuery();
-        if (request()->has('search')) {
-            $users->where('name', 'Like', '%' . request()->input('search') . '%');
-        }
-        if (request()->query('sort')) {
-            $attribute = request()->query('sort');
-            $sort_order = 'ASC';
-            if (strncmp($attribute, '-', 1) === 0) {
-                $sort_order = 'DESC';
-                $attribute = substr($attribute, 1);
-            }
-            $users->orderBy($attribute, $sort_order);
-        } else {
-            $users->latest();
-        }
-
-        $users = $users->with('tokens');
-        $users = $users->paginate(10)->onEachSide(2);
-        //dd($users);
-        return Inertia::render('Users/List', [
-            'users' => $users
-        ]);
+        return Inertia::render('Users/List');
     }
 
+    public function getUsers()
+    {
+        $users = (new User())->newQuery();
+        $users = $users->leftJoin('people', 'people.id', 'users.person_id');
+        $users = $users->select(
+            'users.*',
+            'people.full_name',
+            'people.image',
+            'people.number'
+        );
+
+        return DataTables::of($users)->toJson();
+    }
     public function create()
     {
         return Inertia::render('Users/Create', [
@@ -81,11 +77,31 @@ class UserController extends Controller
 
     public function edit(User $user)
     {
+        $person = Person::find($user->person_id);
+
+        $identityDocumentTypes = DB::table('identity_document_type')->get();
+
+        $ubigeo = District::join('provinces', 'province_id', 'provinces.id')
+            ->join('departments', 'provinces.department_id', 'departments.id')
+            ->select(
+                'districts.id AS district_id',
+                'districts.name AS district_name',
+                'provinces.name AS province_name',
+                'departments.name AS department_name'
+            )
+            ->get();
+
+        $countries = \App\Models\Country::where('status', true)->orderBy('description')->get();
+
         return Inertia::render('Users/Edit', [
             'establishments' => LocalSale::all(),
             'xuser' => $user,
             'xrole' => $user->getRoleNames(),
-            'roles' => Role::all()
+            'roles' => Role::all(),
+            'person' => $person,
+            'identityDocumentTypes' => $identityDocumentTypes,
+            'ubigeo'       => $ubigeo,
+            'countries'    => $countries
         ]);
     }
     public function update(Request $request, User $user)

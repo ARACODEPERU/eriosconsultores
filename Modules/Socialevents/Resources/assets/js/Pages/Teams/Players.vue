@@ -256,6 +256,8 @@
                     children: [
                         { route: route('even_ediciones_fixtures', edicion.id), title: 'Partidos', permissions: 'even_ediciones_fixtures'},
                         { route: route('even_ediciones_pago_sanciones', edicion.id), title: 'Sanciones', permissions: 'even_ediciones_sanciones'},
+                        { route: route('even_ediciones_exclusiones', edicion.id), title: 'Exclusiones', permissions: 'even_ediciones_exclusiones'},
+                        { route: route('even_ediciones_suspensiones', edicion.id), title: 'Suspensiones', permissions: 'even_ediciones_suspensiones'},
                         { route: route('even_ediciones_actas_listado', edicion.id), title: 'Actas', permissions: 'even_ediciones_actas'},
                     ]
                 },
@@ -302,7 +304,7 @@
             </div>
             <div class="mt-6">
                 <div ref="captureRef" class="panel">
-                    <h3 class="text-lg uppercase mb-4 font-medium">Tabla de posiciones</h3>
+                    <h3 class="text-lg uppercase mb-4 font-medium">Lista de jugadores — {{ equipo.name }}</h3>
                     <div class="table-responsive">
                         <table class="w-full text-sm text-left rtl:text-right border-collapse">
                             <thead class="text-sm text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-800">

@@ -1,0 +1,33 @@
+<script setup>
+import AppLayout from '@/Layouts/Vristo/AppLayout.vue';
+import Navigation from '@/Components/vristo/layout/Navigation.vue';
+import EditForm from './Partials/EditForm.vue';
+
+defineProps({
+    categories: {
+        type: Object,
+        default: () => ({}),
+    },
+    comanda: {
+        type: Object,
+        default: () => ({}),
+    },
+    presentations: {
+        type: Object,
+        default: () => ({}),
+    }
+});
+</script>
+
+<template>
+    <AppLayout title="Editar comanda">
+        <Navigation
+            :routeModule="route('res_dashboard')"
+            titleModule="Restaurante"
+            :data="[{ title: 'Comandas', route: route('res_comandas_list') }, { title: 'Editar' }]"
+        />
+        <div class="pt-5">
+            <EditForm :categories="categories" :comanda="comanda" :presentations="presentations" />
+        </div>
+    </AppLayout>
+</template>

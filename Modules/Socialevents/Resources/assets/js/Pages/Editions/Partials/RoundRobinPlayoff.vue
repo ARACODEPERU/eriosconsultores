@@ -274,7 +274,11 @@
                         return {
                             ...p,
                             // Usamos match_role que inyectamos directamente en el back
-                            match_role: p.match_role || null,
+                            match_role: p.is_suspended ? null : (p.match_role || null),
+
+                            // Suspensión vigente (el backend inyecta is_suspended)
+                            is_suspended: !!p.is_suspended,
+                            suspension: p.suspension || null,
 
                             // Estadísticas
                             goals: s.goals || 0,
@@ -402,6 +406,22 @@
         return { penalty_h, penalty_a };
     });
 
+    // Resumen legible de una suspensión (para badges y errores)
+    const suspensionSummary = (suspension) => {
+        if (!suspension) return '';
+        if (suspension.type === 'definitive') return 'Suspensión definitiva';
+        if (suspension.type === 'matches') {
+            const remaining = suspension.matches_remaining;
+            return remaining != null
+                ? `Suspendido · ${remaining} partido(s) restante(s)`
+                : 'Suspendido por partidos';
+        }
+        if (suspension.type === 'date_range') {
+            return `Suspendido del ${suspension.start_date} al ${suspension.end_date}`;
+        }
+        return 'Suspendido';
+    };
+
     const getPlayersForTeam = (team) => {
         if (team === 'local') {
             return playersh.value.map(p => ({
@@ -472,6 +492,17 @@
         formScore.post(route('even_edition_match_score_update'), {
             preserveScroll: true,
             preserveState: true,
+            onError: (errors) => {
+                // Errores de validación del backend (ej. jugador suspendido en la alineación)
+                const message = errors?.score || Object.values(errors || {})[0] || 'Ocurrió un error al guardar el acta';
+                Swal2.fire({
+                    title: 'No se pudo guardar',
+                    text: message,
+                    icon: 'error',
+                    padding: '2em',
+                    customClass: 'sweet-alerts',
+                });
+            },
             onSuccess: () => {
                 Swal2.fire({
                     title: 'Enhorabuena',
@@ -682,7 +713,11 @@
                         return {
                             ...p,
                             // Usamos match_role que inyectamos directamente en el back
-                            match_role: p.match_role || null,
+                            match_role: p.is_suspended ? null : (p.match_role || null),
+
+                            // Suspensión vigente (el backend inyecta is_suspended)
+                            is_suspended: !!p.is_suspended,
+                            suspension: p.suspension || null,
 
                             // Estadísticas
                             goals: s.goals || 0,
@@ -1246,10 +1281,10 @@
                 <div class="sm:col-span-2">
                     <div class="w-full p-0 border border-default rounded-base shadow-xs dark:border-blue-900">
                         <div class="table-responsive">
-                            <table class="w-full text-sm text-left rtl:text-right text-body">
+                            <table class="w-full text-sm text-left rtl:text-right text-body se-score-table">
                                 <thead class="text-sm text-body border-b border-default dark:border-blue-900">
-                                    <th class="px-6 py-2 bg-gray-50 font-blod text-sm dark:bg-blue-900 dark:text-white"></th>
-                                    <th class="px-6 py-2 bg-gray-50 font-blod text-sm dark:bg-blue-900 dark:text-white">Nombre</th>
+                                    <th class="se-score-sticky se-score-sticky--role px-6 py-2 bg-gray-50 font-blod text-sm dark:bg-blue-900 dark:text-white"></th>
+                                    <th class="se-score-sticky se-score-sticky--name px-6 py-2 bg-gray-50 font-blod text-sm dark:bg-blue-900 dark:text-white">Nombre</th>
                                     <th class="px-6 py-2 bg-gray-50 font-blod text-sm dark:bg-blue-900 dark:text-white">Goles</th>
                                     <th class="px-6 py-2 bg-gray-50 font-blod text-sm dark:bg-blue-900 dark:text-white">Asistencias</th>
                                     <th class="px-6 py-2 bg-gray-50 font-blod text-sm dark:bg-blue-900 dark:text-white">Atajadas directas</th>
@@ -1258,17 +1293,19 @@
                                 </thead>
                                 <tbody>
                                     <tr v-for="(playerh, index) in playersh" :key="index" class="border-b border-default">
-                                        <td class="px-2">
-                                            <div class="flex-row items-center gap-2">
+                                        <td class="se-score-sticky se-score-sticky--role bg-white px-2 dark:bg-gray-800">
+                                            <div class="flex-col items-start gap-1">
                                                 <label class="inline-flex items-center cursor-pointer">
                                                     <input type="radio" :name="'role_' + index + playerh.team_id + formScore.id" value="starter"
                                                         v-model="playerh.match_role"
+                                                        :disabled="playerh.is_suspended"
                                                         class="text-blue-600 focus:ring-blue-500">
                                                     <span class="ml-1 text-xs">Titular</span>
                                                 </label>
                                                 <label class="inline-flex items-center cursor-pointer">
                                                     <input type="radio" :name="'role_' + index + playerh.team_id + formScore.id" value="substitute"
                                                         v-model="playerh.match_role"
+                                                        :disabled="playerh.is_suspended"
                                                         class="text-green-600 focus:ring-green-500">
                                                     <span class="ml-1 text-xs">Suplente</span>
                                                 </label>
@@ -1277,8 +1314,14 @@
                                                 </button>
                                             </div>
                                         </td>
-                                        <td class="px-6 py-4 font-medium text-heading whitespace-nowrap bg-neutral-secondary-soft">
+                                        <td class="se-score-sticky se-score-sticky--name px-6 py-4 font-medium text-heading whitespace-nowrap bg-neutral-secondary-soft">
                                             <p class="font-medium text-heading truncate">{{ playerh.person.full_name }}</p>
+                                            <div v-if="playerh.is_suspended" class="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 border border-red-200 dark:bg-red-900/40 dark:text-red-300">
+                                                SUSPENDIDO
+                                            </div>
+                                            <p v-if="playerh.is_suspended && playerh.suspension" class="text-[10px] text-red-600 dark:text-red-300 leading-tight">
+                                                {{ suspensionSummary(playerh.suspension) }}
+                                            </p>
                                             <p class="text-sm text-body truncate">
                                                 Camiseta: {{ playerh.jersey_number }}
                                                 Posición: {{ playerh.position }}
@@ -1367,10 +1410,10 @@
                 <div class="sm:col-span-2">
                     <div class="w-full p-0 border border-default rounded-base shadow-xs dark:border-blue-900">
                         <div class="table-responsive">
-                            <table class="w-full text-sm text-left rtl:text-right text-body">
+                            <table class="w-full text-sm text-left rtl:text-right text-body se-score-table">
                                 <thead class="text-sm text-body border-b border-default dark:border-blue-900">
-                                    <th class="px-6 py-2 bg-gray-50 font-blod text-sm dark:bg-blue-900 dark:text-white"></th>
-                                    <th class="px-6 py-2 bg-gray-50 font-blod text-sm dark:bg-blue-900 dark:text-white">Nombre</th>
+                                    <th class="se-score-sticky se-score-sticky--role px-6 py-2 bg-gray-50 font-blod text-sm dark:bg-blue-900 dark:text-white"></th>
+                                    <th class="se-score-sticky se-score-sticky--name px-6 py-2 bg-gray-50 font-blod text-sm dark:bg-blue-900 dark:text-white">Nombre</th>
                                     <th class="px-6 py-2 bg-gray-50 font-blod text-sm dark:bg-blue-900 dark:text-white">Goles</th>
                                     <th class="px-6 py-2 bg-gray-50 font-blod text-sm dark:bg-blue-900 dark:text-white">Asistencias</th>
                                     <th class="px-6 py-2 bg-gray-50 font-blod text-sm dark:bg-blue-900 dark:text-white">Atajadas directas</th>
@@ -1379,17 +1422,19 @@
                                 </thead>
                                 <tbody>
                                     <tr v-for="(playera, index) in playersa" :key="index" class="border-b border-default">
-                                        <td class="px-2">
-                                            <div class="flex-row items-center gap-2">
+                                        <td class="se-score-sticky se-score-sticky--role bg-white px-2 dark:bg-gray-800">
+                                            <div class="flex-col items-start gap-1">
                                                 <label class="inline-flex items-center cursor-pointer">
                                                     <input type="radio" :name="'role_' + index + playera.team_id + formScore.id" value="starter"
                                                         v-model="playera.match_role"
+                                                        :disabled="playera.is_suspended"
                                                         class="text-blue-600 focus:ring-blue-500">
                                                     <span class="ml-1 text-xs">Titular</span>
                                                 </label>
                                                 <label class="inline-flex items-center cursor-pointer">
                                                     <input type="radio" :name="'role_' + index + playera.team_id + formScore.id" value="substitute"
                                                         v-model="playera.match_role"
+                                                        :disabled="playera.is_suspended"
                                                         class="text-green-600 focus:ring-green-500">
                                                     <span class="ml-1 text-xs">Suplente</span>
                                                 </label>
@@ -1398,8 +1443,14 @@
                                                 </button>
                                             </div>
                                         </td>
-                                        <td class="px-6 py-4 font-medium text-heading whitespace-nowrap bg-neutral-secondary-soft">
+                                        <td class="se-score-sticky se-score-sticky--name px-6 py-4 font-medium text-heading whitespace-nowrap bg-neutral-secondary-soft">
                                             <p class="font-medium text-heading truncate">{{ playera.person.full_name }}</p>
+                                            <div v-if="playera.is_suspended" class="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 border border-red-200 dark:bg-red-900/40 dark:text-red-300">
+                                                SUSPENDIDO
+                                            </div>
+                                            <p v-if="playera.is_suspended && playera.suspension" class="text-[10px] text-red-600 dark:text-red-300 leading-tight">
+                                                {{ suspensionSummary(playera.suspension) }}
+                                            </p>
                                             <p class="text-sm text-body truncate">
                                                 Camiseta: {{ playera.jersey_number }}
                                                 Posición: {{ playera.position }}
@@ -1727,3 +1778,30 @@
     </ModalLargeX>
 
 </template>
+
+<style scoped>
+    /* Columnas fijas del modal de resultados: el nombre del jugador debe
+       permanecer visible al hacer scroll horizontal. */
+    .se-score-table {
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .se-score-sticky {
+        position: sticky;
+        z-index: 5;
+        min-width: 9rem;
+    }
+
+    .se-score-sticky--role {
+        left: 0;
+        z-index: 6;
+        min-width: 7.5rem;
+        box-shadow: 2px 0 4px rgba(0, 0, 0, 0.06);
+    }
+
+    .se-score-sticky--name {
+        left: 7.5rem;
+        box-shadow: 2px 0 4px rgba(0, 0, 0, 0.06);
+    }
+</style>

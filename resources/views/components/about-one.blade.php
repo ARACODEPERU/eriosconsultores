@@ -1,55 +1,34 @@
 <div>
-    <section id="about-part" class="pt-65">
+    <section id="about-part" class="pt-80 pb-60">
         <div class="container">
-            <div class="row">
-                <div class="col-lg-5">
-                    <div class="section-title mt-50">
-                        <h5>{{ $about[0]->content }}</h5>
-                        <h2>{{ $about[1]->content }} </h2>
-                    </div> <!-- section title -->
-                    <div class="about-cont">
-                        <p>
-                            {{ $about[2]->content }}
-                        </p>
-                        <a href="{{ route('web_about') }}" class="main-btn mt-55">Leer Más</a>
+            <div class="erc-habout">
+
+                {{-- ======== Columna de contenido ======== --}}
+                <div data-reveal data-reveal-delay="120">
+                    <span class="erc-sec-eyebrow">{{ $about[0]->content }}</span>
+                    <h2 class="erc-habout__title">{{ $about[1]->content }}</h2>
+                    <p class="erc-habout__text">{{ $about[2]->content }}</p>
+
+                    <div class="erc-habout__actions">
+                        <a href="{{ route('web_about') }}" class="erc-btn erc-btn--yellow">
+                            Conócenos <i class="fa fa-arrow-right" aria-hidden="true"></i>
+                        </a>
+                        <a href="{{ route('web_services') }}" class="erc-btn erc-btn--outline">
+                            Ver servicios
+                        </a>
                     </div>
                 </div>
-                <div class="col-lg-7">
-                    <div class="about-image mt-50">
-                        <img src="{{ asset('storage/' . $about[5]->content) }}" alt="About">
-                    </div>  <!-- about image -->
-                </div> 
-                {{-- <div class="col-lg-6 offset-lg-1">
-                    <div class="about-event mt-30">
-                        <ul>
-                            <li>
-                                <div class="single-event">
-                                    <span><i class="fa fa-calendar"></i> 2 December 2018</span>
-                                    <a href="events-single.html"><h4>Campus clean workshop</h4></a>
-                                    <span><i class="fa fa-map-marker"></i> Rc Auditorim</span>
-                                </div>
-                            </li>
-                            <li>
-                                <div class="single-event">
-                                    <span><i class="fa fa-calendar"></i> 2 December 2018</span>
-                                    <a href="events-single.html"><h4>Tech Summit</h4></a>
-                                    <span><i class="fa fa-map-marker"></i> Rc Auditorim</span>
-                                </div>
-                            </li>
-                            <li>
-                                <div class="single-event">
-                                    <span><i class="fa fa-calendar"></i> 2 December 2018</span>
-                                    <a href="events-single.html"><h4>Environment conference</h4></a>
-                                    <span><i class="fa fa-map-marker"></i> Rc Auditorim</span>
-                                </div>
-                            </li>
-                        </ul> 
+                
+                {{-- ======== Columna visual ======== --}}
+                <div class="erc-habout__media" data-reveal>
+                    <div class="erc-habout__imgwrap">
+                        <img src="{{ asset('storage/' . $about[5]->content) }}" alt="{{ $about[1]->content }}"
+                            class="erc-habout__img"
+                            onerror="this.onerror=null;this.src='{{ asset('themes/webpage/images/logo-2.png') }}';this.classList.add('erc-habout__img--fallback');">
                     </div>
-                </div> --}}
-            </div> <!-- row -->
+                    <div class="erc-habout__accent"></div>
+                </div>
+            </div>
         </div> <!-- container -->
-        <div class="about-bg">
-            <img src="{{ asset('storage/' . $about[3]->content ) }}" alt="About">
-        </div>
     </section>
 </div>

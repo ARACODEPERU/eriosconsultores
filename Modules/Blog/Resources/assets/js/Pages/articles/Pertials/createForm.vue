@@ -9,6 +9,7 @@ import { ref, onMounted, reactive, nextTick  } from 'vue';
 import Editor from '@tinymce/tinymce-vue'
 import TextInput from '@/Components/TextInput.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
+import BlogAiAssistant from '@/Components/BlogAiAssistant.vue';
 
 
     const props = defineProps({
@@ -41,13 +42,18 @@ import SecondaryButton from '@/Components/SecondaryButton.vue';
         }
 
         if (inputKeyword.value) {
-            form.keywords = keywords.value;
+            const parts = inputKeyword.value.split(/[,]+/).map(s => s.trim()).filter(s => s.length > 0);
+            parts.forEach(part => {
+                if (!form.keywords.includes(part)) {
+                    form.keywords.push(part);
+                }
+            });
+            inputKeyword.value = null;
         }
 
         form.post(route('blog-article.store'), {
             forceFormData: true,
             errorBag: 'createArticle',
-            preserveScroll: true,
             preserveScroll: true
         });
     };
@@ -105,8 +111,16 @@ import SecondaryButton from '@/Components/SecondaryButton.vue';
 
     const inputKeyword = ref(null);
     const addkeyword = () => {
-        form.keywords.push(inputKeyword.value)
-        inputKeyword.value = null;
+        const text = inputKeyword.value;
+        if (text) {
+            const parts = text.split(/[,]+/).map(s => s.trim()).filter(s => s.length > 0);
+            parts.forEach(part => {
+                if (!form.keywords.includes(part)) {
+                    form.keywords.push(part);
+                }
+            });
+            inputKeyword.value = null;
+        }
     }
 
     const removekeyword = (index) => {
@@ -144,7 +158,17 @@ import SecondaryButton from '@/Components/SecondaryButton.vue';
                 <InputError :message="form.errors.description" class="mt-2" />
             </div>
             <div class="col-span-6 sm:col-span-6">
-                <InputLabel for="content" value="Contenido *" />
+                <div class="flex items-center justify-between mb-2">
+                    <InputLabel for="content" value="Contenido *" />
+                    <BlogAiAssistant
+                        :contentText="form.content_text"
+                        :title="form.title"
+                        :description="form.description"
+                        @update:contentText="form.content_text = $event"
+                        @update:title="form.title = $event"
+                        @update:description="form.description = $event"
+                    />
+                </div>
                 <Editor
                     :api-key="tiny_api_key"
                     v-model="form.content_text"
@@ -215,7 +239,7 @@ import SecondaryButton from '@/Components/SecondaryButton.vue';
                     <input @keydown.enter.stop.prevent="addkeyword" 
                         v-model="inputKeyword" 
                         class="form-input"
-                        :maxlength="22" placeholder="Máximo 22 caracteres"
+                        :maxlength="250" placeholder="Separar con comas (ej: jovenes, escolares)"
                     />
                 </div>
                 <InputError :message="form.errors.keywords" class="mt-2" />

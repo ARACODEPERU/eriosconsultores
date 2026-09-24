@@ -28,6 +28,7 @@ use DataTables;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Modules\Treasury\Services\TreasuryHooks;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -95,7 +96,7 @@ class SaleDocumentController extends Controller
 
     public function tableDocument()
     {
-        $hasFullAccess = Auth::user()->hasAnyRole(['admin', 'Contabilidad']);
+        $hasFullAccess = Auth::user()->hasAnyRole(['admin', 'Administrador', 'Contabilidad']);
 
         $sales = (new Sale)->newQuery()
             ->join('people', 'client_id', 'people.id')
@@ -507,6 +508,9 @@ class SaleDocumentController extends Controller
 
                 return $document;
             });
+
+            // Tesorería: registrar los ingresos de la venta según método de pago
+            $this->recordTreasuryIncomes($res->sale);
 
             $healthChargeIds = collect($request->get('items', []))
                 ->pluck('health_charge_id')
@@ -1128,6 +1132,27 @@ class SaleDocumentController extends Controller
             // dd($document);
             $document->status = 3;
             $document->reason_cancellation = $request->get('reason');
+
+            // Verificar si la boleta fue informada como "alta" (estado 1) y aceptada por SUNAT.
+            // Si nunca llegó a SUNAT, no debe intentarse anular electrónicamente (SUNAT responde 2663).
+            $informedAsAlta = SaleSummaryDetail::where('document_id', $document->id)
+                ->where('status', 1)
+                ->whereHas('summary', fn ($q) => $q->where('status', 'Aceptado'))
+                ->exists();
+
+            if (! $informedAsAlta) {
+                $document->invoice_status = 'Anulada';
+                $document->save();
+
+                $boleta = new Boleta;
+                $boleta->updateStockSale($document->id);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'La boleta no fue informada a SUNAT (no existe en sus registros). Se anuló localmente sin conformidad SUNAT.',
+                ]);
+            }
+
             $document->invoice_status = 'Enviada Por Anular';
             $document->save();
 
@@ -1182,5 +1207,14 @@ class SaleDocumentController extends Controller
         } catch (\Exception $e) {
             return ['message' => $e->getMessage()];
         }
+    }
+
+    /**
+     * Tesorería: registra los ingresos de la venta según el método de pago.
+     * Es best-effort: sin cuenta mapeada o con el módulo inactivo no interrumpe la venta.
+     */
+    private function recordTreasuryIncomes(Sale $sale): void
+    {
+        TreasuryHooks::recordSaleIncomes($sale);
     }
 }
