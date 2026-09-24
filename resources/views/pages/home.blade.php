@@ -132,10 +132,7 @@
     .erc-vfeat h4 { color: #fff; font-size: 17px; font-weight: 700; margin: 0 0 6px; }
     .erc-vfeat p { color: rgba(255,255,255,.72); font-size: 14px; line-height: 24px; margin: 0; }
 
-    /* ---- Docentes: grid base (el detalle de tarjetas vive en el componente) ---- */
-    .erc-teachers { gap: 26px; }
-    @media (max-width: 991px) { .erc-teachers { grid-template-columns: repeat(2, minmax(0,1fr)) !important; } }
-    @media (max-width: 575px) { .erc-teachers { grid-template-columns: 1fr !important; } }
+    /* Docentes: el CSS vive dentro del componente (autocontenido) */
 
     /* Testimonios: el CSS vive dentro del componente (autocontenido) */
 
@@ -159,6 +156,10 @@
     <!--====== ABOUT PART START ======-->
     <x-about-one />
     <!--====== ABOUT PART ENDS ======-->
+
+    <!--====== CEO FUNDADORA PART START ======-->
+    <x-ceo-profile :show-link="true" />
+    <!--====== CEO FUNDADORA PART ENDS ======-->
    
     <!--====== APPLY PART START ======-->
     <x-services-one />

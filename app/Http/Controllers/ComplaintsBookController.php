@@ -6,8 +6,6 @@ use App\Mail\SendClaimConfirmationEmail;
 use App\Models\ComplaintsBook;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Inertia\Inertia;
-use Modules\CMS\Entities\CmsSection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -27,31 +25,15 @@ class ComplaintsBookController extends Controller
             'priorities' => $priorities,
             'meansCommunication' => $meansCommunication
         ]);
-    }
-
-    public function createdByClient(){
-        $header = CmsSection::with(['items' => function ($query) {
-            $query->orderBy('position');
-        }, 'items.item'])
-            ->where('component_id', 'encabezado_2')
-            ->first();
-
+    }    public function createdByClient(){
         $monedas = DB::table('sunat_currency_types')->get();
 
         $tipoDocuemntos = DB::table('identity_document_type')->get();
 
-        // para vistas BLADE
-        // return view('pages/complaints-book', [
-        //     'monedas' => $monedas,
-        //         'tipoDocumentos' => $tipoDocumentos,
-        // ]);
-        // para vistas VueJS
-        return Inertia::render('Landing/ComplaintsBook',[
-            'dataBook' => [
-                'header' => $header,
-                'monedas' => $monedas,
-                'tipoDocuemntos' => $tipoDocuemntos
-            ],
+        // Vista Blade de la página web
+        return view('pages/complaints-book', [
+            'monedas' => $monedas,
+            'tipoDocumentos' => $tipoDocuemntos,
         ]);
     }
 
@@ -90,7 +72,8 @@ class ComplaintsBookController extends Controller
         // Si ocurre alguna excepción dentro de este bloque,
         // la base de datos hará un ROLLBACK (deshará los cambios).
         try {
-            DB::transaction(function () use ($request) {
+            $book = null;
+            DB::transaction(function () use ($request, &$book) {
                 // Crear el reclamo en la base de datos
                 // Asegúrate de que los nombres de los campos en el array coincidan con los de tu DB y $fillable
                 $book = ComplaintsBook::create([
@@ -112,15 +95,20 @@ class ComplaintsBookController extends Controller
                     'status' => 'RE'
                 ]);
 
-                // El correo de confirmación va a la cola: el reclamo ya no depende del
-                // SMTP. Antes, un fallo de correo revertia la transacción y el reclamo
-                // no se guardaba. El job se ejecuta despues del commit, porque la
-                // conexion de cola tiene 'after_commit' => true.
-                Mail::to($book->email)->queue(new SendClaimConfirmationEmail($book));
+                // El reclamo queda registrado aunque el correo falle (el fallo de SMTP
+                // no debe revertir la transacción ni perder el folio generado).
             });
 
+            // El correo de confirmación va a la cola: se envía después del commit.
+            // Un fallo de SMTP solo se registra en el log, no afecta al reclamo.
+            try {
+                Mail::to($book->email)->queue(new SendClaimConfirmationEmail($book));
+            } catch (\Throwable $mailError) {
+                Log::warning('Reclamo registrado pero el correo de confirmación falló: ' . $book->composite_code . ' - ' . $mailError->getMessage());
+            }
+
             // Si todo fue exitoso (validación, registro y envío de correo)
-            return redirect()->route('complaints_book')->with('success', '¡Su reclamo ha sido registrado con éxito! Revise su correo electrónico para obtener el número de folio.');
+            return redirect()->route('web_complaints_book')->with('success', '¡Su reclamo ha sido registrado con éxito! Revise su correo electrónico para obtener el número de folio.');
 
         } catch (\Exception $e) {
             // Si algo falla dentro de la transacción (incluido el envío de correo)

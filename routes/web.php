@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\ClientController;
+use App\Http\Controllers\ComplaintsBookController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\KardexController;
@@ -34,8 +35,7 @@ Route::get('/', [WebPageController::class, 'index'])->name('index_main');
 Route::get('/nosotros', [WebPageController::class, 'about'])->name('web_about');
 Route::get('/servicios', [WebPageController::class, 'services'])->name('web_services');
 Route::get('/cursos', [WebPageController::class, 'courses'])->name('web_courses');
-Route::get('/curso-descripcion',  [WebPageController::class, 'coursedescription'])->name('web_course_description');
-// Route::get('/curso-descripcion/{id}', [WebPageController::class, 'coursedescription'])->name('web_course_description');
+Route::get('/curso/{slug}', [WebPageController::class, 'coursedescription'])->name('web_course_description');
 Route::get('/carrito', [WebPageController::class, 'shopcart'])->name('web_carrito');
 Route::get('/pagar', [WebPageController::class, 'pay'])->name('web_pay');
 Route::get('/gracias', [WebPageController::class, 'thanks'])->name('web_thanks');
@@ -44,6 +44,8 @@ Route::get('/contactanos', [WebPageController::class, 'contact'])->name('web_con
 Route::get('/docentes', [WebPageController::class, 'teachers'])->name('web_teachers');
 Route::get('/politicas-privacidad', [WebPageController::class, 'privacypolicies'])->name('web_privacy_policies');
 Route::get('/politicas-de-devoluciones', [WebPageController::class, 'returnpolicies'])->name('web_return_policies');
+Route::get('/libro-de-reclamaciones', [ComplaintsBookController::class, 'createdByClient'])->name('web_complaints_book');
+Route::post('/libro-de-reclamaciones', [ComplaintsBookController::class, 'storeByClient'])->name('web_complaints_book_store');
 Route::get('/prices/academic', [LandingController::class, 'academicPrices'])->name('academic_prices');
 //////mensajes de whatsapp///////
 Route::get('/ask/product/{id}', [LandingController::class, 'redirectToWhatsApp'])->name('whatsapp_send');

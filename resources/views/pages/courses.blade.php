@@ -336,6 +336,7 @@
                             $price = $course->discount > 0 && $course->discount < $course->price ? $course->discount : $course->price;
                             $price = $price > 0 ? 'S/ ' . number_format($price, 0) : 'Consultar';
                             $desc = trim(strip_tags($course->description ?? ''));
+                            $courseSlug = optional($aca?->landing)->url_slug ?: \Illuminate\Support\Str::of($course->name)->trim()->replace(['.', ','], '')->slug('-')->lower();
                             $modalityIcon = match ($modality) {
                                 'Presencial' => 'fa-university',
                                 'E-learning' => 'fa-laptop',
@@ -359,7 +360,7 @@
                                     <p class="erc-course-card__text">{{ $desc }}</p>
                                 @endif
                                 <div class="erc-course-card__actions">
-                                    <a href="{{ route('web_course_description') }}" class="erc-course-btn erc-course-btn--info">
+                                    <a href="{{ route('web_course_description', ['slug' => $courseSlug]) }}" class="erc-course-btn erc-course-btn--info">
                                         Ver curso <i class="fa fa-arrow-right erc-anim-arrow" aria-hidden="true"></i>
                                     </a>
                                     <a href="https://wa.link/9q9g9v" target="_blank" rel="noopener"

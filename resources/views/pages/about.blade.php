@@ -291,6 +291,10 @@
 
     <x-mision-vision-valores />
 
+    <!--====== CEO FUNDADORA PART START ======-->
+    <x-ceo-profile />
+    <!--====== CEO FUNDADORA PART ENDS ======-->
+
     <!--====== COUNTER PART START ======-->
     
     {{-- <div id="counter-part" class="bg_cover pt-65 pb-110" data-overlay="8" style="background-image: url(images/bg-2.jpg)">

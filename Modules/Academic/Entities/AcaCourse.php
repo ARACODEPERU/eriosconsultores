@@ -64,6 +64,11 @@ class AcaCourse extends Model
         return $this->hasOne(AcaBrochure::class, 'course_id');
     }
 
+    public function landing(): HasOne
+    {
+        return $this->hasOne(AcaCourseLanding::class, 'course_id');
+    }
+
     public function agreements(): HasMany
     {
         return $this->hasMany(AcaAgreement::class, 'course_id');
