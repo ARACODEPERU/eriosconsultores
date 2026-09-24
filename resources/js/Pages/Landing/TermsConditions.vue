@@ -1,5 +1,5 @@
 <script setup>
-import { Head, Link, usePage } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
 import iconUser from '@/Components/vristo/icon/icon-user.vue';
 import { useAppStore } from '@/stores/index';
 
@@ -9,7 +9,6 @@ const xassetUrl = assetUrl;
 const store = useAppStore();
 </script>
 <template>
-    <Head title="Términos y condiciones | ARACODE Smart Solutions" />
     <!-- Content -->
     <div class="relative h-screen">
         <div class="py-10 lg:py-14">

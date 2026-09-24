@@ -1,5 +1,5 @@
 @extends('errors::minimal')
 
-@section('title', __('messages.title402'))
+@section('title', __('Payment Required'))
 @section('code', '402')
-@section('message', __('messages.402PaymentRequired'))
+@section('message', __('Payment Required'))

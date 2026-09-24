@@ -16,20 +16,12 @@ const props = defineProps({
     person:{
         type: Object,
         default : () => ({})
-    },
-    countries: {
-        type: [Array, Object],
-        default: () => ([])
     }
 });
-
-// Manejo seguro de la URL base
-const baseUrl = typeof window !== 'undefined' && window.assetUrl ? window.assetUrl : '/';
+const baseUrl = assetUrl;
 
 const getImage = (path) => {
-    // Evita duplicar barras al concatenar
-    const cleanPath = path.startsWith('/') ? path.substring(1) : path;
-    return `${baseUrl}storage/${cleanPath}`;
+    return baseUrl + 'storage/'+ path;
 }
 </script>
 
@@ -58,7 +50,7 @@ const getImage = (path) => {
             </div>
         </div>
         <div class="mt-5">
-            <UpdateInformationForm :person="person" :identityDocumentTypes="identityDocumentTypes" :ubigeo="ubigeo" :countries="countries" />
+            <UpdateInformationForm :person="person" :identityDocumentTypes="identityDocumentTypes" :ubigeo="ubigeo" /> 
         </div>
     </AppLayout>
 </template>

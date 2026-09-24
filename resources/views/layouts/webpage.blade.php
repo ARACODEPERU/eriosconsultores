@@ -3,7 +3,7 @@
 <html lang="es">
 
 <head>
-
+   
     <!--====== Required meta tags ======-->
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
@@ -68,11 +68,11 @@
     <link rel="stylesheet" href="{{ asset('themes/webpage/css/sky-tabs.css') }}">
 
     @yield('page_styles')
-
+  
 </head>
 
 <body>
-
+   
     <!--====== PRELOADER PART START ======
 
     <div class="preloader">
@@ -89,13 +89,13 @@
     </div>-->
 
     <!--====== PRELOADER PART START ======-->
-
+    
     <!--====== HEADER PART START ======-->
     <x-header />
     <!--====== HEADER PART ENDS ======-->
-
+   
     <!--====== SEARCH BOX PART START ======-->
-
+    
     <div class="search-box">
         <div class="search-form">
             <div class="closebtn">
@@ -108,27 +108,27 @@
             </form>
         </div> <!-- search form -->
     </div>
-
+    
     <!--====== SEARCH BOX PART ENDS ======-->
-
+   
     @yield('content')
-
+    
     <!--====== FOOTER PART START ======-->
     <x-footer />
     <!--====== FOOTER PART ENDS ======-->
 
-
+    
     <!--Whatsapp Start-->
-    <x-whatsapp />
+    <x-whatsapp /> 
     <!--Whatsapp End--
-
+   
     <!--====== BACK TO TP PART START ======-->
-
+    
     <a href="#" class="back-to-top"><i class="fa fa-angle-up"></i></a>
-
+    
     <!--====== BACK TO TP PART ENDS ======-->
-
-
+   
+    
 
     <!--====== jquery js ======-->
     <script src="{{ asset('themes/webpage/js/vendor/modernizr-3.6.0.min.js') }}"></script>
@@ -164,11 +164,6 @@
 
     <!--====== Main js ======-->
     <script src="{{ asset('themes/webpage/js/main.js') }}"></script>
-
-    <!--====== Map js ======-->
-    <script src="{{ asset('themes/webpage/js/map-script.js') }}"></script>
-
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDC3Ip9iVC0nIxC6V14CKLQ1HZNF_65qEQ"></script>
 
     {{-- ====== ERIOS · Reveal on scroll (fade-in) ====== --}}
     <style>

@@ -1,5 +1,5 @@
 @extends('errors::minimal')
 
-@section('title', __('messages.title429'))
+@section('title', __('Too Many Requests'))
 @section('code', '429')
-@section('message', __('messages.429TooManyRequests'))
+@section('message', __('Too Many Requests'))

@@ -33,10 +33,6 @@
             type: Object,
             default: () => ({})
         },
-        countries: {
-            type: [Array, Object],
-            default: () => ([])
-        },
     });
 
 </script>
@@ -63,7 +59,6 @@
                 :person ="person"
                 :identityDocumentTypes = "identityDocumentTypes"
                 :ubigeo = "ubigeo"
-                :countries = "countries"
             />
         </div>
     </AppLayout>

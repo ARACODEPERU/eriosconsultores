@@ -6,7 +6,6 @@
     import { Link, usePage } from '@inertiajs/vue3';
     import menuData from './MenuData.js';
     import { Tooltip } from 'ant-design-vue'
-    import { useSidebarEditor } from 'Modules/Security/Resources/assets/js/Composables/useSidebarEditor';
 
     const store = useAppStore();
     const xasset = assetUrl;
@@ -52,24 +51,21 @@
         return permissions.value.includes(permission);
     };
 
-    // Modo Super Editor: ver useSidebarEditor.
-    const editor = useSidebarEditor(hasPermission);
-
     const findAllowedModule = (moduleText) => {
         return menuData.value.find((module) => module.text === moduleText && hasPermission(module.permissions));
     };
 
     const visibleOptions = computed(() => {
-        return (moduleSelected.value?.items || []).filter((option) => editor.reveals(option.permissions));
+        return (moduleSelected.value?.items || []).filter((option) => hasPermission(option.permissions));
     });
 
     /** Módulos del rail izquierdo: sin permiso no se monta Tooltip ni wrapper (evita huecos). */
     const visibleModules = computed(() => {
-        return menuData.value.filter((menu) => editor.reveals(menu.permissions));
+        return menuData.value.filter((menu) => hasPermission(menu.permissions));
     });
 
     const visibleSubOptions = (option) => {
-        return (option?.items || []).filter((subOption) => editor.reveals(subOption.permissions));
+        return (option?.items || []).filter((subOption) => hasPermission(subOption.permissions));
     };
 
     const isExpandableOption = (option) => visibleSubOptions(option).length > 0;
@@ -303,9 +299,7 @@
 
     // Función para manejar clicks en los botones de módulos
     const handleModuleClick = (module) => {
-        // En modo editor se puede abrir cualquier módulo para configurarlo,
-        // aunque el rol actual no tenga su permiso.
-        if (!editor.reveals(module.permissions)) {
+        if (!hasPermission(module.permissions)) {
             return;
         }
 
@@ -542,7 +536,6 @@
                                                     <span class="uppercase" :class="fontTitleTooltip">{{ menu.text }}</span>
                                                 </template>
                                                 <button
-                                                    v-bind="editor.rowAttrs(menu, 'módulo', 'corner')"
                                                     @click="handleModuleClick(menu)"
                                                     @mouseenter="showModuleTooltip(menu.text)"
                                                     @mouseleave="hideModuleTooltip(menu.text)"
@@ -580,7 +573,6 @@
                                                     <span class="uppercase" :class="fontTitleTooltip">{{ menu.text }}</span>
                                                 </template>
                                                 <button
-                                                    v-bind="editor.rowAttrs(menu, 'módulo', 'corner')"
                                                     @click="handleModuleClick(menu)"
                                                     @mouseenter="showModuleTooltip(menu.text)"
                                                     @mouseleave="hideModuleTooltip(menu.text)"
@@ -619,7 +611,6 @@
                                                 </template>
                                                 <Link
                                                     :href="menu.route"
-                                                    v-bind="editor.rowAttrs(menu, 'módulo', 'corner')"
                                                     @click="handleModuleClick(menu)"
                                                     @mouseenter="showModuleTooltip(menu.text)"
                                                     @mouseleave="hideModuleTooltip(menu.text)"
@@ -696,19 +687,6 @@
                             }"
                             class="h-full"
                         >
-                        <!-- Aviso del Modo Super Editor.
-                             Es solo texto: no captura el puntero, para que si cae
-                             encima de un control de la página el click siga
-                             siendo del control. -->
-                        <div
-                            v-if="editor.active"
-                            class="pointer-events-none mb-3 rounded-xl border border-blue-200 bg-blue-50/70 px-3 py-2 text-[11px] leading-relaxed text-blue-700 select-none dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-200"
-                        >
-                            Modo editor activo: pasa el mouse por una opción y usa el engrane para elegir qué roles
-                            pueden verla. Las filas con 🔒 no son accesibles con tu rol y se muestran solo para
-                            configurarlas.
-                        </div>
-
                         <!-- Opciones dinámicas del módulo activo -->
                         <div v-if="isOptionsLoading" class="space-y-3">
                             <div v-for="item in 5" :key="item" class="flex items-center gap-3 rounded-xl border border-slate-200/60 bg-white/70 px-3 py-3 dark:border-slate-700/60 dark:bg-slate-800/70">
@@ -723,11 +701,8 @@
                             <div
                                 v-for="(option, index) in visibleOptions"
                                 :key="option.text"
-                                class="sidebar-option-item group relative"
-                                :class="{ 'super-editor-locked': editor.isLocked(option.permissions) }"
+                                class="sidebar-option-item"
                                 :style="{ transitionDelay: `${Math.min(index * 45, 180)}ms` }"
-                                v-bind="editor.rowAttrs(option, 'opción de menú', 'before-end')"
-                                @click.capture="editor.guardClick($event, option)"
                             >
                                 <template v-if="isExpandableOption(option)">
                                     <button
@@ -819,7 +794,6 @@
                                         </div>
                                     </Link>
                                 </template>
-
                                 <!-- Submenú desplegable si tiene subopciones -->
                                 <VueCollapsible v-if="isExpandableOption(option)" :isOpen="expandedSections == option.text">
                                     <TransitionGroup
@@ -828,12 +802,6 @@
                                         class="ml-4 mt-2 space-y-1 border-l border-slate-200 pl-3 dark:border-slate-700"
                                     >
                                         <template v-for="(subOption, subIndex) in visibleSubOptions(option)" :key="subIndex">
-                                        <div
-                                            class="group relative rounded-lg"
-                                            :class="{ 'super-editor-locked': editor.isLocked(subOption.permissions) }"
-                                            v-bind="editor.rowAttrs(subOption, 'subopción', 'end')"
-                                            @click.capture="editor.guardClick($event, subOption)"
-                                        >
                                         <Link
                                                 :href="subOption.route"
                                                 @click="handleSubOptionClick(option.text, subOption.text)"
@@ -858,7 +826,6 @@
                                                 </span>
                                             </div>
                                         </Link>
-                                        </div>
                                         </template>
                                     </TransitionGroup>
                                 </VueCollapsible>

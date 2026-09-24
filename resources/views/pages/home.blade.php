@@ -45,7 +45,7 @@
     .erc-btn--outline:hover { background: #004aad; color: #fff; }
 
     /* ---- Hero slider ---- */
-    .erc-hero__content { position: relative; z-index: 2; padding: 150px 0 170px; }
+    .erc-hero__content { position: relative; z-index: 2; padding: 76px 0 78px; }
     .erc-hero__badge {
         display: inline-flex; align-items: center; gap: 9px;
         background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.25);
@@ -69,9 +69,20 @@
 
     .erc-hero__overlay {
         position: absolute; inset: 0;
-        background: linear-gradient(100deg, rgba(7, 41, 77, 0.92) 0%, rgba(7, 41, 77, 0.72) 45%, rgba(7, 41, 77, 0.25) 100%);
+        /* Izquierda sólida para legibilidad; derecha casi transparente para ver la imagen completa */
+        background: linear-gradient(100deg, rgba(7, 41, 77, 0.93) 0%, rgba(7, 41, 77, 0.78) 34%, rgba(7, 41, 77, 0.30) 62%, rgba(7, 41, 77, 0.04) 100%);
     }
-    .single-slider { position: relative; }
+    /* Altura contenida: siempre se nota que hay más secciones debajo */
+    #slider-part { height: clamp(430px, 62vh, 560px); overflow: hidden; }
+    .single-slider {
+        position: relative;
+        padding: 0 !important; /* anula el padding-bottom:300px de la plantilla Edubin */
+        height: 100% !important;
+        background-position: center;
+        background-size: cover;
+    }
+    #slider-part .slick-list, #slider-part .slick-track,
+    #slider-part .slick-slide, #slider-part .slick-slide > div { height: 100%; }
 
     /* ---- Sobre (home) ---- */
     .erc-habout { display: grid; grid-template-columns: minmax(0,5fr) minmax(0,6fr); gap: 50px; align-items: center; }
@@ -126,33 +137,7 @@
     @media (max-width: 991px) { .erc-teachers { grid-template-columns: repeat(2, minmax(0,1fr)) !important; } }
     @media (max-width: 575px) { .erc-teachers { grid-template-columns: 1fr !important; } }
 
-    /* ---- Testimonios ---- */
-    .erc-testi-band { position: relative; background: linear-gradient(135deg, #004aad 0%, #2f6fd6 60%, #4a86e8 100%); padding: 90px 0; overflow: hidden; }
-    .erc-testi-band::before { content: ''; position: absolute; width: 380px; height: 380px; border-radius: 50%; border: 2px solid rgba(255,255,255,.15); top: -140px; left: -100px; }
-    .erc-testi-band .erc-sec-eyebrow { color: #ffc600; }
-    .erc-testi-band .erc-sec-head h2 { color: #fff; }
-    .erc-testi-band .erc-sec-head p { color: rgba(255,255,255,.78); }
-    .erc-testi-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 26px; }
-    @media (max-width: 991px) { .erc-testi-grid { grid-template-columns: 1fr; } }
-    .erc-testi-card {
-        background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.15);
-        border-radius: 16px; padding: 28px 26px; position: relative;
-        display: flex; flex-direction: column; transition: all .35s ease;
-    }
-    .erc-testi-card:hover { transform: translateY(-6px); background: rgba(255,255,255,.11); border-color: rgba(255,198,0,.5); }
-    .erc-testi-card__quote {
-        position: absolute; top: -18px; right: 24px; width: 44px; height: 44px; border-radius: 12px;
-        background: #ffc600; color: #07294d; display: flex; align-items: center; justify-content: center; font-size: 18px;
-        box-shadow: 0 8px 20px rgba(255,198,0,.4);
-    }
-    .erc-testi-card__text { color: #fff; font-size: 14.5px; line-height: 25px; margin: 0 0 18px; font-style: italic; }
-    .erc-testi-card__author { display: flex; align-items: center; gap: 12px; margin-top: auto; }
-    .erc-testi-card__avatar {
-        flex: none; width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,.5);
-    }
-    .erc-testi-card__avatar--fallback { padding: 12px; filter: brightness(0) invert(1); background: rgba(255,255,255,.15); }
-    .erc-testi-card__name { color: #fff; font-size: 15px; font-weight: 700; margin: 0; }
-    .erc-testi-card__place { color: rgba(255,255,255,.7); font-size: 13px; margin: 0; }
+    /* Testimonios: el CSS vive dentro del componente (autocontenido) */
 
     @media (max-width: 575px) {
         .erc-hero__title { font-size: 34px; }
@@ -166,33 +151,33 @@
     <!--====== SLIDER PART START ======-->
     <x-slider />
     <!--====== SLIDER PART ENDS ======-->
-
+   
     <!--====== CATEGORY PART START ======-->
     {{-- <x-category-courses-slider /> --}}
     <!--====== CATEGORY PART ENDS ======-->
-
+   
     <!--====== ABOUT PART START ======-->
     <x-about-one />
     <!--====== ABOUT PART ENDS ======-->
-
+   
     <!--====== APPLY PART START ======-->
     <x-services-one />
     <!--====== APPLY PART ENDS ======-->
-
+   
     <!--====== COURSE PART START ======-->
     {{-- <x-list-courses-carousel /> --}}
     <!--====== COURSE PART ENDS ======-->
-
+   
     <!--====== VIDEO BENEFITS PART START ======-->
     <x-benefits-video />
     <!--====== VIDEO BENEFITS PART ENDS ======-->
-
+   
     <!--====== TEACHERS PART START ======-->
     <x-teachers :limit="6" :show-button="true" />
     <!--====== TEACHERS PART ENDS ======-->
-
+   
     <!--====== PUBLICATION PART START ======-->
-
+    
     {{-- <section id="publication-part" class="pt-115 pb-120 gray-bg">
         <div class="container">
             <div class="row align-items-end">
@@ -316,15 +301,15 @@
             </div> <!-- row -->
         </div> <!-- container -->
     </section> --}}
-
+    
     <!--====== PUBLICATION PART ENDS ======-->
-
+   
     <!--====== TEASTIMONIAL PART START ======-->
     <x-testimonial />
     <!--====== TEASTIMONIAL PART ENDS ======-->
-
+   
     <!--====== NEWS PART START ======-->
-
+    
     {{-- <section id="news-part" class="pt-115 pb-110">
         <div class="container">
             <div class="row">
@@ -413,9 +398,9 @@
             </div> <!-- row -->
         </div> <!-- container -->
     </section> --}}
-
+    
     <!--====== NEWS PART ENDS ======-->
-
+   
     <!--====== PATNAR LOGO PART START ======-->
     {{-- <x-patnar-logo /> --}}
     <!--====== PATNAR LOGO PART ENDS ======-->

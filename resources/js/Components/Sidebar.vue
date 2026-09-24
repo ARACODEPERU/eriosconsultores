@@ -11,14 +11,11 @@ import {
  } from "@fortawesome/free-solid-svg-icons";
 import { Link } from '@inertiajs/vue3';
 import menuAcademic from '../../../Modules/Academic/Resources/assets/js/Menu.js';
-import menuRestaurant from '../../../Modules/Restaurant/Resources/assets/js/Menu.js';
 import menuSales from '../../../Modules/Sales/Resources/assets/js/Menu.js';
 import menuPurchases from '../../../Modules/Purchases/Resources/assets/js/Menu.js';
 import menuConfig from '../../../Modules/Security/Resources/assets/js/Menu.js';
 import menuCMS from '../../../Modules/CMS/Resources/assets/js/Menu.js';
 import menuSocialevents from '../../../Modules/Socialevents/Resources/assets/js/Menu.js';
-import menuHelpdesk from '../../../Modules/Helpdesk/Resources/assets/js/Menu.js';
-import menuHealth from '../../../Modules/Health/Resources/assets/js/Menu.js';
 
 const props = defineProps({
     sidebarToggle: {
@@ -42,11 +39,8 @@ const menu = ref([
     menuConfig,
     menuPurchases,
     menuSales,
-    menuHelpdesk,
     menuCMS,
-    menuHealth,
     menuAcademic,
-    menuRestaurant,
     menuSocialevents
 ]);
 
