@@ -210,13 +210,14 @@ Route::middleware('auth')->group(function () {
         'person/birthdays',
         [PersonController::class, 'getBirthdays']
     )->name('person-birthdays');
-	
+
     Route::get('calendar/index', [CalendarController::class, 'index'])->name('calendar');
     ///////////////META FACEBOOK WHATSAPP/////////////////
 
     Route::post('meta/whatsapp/message/send', [MetaController::class, 'sendMessageWhatsapp'])->name('meta_whatsapp_message_send');
 });
 
+Route::get('/doctors', [DoctorController::class, 'index'])->name('heal_doctors_list');
 
 //CERTIFICADOS AUTOMATIZACIÓN Y PRUEBAS
 Route::get('/test-image/{student_id}/{certificate_id}', [WebController::class, 'testimage'])->name('test-image');
