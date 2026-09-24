@@ -4,10 +4,10 @@
     import { ref, onMounted  } from 'vue';
     import { usePage } from '@inertiajs/vue3';
     import { useAppStore } from '@/stores/index';
-    import axios from 'axios';
     import Swal2 from "sweetalert2";
     import shortVideos from "../../Components/shortVideos.vue";
     import Navigation from '@/Components/vristo/layout/Navigation.vue';
+    import CertificatePreviewModal from './Partials/CertificatePreviewModal.vue';
 
     const page = usePage();
     const store = useAppStore();
@@ -104,8 +104,34 @@
         }
     }
 
+    // Curso no disponible: en vez de no hacer nada, ofrece ver la informacion
+    // publica del curso y redirige a la landing (/curso/{slug}) o, si el curso
+    // no tiene landing publicada, a la descripcion (/curso-descripcion/{id}).
+    const viewCourseInfo = (course) => {
+        Swal2.fire({
+            title: '¿Ver información del curso?',
+            html: `Te mostramos la información de <strong>${course.description}</strong>.`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, ver información',
+            cancelButtonText: 'Cancelar',
+            reverseButtons: true,
+            padding: '2em',
+            customClass: 'sweet-alerts',
+        }).then((result) => {
+            if (!result.isConfirmed) return;
+
+            const hasLanding = course.url_slug && (course.landing_published === true || course.landing_published === 1);
+            const url = hasLanding
+                ? route('course_url_slug', course.url_slug)
+                : route('web_course_description', course.id);
+
+            window.open(url, '_blank');
+        });
+    };
+
     const showAlertToast = async (text, iconType = null, xposition = 'top-end') => {
-        const toast = Swal.mixin({
+        const toast = Swal2.mixin({
             toast: true,
             position: xposition,
             showConfirmButton: false,
@@ -224,31 +250,27 @@
         }
     };
 
-    const downloadCourseCertificate = async (course) => {
-        try {
-            const response = await axios.get(route('aca_student_course_certificate_find', course.id));
-            
-            if (response.data.success && response.data.certificate_id) {
-                window.open(route('aca_image_download', response.data.certificate_id), '_blank');
-            } else {
-                Swal2.fire({
-                    title: 'Certificado no disponible',
-                    text: 'No se encontró el certificado para este curso',
-                    icon: 'warning',
-                    padding: '2em',
-                    customClass: 'sweet-alerts',
-                });
-            }
-        } catch (error) {
-            console.error('Error:', error);
+    const certificateModalOpen = ref(false);
+    const activeCertificateId = ref(null);
+
+    const downloadCourseCertificate = (course) => {
+        if (!course.certificate_id) {
             Swal2.fire({
-                title: 'Error',
-                text: 'No se pudo descargar el certificado',
-                icon: 'error',
+                title: 'Certificado no disponible',
+                text: 'No se encontró el certificado para este curso',
+                icon: 'warning',
                 padding: '2em',
                 customClass: 'sweet-alerts',
             });
+            return;
         }
+        activeCertificateId.value = course.certificate_id;
+        certificateModalOpen.value = true;
+    };
+
+    const closeCertificatePreview = () => {
+        certificateModalOpen.value = false;
+        activeCertificateId.value = null;
     };
 </script>
 
@@ -368,11 +390,15 @@
                                 </template>
                                 <template v-else>
                                     <!-- Curso no matriculado -->
-                                    <div class="relative flex items-end overflow-hidden rounded-xl mb-4">
+                                    <div class="relative flex items-end overflow-hidden rounded-xl mb-4 cursor-pointer"
+                                        @click="viewCourseInfo(course)"
+                                        title="Ver información del curso">
                                         <img :src="getImage(course.image)" alt="Hotel Photo" class="w-full h-48 object-cover transition-all duration-300 group-hover:brightness-110" />
                                     </div>
 
-                                    <div class="space-y-3">
+                                    <div class="space-y-3 cursor-pointer"
+                                        @click="viewCourseInfo(course)"
+                                        title="Ver información del curso">
                                         <!-- Badges de información -->
                                         <div class="flex flex-wrap gap-2">
                                             <div class="inline-flex items-center px-2 py-1 bg-purple-500 text-white rounded-lg text-xs font-medium group-hover:bg-purple-600 transition-colors duration-300">
@@ -453,6 +479,11 @@
             </div>
         </div>
 
+        <CertificatePreviewModal
+            v-if="certificateModalOpen"
+            :certificate-id="activeCertificateId"
+            @close="closeCertificatePreview"
+        />
     </AppLayout>
 </template>
 <style>

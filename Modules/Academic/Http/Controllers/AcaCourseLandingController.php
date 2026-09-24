@@ -7,11 +7,15 @@ use Carbon\Carbon;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Modules\Academic\Entities\AcaCourse;
 use Modules\Academic\Entities\AcaCourseLanding;
 use Modules\Academic\Entities\AcaTeacher;
+use Modules\CMS\Entities\CmsSubscriber;
+use Modules\CMS\Entities\CmsTestimony;
 use Modules\Onlineshop\Entities\OnliItem;
+use Modules\Onlineshop\Entities\OnliSale;
 
 class AcaCourseLandingController extends Controller
 {
@@ -60,12 +64,52 @@ class AcaCourseLandingController extends Controller
                 ];
             });
 
+        // Testimonios de alumnos de este curso: se moderan desde esta pestana
+        // (aprobar, rechazar, modificar y corregir con IA).
+        $courseTestimonials = CmsTestimony::query()
+            ->where('course_id', $courseId)
+            ->where('source', CmsTestimony::SOURCE_STUDENT)
+            ->orderByRaw("CASE WHEN approval_status = 'pending' THEN 0 ELSE 1 END")
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function (CmsTestimony $testimony) {
+                return [
+                    'id' => $testimony->id,
+                    'student_id' => $testimony->student_id,
+                    'author_name' => $testimony->author_name,
+                    'author_role' => $testimony->author_role,
+                    'rating' => $testimony->rating,
+                    'description' => $testimony->description,
+                    'image' => $testimony->image,
+                    'video' => $testimony->video,
+                    'source' => $testimony->source,
+                    'approval_status' => $testimony->approval_status,
+                    'status' => (bool) $testimony->status,
+                    'created_at' => optional($testimony->created_at)->toIso8601String(),
+                    'ia_corrected_at' => optional($testimony->ia_corrected_at)->toIso8601String(),
+                ];
+            })
+            ->values();
+
+        $testimonialCounters = [
+            'all' => CmsTestimony::where('course_id', $courseId)->where('source', CmsTestimony::SOURCE_STUDENT)->count(),
+            'pending' => CmsTestimony::where('course_id', $courseId)->where('source', CmsTestimony::SOURCE_STUDENT)
+                ->where('approval_status', CmsTestimony::STATUS_PENDING)->count(),
+            'approved' => CmsTestimony::where('course_id', $courseId)->where('source', CmsTestimony::SOURCE_STUDENT)
+                ->where('approval_status', CmsTestimony::STATUS_APPROVED)->count(),
+            'rejected' => CmsTestimony::where('course_id', $courseId)->where('source', CmsTestimony::SOURCE_STUDENT)
+                ->where('approval_status', CmsTestimony::STATUS_REJECTED)->count(),
+        ];
+
         return Inertia::render('Academic::Courses/Landing', [
             'course' => $course,
             'landing' => $landing,
             'languageOptions' => AcaCourseLanding::getLanguageOptions(),
             'teachers' => $teachers,
             'people' => $people,
+            'utmStats' => $this->getUtmStatsData($courseId),
+            'courseTestimonials' => $courseTestimonials,
+            'testimonialCounters' => $testimonialCounters,
         ]);
     }
 
@@ -465,6 +509,175 @@ class AcaCourseLandingController extends Controller
         $landing->update([
             'faq_section' => $faqUpdate,
         ]);
+    }
+
+    /**
+     * Estadísticas de atribución UTM para la landing de un curso:
+     * suscriptores/leads (por utm_campaign o asunto del curso) y ventas (onli_sales del curso),
+     * agrupados por origen (traffic_source).
+     */
+    private function getUtmStatsData($courseId, $start = null, $end = null)
+    {
+        $course = AcaCourse::findOrFail($courseId);
+        $landing = AcaCourseLanding::where('course_id', $courseId)->first();
+
+        $utmConfig = $landing ? ($landing->utm_config ?? []) : [];
+        $campaign = ! empty($utmConfig['campaign'])
+            ? $utmConfig['campaign']
+            : 'curso_' . str_replace('-', '_', $landing->url_slug ?? '');
+
+        $subscriberScope = function ($q) use ($campaign, $course, $start, $end) {
+            $q->where(function ($w) use ($campaign, $course) {
+                $w->where('utm_campaign', $campaign)
+                    ->orWhere('subject', $course->description);
+            });
+
+            if ($start && $end) {
+                $q->whereDate('created_at', '>=', $start)
+                    ->whereDate('created_at', '<=', $end);
+            }
+        };
+
+        $salesScope = function ($q) use ($courseId, $start, $end) {
+            $q->whereHas('details', function ($w) use ($courseId) {
+                $w->where('entitie', AcaCourse::class)
+                    ->where('item_id', $courseId);
+            });
+
+            if ($start && $end) {
+                $q->whereDate('created_at', '>=', $start)
+                    ->whereDate('created_at', '<=', $end);
+            }
+        };
+
+        $subscribers = CmsSubscriber::where($subscriberScope)
+            ->select('traffic_source', DB::raw('COUNT(*) as total'))
+            ->groupBy('traffic_source')
+            ->orderByDesc('total')
+            ->get();
+
+        $sales = OnliSale::where($salesScope)
+            ->select('traffic_source', DB::raw('COUNT(*) as total'))
+            ->groupBy('traffic_source')
+            ->orderByDesc('total')
+            ->get();
+
+        // Desglose del tráfico social por canal (utm_source + utm_medium)
+        $socialSubscribers = CmsSubscriber::where($subscriberScope)
+            ->where('traffic_source', 'social')
+            ->select('utm_source', 'utm_medium', DB::raw('COUNT(*) as total'))
+            ->groupBy('utm_source', 'utm_medium')
+            ->orderByDesc('total')
+            ->get();
+
+        $socialSales = OnliSale::where($salesScope)
+            ->where('traffic_source', 'social')
+            ->select('utm_source', 'utm_medium', DB::raw('COUNT(*) as total'))
+            ->groupBy('utm_source', 'utm_medium')
+            ->orderByDesc('total')
+            ->get();
+
+        // Desglose de "Otra página" por dominio de origen (referer)
+        $referrerSubscribers = $this->groupByRefererHost(
+            CmsSubscriber::where($subscriberScope)
+                ->where('traffic_source', 'referrer')
+                ->whereNotNull('referer')
+                ->where('referer', '!=', '')
+                ->select('referer')
+                ->get()
+        );
+
+        $referrerSales = $this->groupByRefererHost(
+            OnliSale::where($salesScope)
+                ->where('traffic_source', 'referrer')
+                ->whereNotNull('referer')
+                ->where('referer', '!=', '')
+                ->select('referer')
+                ->get()
+        );
+
+        return [
+            'subscribers' => $subscribers,
+            'sales' => $sales,
+            'social_detail' => [
+                'subscribers' => $socialSubscribers,
+                'sales' => $socialSales,
+            ],
+            'referrer_detail' => [
+                'subscribers' => $referrerSubscribers,
+                'sales' => $referrerSales,
+            ],
+        ];
+    }
+
+    /**
+     * Agrupa filas de referer (URL completa) por dominio de origen, ordenado de mayor a menor.
+     */
+    private function groupByRefererHost($rows)
+    {
+        $hosts = [];
+
+        foreach ($rows as $row) {
+            $host = $row->referer ? parse_url($row->referer, PHP_URL_HOST) : null;
+            $host = $host ?: (str_contains($row->referer ?? '', '.') ? $row->referer : 'Desconocido');
+            $hosts[$host] = ($hosts[$host] ?? 0) + 1;
+        }
+
+        arsort($hosts);
+
+        return collect($hosts)
+            ->map(fn ($total, $host) => ['host' => $host, 'total' => $total])
+            ->values();
+    }
+
+    public function getUtmStats(Request $request, $courseId)
+    {
+        $dates = $request->get('dates');
+
+        $start = null;
+        $end = null;
+
+        if ($dates) {
+            if (str_contains($dates, ' to ') || str_contains($dates, ' a ')) {
+                $separator = str_contains($dates, ' to ') ? ' to ' : ' a ';
+                [$start, $end] = explode($separator, $dates);
+            } else {
+                $start = $end = $dates;
+            }
+        }
+
+        return response()->json($this->getUtmStatsData($courseId, $start, $end));
+    }
+
+    /**
+     * Guarda la configuración de enlaces UTM (nombre de campaña y term/content por canal).
+     */
+    public function updateUtmConfig(Request $request, $courseId)
+    {
+        $this->validate(
+            $request,
+            [
+                'campaign' => 'nullable|string|max:255',
+                'channels' => 'nullable|array',
+                'channels.*.id' => 'required|string|max:100',
+                'channels.*.term' => 'nullable|string|max:500',
+                'channels.*.content' => 'nullable|string|max:500',
+                'channels.*.active' => 'nullable|boolean',
+            ]
+        );
+
+        $landing = AcaCourseLanding::where('course_id', $courseId)->firstOrFail();
+
+        $campaign = $request->campaign ?: ('curso_' . str_replace('-', '_', $landing->url_slug ?? ''));
+
+        $landing->update([
+            'utm_config' => [
+                'campaign' => $campaign,
+                'channels' => $request->channels ?? [],
+            ],
+        ]);
+
+        return response()->json(['success' => true]);
     }
 
     public function getCoursesWithLanding($excludeCourseId)

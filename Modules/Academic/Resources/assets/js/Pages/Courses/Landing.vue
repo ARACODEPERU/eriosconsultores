@@ -40,6 +40,18 @@ const props = defineProps({
         type: Array,
         default: () => ([]),
     },
+    utmStats: {
+        type: Object,
+        default: () => ({ subscribers: [], sales: [] }),
+    },
+    courseTestimonials: {
+        type: Array,
+        default: () => ([]),
+    },
+    testimonialCounters: {
+        type: Object,
+        default: () => ({ all: 0, pending: 0, approved: 0, rejected: 0 }),
+    },
 });
 
 const activeTab = ref('banner');
@@ -370,6 +382,8 @@ const formatIconForVue = (iconName) => {
                             :course="course"
                             :landing="landing"
                             :people="people"
+                            :course-testimonials="courseTestimonials"
+                            :testimonial-counters="testimonialCounters"
                         />
                     </div>
 
@@ -407,10 +421,11 @@ const formatIconForVue = (iconName) => {
 
                     <!-- UTM Links Section -->
                     <div v-show="activeTab === 'utm_links'">
-                        <LandingUtmLinks
-                            :course="course"
-                            :landing="landing"
-                        />
+                    <LandingUtmLinks
+                        :course="course"
+                        :landing="landing"
+                        :utm-stats="utmStats"
+                    />
                     </div>
                 </div>
             </div>

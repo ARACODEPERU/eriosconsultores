@@ -39,6 +39,7 @@ use Modules\Academic\Entities\AcaSubscriptionPayment;
 use Modules\Academic\Entities\AcaStudentAttendance;
 use Modules\Academic\Entities\AcaStudentParticipation;
 use Modules\Academic\Entities\AcaStudentGrade;
+use Modules\Onlineshop\Entities\OnliItem;
 
 class AcaStudentController extends Controller
 {
@@ -516,11 +517,15 @@ class AcaStudentController extends Controller
                 });
             });
             $course->auto_certificate = $course->auto_certificate ?? false;
+            $course->certificate_id = null;
             $course->certificate_exists = false;
             if ($course->auto_certificate && $student_id) {
-                $course->certificate_exists = AcaCertificate::where('student_id', $student_id)
+                $cert = AcaCertificate::where('student_id', $student_id)
                     ->where('course_id', $course->id)
-                    ->exists();
+                    ->whereNull('module_id')
+                    ->first();
+                $course->certificate_exists = $cert !== null;
+                $course->certificate_id = $cert?->id;
             }
             return $course;
         });
@@ -534,6 +539,10 @@ class AcaStudentController extends Controller
             ) {
                 $this->checkAndCreateCertificate($user->id, $course->id);
                 $course->certificate_exists = true;
+                $course->certificate_id = AcaCertificate::where('student_id', $student_id)
+                    ->where('course_id', $course->id)
+                    ->whereNull('module_id')
+                    ->value('id');
             }
         }
 
@@ -582,8 +591,16 @@ class AcaStudentController extends Controller
                 'course.teacher.person',
                 'course.category',
             ])
-            ->orderBy('aca_courses.description')
+            // Varias filas para el mismo curso (reintentos de pago) se muestran
+            // como una sola tarjeta: primero la matricula ilimitada, luego la
+            // que vence mas tarde y por ultimo la mas reciente.
+            ->orderByDesc('aca_cap_registrations.unlimited')
+            ->orderByDesc('aca_cap_registrations.date_end')
+            ->orderByDesc('aca_cap_registrations.id')
             ->get()
+            ->unique('course_id')
+            ->sortBy(fn ($registration) => $registration->course?->description)
+            ->values()
             ->map(function ($registration) use ($student_id, $user) {
                 $course = $registration->course;
                 $course->can_view = true;
@@ -604,12 +621,16 @@ class AcaStudentController extends Controller
                 // Verificar si el curso tiene auto_certificate
                 $course->auto_certificate = $course->auto_certificate ?? false;
 
-                // Verificar si existe certificado (para auto_certificate)
+                // Verificar si existe certificado (solo de curso, no de módulo)
+                $course->certificate_id = null;
                 $course->certificate_exists = false;
-                if ($course->auto_certificate) {
-                    $course->certificate_exists = AcaCertificate::where('student_id', $student_id)
-                        ->where('course_id', $course->id)
-                        ->exists();
+                $cert = AcaCertificate::where('student_id', $student_id)
+                    ->where('course_id', $course->id)
+                    ->whereNull('module_id')
+                    ->first();
+                if ($cert) {
+                    $course->certificate_exists = true;
+                    $course->certificate_id = $cert->id;
                 }
 
                 // Obtener nota del estudiante (solo si no es auto_certificate)
@@ -658,6 +679,9 @@ class AcaStudentController extends Controller
             })
             ->exists();
 
+        // 1.1 Verificar si el estudiante tiene Premium VIP
+        $hasPremiumVip = $this->hasPremiumVipSubscription($studentId);
+
         // 2. Obtener los IDs de los cursos en los que el estudiante está matriculado
         $registeredCourseIds = AcaCapRegistration::where('student_id', $studentId)
             ->where(function ($query) use ($today) {
@@ -670,20 +694,35 @@ class AcaStudentController extends Controller
             ->pluck('course_id')
             ->toArray();
 
-        // 3. Obtener todos los cursos disponibles
+        // 3. Obtener los IDs de los cursos publicados como producto web activo.
+        // Un curso sin producto web no debe ofrecerse: no se puede cobrar en
+        // /carrito, que resuelve los items por onli_items.id.
+        $webProductCourseIds = OnliItem::query()
+            ->whereIn('entitie', ['Modules-Academic-Entities-AcaCourse', AcaCourse::class])
+            ->where('status', true)
+            ->whereNotNull('item_id')
+            ->pluck('item_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        // 4. Obtener todos los cursos disponibles
         $allCourses = AcaCourse::with('modules.themes.contents')
                 ->with('modality')
                 ->with('teacher.person')
+                ->with('landing:id,course_id,url_slug,is_published')
                 ->orderBy('id', 'DESC')
                 ->get();
 
-        // 4. Procesar cada curso para determinar 'can_view'
-        $coursesWithAccess = $allCourses->map(function ($course) use ($hasActiveSubscription, $registeredCourseIds) {
+        // 5. Procesar cada curso para determinar 'can_view'
+        $coursesWithAccess = $allCourses->map(function ($course) use ($hasActiveSubscription, $hasPremiumVip, $registeredCourseIds, $webProductCourseIds) {
             $canView = false; // Valor por defecto
 
-            // Condición 4: Si el tipo es 'Programas de especialización', NUNCA se puede ver (a menos que haya una lógica de compra/pago específica no indicada)
-            // Normalizar ambas cadenas (recomendado)
-            if (strcasecmp($course->type_description, 'Programas de Especialización') === 0) {
+            // Condición VIP: Si tiene Premium VIP, puede ver TODOS los cursos (incluido especialización)
+            if ($hasPremiumVip) {
+                $canView = true;
+            }
+            // Condición 4: Si el tipo es 'Programas de especialización', solo matriculados
+            elseif (strcasecmp($course->type_description, 'Programas de Especialización') === 0) {
                 if (in_array($course->id, $registeredCourseIds)) {
                     $canView = true;
                 } else {
@@ -703,13 +742,38 @@ class AcaStudentController extends Controller
                 $canView = true;
             }
 
+            // Un curso sin producto web activo no forma parte del catalogo que
+            // se ofrece en la web. Si el alumno ya tiene acceso, se conserva.
+            if (! $canView && ! in_array((int) $course->id, $webProductCourseIds, true)) {
+                return null;
+            }
+
             // Agrega el campo 'can_view' al objeto del curso
             $course->can_view = $canView;
 
+            // Datos de la landing publica del curso, para poder ofrecer mas
+            // informacion cuando el alumno no tiene acceso al contenido.
+            $course->url_slug = $course->landing?->url_slug;
+            $course->landing_published = (bool) ($course->landing?->is_published);
+            $course->unsetRelation('landing');
+
             return $course;
-        });
+        })->filter()->values();
 
         return $coursesWithAccess;
+    }
+
+    /**
+     * Verificar si el estudiante tiene una suscripción Premium VIP activa
+     */
+    private function hasPremiumVipSubscription(int $studentId): bool
+    {
+        return AcaStudentSubscription::where('student_id', $studentId)
+            ->where('status', true)
+            ->whereHas('subscription', function ($query) {
+                $query->where('title', 'LIKE', '%Premium VIP%');
+            })
+            ->exists();
     }
 
     public function checkCourseAccess(int $studentId, int $courseId): bool
@@ -720,6 +784,14 @@ class AcaStudentController extends Controller
         // Si el curso no existe, no hay acceso.
         if (!$course) {
             return false;
+        }
+
+        // Verificar si el estudiante tiene Premium VIP
+        $hasPremiumVip = $this->hasPremiumVipSubscription($studentId);
+
+        // Condición VIP: Si tiene Premium VIP, puede ver TODOS los cursos (incluido especialización)
+        if ($hasPremiumVip) {
+            return true;
         }
 
         // Condición 4: Si el tipo es 'Programas de especialización', NO pasa (a menos que haya lógica de compra/pago específica)
@@ -864,12 +936,24 @@ class AcaStudentController extends Controller
         ])
         ->findOrFail($id);
 
-        // Calcular progreso por tema
-        $module->themes->each(function ($theme) {
-            $totalContents = $theme->contents->reject(fn($c) => $c->is_file == 4)->count();
-            $viewedContents = $theme->student_history->unique('content_id')->count();
-            $theme->progress = $totalContents > 0 ? round(($viewedContents / $totalContents) * 100) : 0;
-        });
+        // Serializar fechas en ISO 8601 con zona horaria (-05:00) para que `new Date()`
+        // en el frontend calcule instantes correctos sin importar la zona del navegador.
+        if ($module->exam) {
+            $module->exam->date_start_iso = Carbon::parse($module->exam->date_start)->toIso8601String();
+            $module->exam->date_end_iso = Carbon::parse($module->exam->date_end)->toIso8601String();
+            $module->exam->student_exams->each(function ($se) {
+                $se->started_at = $se->started_at ? Carbon::parse($se->started_at)->toIso8601String() : null;
+                $se->finished_at = $se->finished_at ? Carbon::parse($se->finished_at)->toIso8601String() : null;
+            });
+        }
+        if ($module->mock_exam) {
+            $module->mock_exam->date_start_iso = Carbon::parse($module->mock_exam->date_start)->toIso8601String();
+            $module->mock_exam->date_end_iso = Carbon::parse($module->mock_exam->date_end)->toIso8601String();
+            $module->mock_exam->student_exams->each(function ($se) {
+                $se->started_at = $se->started_at ? Carbon::parse($se->started_at)->toIso8601String() : null;
+                $se->finished_at = $se->finished_at ? Carbon::parse($se->finished_at)->toIso8601String() : null;
+            });
+        }
 
         $course = AcaCourse::with('teacher.person')->where('id', $module->course_id)
             ->first();
@@ -888,6 +972,9 @@ class AcaStudentController extends Controller
         $nextModule = $currentModuleIndex !== false ? $courseModules->get($currentModuleIndex + 1) : null;
 
         $isEnrolled = false;
+        $isVipStudent = false;
+        $isMatriculated = false;
+        $isSpecializationCourse = strcasecmp($course->type_description, 'Programas de Especialización') === 0;
 
         $user = Auth::user();
         if ($user->hasAnyRole(['admin', 'Docente', 'Administrador'])) {
@@ -896,7 +983,10 @@ class AcaStudentController extends Controller
 
         if($studentId){
             $isEnrolled = $this->checkCourseAccess($studentId, $course->id);
-
+            $isVipStudent = $this->hasPremiumVipSubscription($studentId);
+            $isMatriculated = AcaCapRegistration::where('student_id', $studentId)
+                ->where('course_id', $course->id)
+                ->exists();
         }
 
         // Denegar acceso si no está matriculado y el curso no es gratis
@@ -904,11 +994,53 @@ class AcaStudentController extends Controller
             abort(403, 'No tienes acceso a este curso.');
         }
 
+        // Filtrar contenido según reglas de acceso
+        $module->themes->each(function ($theme) use ($isVipStudent, $isMatriculated, $isSpecializationCourse, $user) {
+            $theme->contents = $theme->contents->filter(function ($content) use ($isVipStudent, $isMatriculated, $isSpecializationCourse, $user) {
+                // Admin/Docentes ven todo
+                if ($user->hasAnyRole(['admin', 'Docente', 'Administrador'])) {
+                    return true;
+                }
+
+                // Zoom/Meet (is_file = 3)
+                if ($content->is_file == 3) {
+                    // VIP en programa de especialización NO ve Zoom/Meet
+                    if ($isVipStudent && $isSpecializationCourse) {
+                        return false;
+                    }
+                    // Matriculados SÍ ven Zoom/Meet
+                    return true;
+                }
+
+                // Webinars (is_file = 5)
+                if ($content->is_file == 5) {
+                    // Matriculados NO ven webinars (ellos tienen Zoom/Meet)
+                    if ($isMatriculated) {
+                        return false;
+                    }
+                    // VIP SÍ ven webinars
+                    return true;
+                }
+
+                // Todo lo demás (videos, PDFs, links, exámenes) siempre visible
+                return true;
+            })->values();
+        });
+
+        // Recalcular progreso después del filtrado
+        $module->themes->each(function ($theme) {
+            $totalContents = $theme->contents->reject(fn($c) => $c->is_file == 4)->count();
+            $viewedContents = $theme->student_history->unique('content_id')->count();
+            $theme->progress = $totalContents > 0 ? round(($viewedContents / $totalContents) * 100) : 0;
+        });
+
         return Inertia::render('Academic::Students/Themes', [
             'course' => $course,
             'module' => $module,
             'previousModule' => $previousModule,
             'nextModule' => $nextModule,
+            'isVipStudent' => $isVipStudent,
+            'isSpecializationCourse' => $isSpecializationCourse,
         ]);
     }
 
@@ -1734,7 +1866,7 @@ class AcaStudentController extends Controller
         }
 
         try {
-            \Mail::to($person->email)->send(new \App\Mail\ThankYouAccessMail($person));
+            \Mail::to($person->email)->queue(new \App\Mail\ThankYouAccessMail($person));
 
             return response()->json([
                 'success' => true,
@@ -1767,7 +1899,7 @@ class AcaStudentController extends Controller
                 ['personId' => $person->id]
             );
 
-            \Mail::to($person->email)->send(new \App\Mail\StudentPasswordRecoveryMail($person, $resetUrl));
+            \Mail::to($person->email)->queue(new \App\Mail\StudentPasswordRecoveryMail($person, $resetUrl));
 
             return response()->json([
                 'success' => true,
@@ -1779,6 +1911,62 @@ class AcaStudentController extends Controller
                 'message' => 'Error al enviar correo: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Cambia la contraseña de un estudiante directamente desde el panel.
+     * Solo roles Administrador/admin. Requiere confirmar la contraseña del usuario actual.
+     */
+    public function setStudentPassword(Request $request, $personId)
+    {
+        $currentUser = Auth::user();
+
+        if (! $currentUser->hasAnyRole(['Administrador', 'admin'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Solo un Administrador puede cambiar la contraseña de un estudiante.',
+            ], 403);
+        }
+
+        $this->validate(
+            $request,
+            [
+                'password' => 'required|string',
+                'password_confirmation' => 'required|same:password',
+                'admin_password' => 'required|string',
+            ],
+            [
+                'password.required' => 'La nueva contraseña es obligatoria.',
+                'password_confirmation.required' => 'Debes repetir la contraseña.',
+                'password_confirmation.same' => 'Las contraseñas no coinciden.',
+                'admin_password.required' => 'Debes ingresar tu contraseña para validar la acción.',
+            ]
+        );
+
+        if (! Hash::check($request->get('admin_password'), $currentUser->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'La contraseña actual ingresada no es correcta.',
+            ], 422);
+        }
+
+        $studentUser = User::where('person_id', $personId)->first();
+
+        if (! $studentUser) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El estudiante no tiene un usuario registrado.',
+            ], 422);
+        }
+
+        $studentUser->update([
+            'password' => Hash::make($request->get('password')),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Contraseña del estudiante actualizada correctamente.',
+        ]);
     }
 
     public function passwordRecoveryForm(Request $request, $personId)

@@ -27,6 +27,7 @@ use Modules\Academic\Entities\AcaStudent;
 use Modules\Academic\Entities\AcaStudentSubscription;
 use Modules\Onlineshop\Entities\OnliSaleDetail;
 use Illuminate\Support\Facades\Mail;
+use Modules\Onlineshop\Jobs\ProcessCompra;
 
 class MercadopagoController extends Controller
 {
@@ -318,15 +319,17 @@ class MercadopagoController extends Controller
                     'phone' => $person->telephone,
                     'email' => $person->email,
                     'nota_sale_id' => $sale_note->id,
-                    'utm_source'     => session('traffic_tracking.utm_source'),
-                    'utm_medium'     => session('traffic_tracking.utm_medium'),
-                    'utm_campaign'   => session('traffic_tracking.utm_campaign'),
-                    'utm_term'       => session('traffic_tracking.utm_term'),
-                    'utm_content'    => session('traffic_tracking.utm_content'),
-                    'gclid'          => session('traffic_tracking.gclid'),
-                    'referer'        => session('traffic_tracking.referer'),
-                    'landing_url'    => session('traffic_tracking.landing_url'),
-                    'traffic_source' => session('traffic_tracking.traffic_source'),
+                    'utm_source'     => $request->get('utm_source', session('traffic_tracking.utm_source')),
+                    'utm_medium'     => $request->get('utm_medium', session('traffic_tracking.utm_medium')),
+                    'utm_campaign'   => $request->get('utm_campaign', session('traffic_tracking.utm_campaign')),
+                    'utm_term'       => $request->get('utm_term', session('traffic_tracking.utm_term')),
+                    'utm_content'    => $request->get('utm_content', session('traffic_tracking.utm_content')),
+                    'utm_id'         => $request->get('utm_id', session('traffic_tracking.utm_id')),
+                    'fbclid'         => $request->get('fbclid', session('traffic_tracking.fbclid')),
+                    'gclid'          => $request->get('gclid', session('traffic_tracking.gclid')),
+                    'referer'        => $request->get('referer', session('traffic_tracking.referer')),
+                    'landing_url'    => $request->get('landing_url', session('traffic_tracking.landing_url')),
+                    'traffic_source' => $request->get('traffic_source', session('traffic_tracking.traffic_source')),
                 ]);
 
                 $studentSubscribed = AcaStudentSubscription::where('student_id', $student->id)
@@ -423,7 +426,7 @@ class MercadopagoController extends Controller
                 if($payment->status == 'approved'){
                     ////enviar correo de agradecimiento///
                     Mail::to($sale->email)
-                        ->send(new CratitudeCoursePurchase(OnliSale::with('details.course')->where('id', $sale->id)->first()));
+                        ->queue(new CratitudeCoursePurchase(OnliSale::with('details.course')->where('id', $sale->id)->first()));
 
                 }
 
@@ -437,6 +440,11 @@ class MercadopagoController extends Controller
             $url = route('aca_mycourses');
 
             $payment = $res['payment'];
+
+            // Enviar datos de la compra a N8N via Integrationhub (async)
+            if ($payment->status === 'approved') {
+                ProcessCompra::dispatch($sale->id, 'carrito_autenticado');
+            }
 
             return response()->json([
                 'status' => $payment->status,
