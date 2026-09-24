@@ -2,15 +2,6 @@
     <section id="about-part" class="pt-80 pb-60">
         <div class="container">
             <div class="erc-habout">
-                {{-- ======== Columna visual ======== --}}
-                <div class="erc-habout__media" data-reveal>
-                    <div class="erc-habout__imgwrap">
-                        <img src="{{ asset('storage/' . $about[5]->content) }}" alt="{{ $about[1]->content }}"
-                            class="erc-habout__img"
-                            onerror="this.onerror=null;this.src='{{ asset('themes/webpage/images/logo-2.png') }}';this.classList.add('erc-habout__img--fallback');">
-                    </div>
-                    <div class="erc-habout__accent"></div>
-                </div>
 
                 {{-- ======== Columna de contenido ======== --}}
                 <div data-reveal data-reveal-delay="120">
@@ -26,6 +17,16 @@
                             Ver servicios
                         </a>
                     </div>
+                </div>
+                
+                {{-- ======== Columna visual ======== --}}
+                <div class="erc-habout__media" data-reveal>
+                    <div class="erc-habout__imgwrap">
+                        <img src="{{ asset('storage/' . $about[5]->content) }}" alt="{{ $about[1]->content }}"
+                            class="erc-habout__img"
+                            onerror="this.onerror=null;this.src='{{ asset('themes/webpage/images/logo-2.png') }}';this.classList.add('erc-habout__img--fallback');">
+                    </div>
+                    <div class="erc-habout__accent"></div>
                 </div>
             </div>
         </div> <!-- container -->
