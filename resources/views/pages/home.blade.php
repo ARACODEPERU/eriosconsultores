@@ -1,214 +1,423 @@
 @extends('layouts.webpage')
 
-@section('meta_title', 'ARACODE Smart Solutions | Software Empresarial, IA y Automatización')
-@section('meta_description', 'Empresa peruana especializada en desarrollo de software empresarial, automatización de procesos, inteligencia artificial y soluciones SaaS.')
+@section('meta_title', 'Inicio')
+@section('meta_description', 'ERIOS CONSULTORES: instituto de capacitación profesional. Cursos, diplomados y consultoría para potenciar tu carrera e impulsar tu empresa.')
+
+@section('page_styles')
+<style>
+    /* ============================================================
+       ERIOS · Home moderna (tarjetas, sección headers, reveal)
+       ============================================================ */
+    .erc-sec-head { text-align: center; max-width: 720px; margin: 0 auto 46px; padding: 0 15px; }
+    .erc-sec-head--left { text-align: left; margin-left: 0; }
+    .erc-sec-eyebrow {
+        display: inline-block;
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 700;
+        font-size: 14px;
+        letter-spacing: 2.5px;
+        text-transform: uppercase;
+        color: #004aad;
+        position: relative;
+        padding-bottom: 12px;
+        margin-bottom: 12px;
+    }
+    .erc-sec-eyebrow::before { content: ''; position: absolute; bottom: 0; left: 0; width: 35px; height: 2px; background: #ffc600; }
+    .erc-sec-head:not(.erc-sec-head--left) .erc-sec-eyebrow::after {
+        content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(8px); width: 35px; height: 2px; background: #ffc600;
+    }
+    .erc-sec-head:not(.erc-sec-head--left) .erc-sec-eyebrow::before { left: 50%; transform: translateX(calc(-100% - 8px)); }
+    .erc-sec-head h2 { font-size: 36px; font-weight: 700; color: #1d2025; line-height: 1.3; margin-bottom: 14px; }
+    .erc-sec-head p { font-size: 16px; line-height: 28px; color: #505050; margin: 0; }
+
+    /* ---- Botones ---- */
+    .erc-btn {
+        display: inline-flex; align-items: center; gap: 8px;
+        font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 14.5px;
+        padding: 13px 28px; border-radius: 5px; text-decoration: none; transition: all .35s ease;
+    }
+    .erc-btn:hover { text-decoration: none; transform: translateY(-2px); }
+    .erc-btn--yellow { background: #ffc600; color: #07294d; }
+    .erc-btn--yellow:hover { background: #004aad; color: #ffc600; }
+    .erc-btn--ghost { border: 2px solid #fff; color: #fff; }
+    .erc-btn--ghost:hover { background: #ffc600; border-color: #ffc600; color: #07294d; }
+    .erc-btn--outline { border: 2px solid #004aad; color: #004aad; }
+    .erc-btn--outline:hover { background: #004aad; color: #fff; }
+
+    /* ---- Hero slider ---- */
+    .erc-hero__content { position: relative; z-index: 2; padding: 150px 0 170px; }
+    .erc-hero__badge {
+        display: inline-flex; align-items: center; gap: 9px;
+        background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.25);
+        backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+        color: #fff; font-family: 'Montserrat', sans-serif; font-weight: 600; font-size: 13px;
+        letter-spacing: 1.5px; text-transform: uppercase;
+        padding: 8px 18px; border-radius: 50px; margin-bottom: 22px;
+    }
+    .erc-hero__badge i { color: #ffc600; }
+    .erc-hero__title {
+        color: #fff; font-size: 52px; font-weight: 700; line-height: 1.15;
+        margin-bottom: 18px; max-width: 640px;
+        text-shadow: 0 2px 24px rgba(7, 41, 77, 0.45);
+    }
+    .erc-hero__text { color: rgba(255,255,255,.88); font-size: 17px; line-height: 29px; max-width: 560px; margin-bottom: 30px; }
+    .erc-hero__actions { display: flex; gap: 14px; flex-wrap: wrap; }
+    .erc-hero__actions .erc-btn--yellow { box-shadow: 0 10px 26px rgba(255, 198, 0, 0.35); }
+    .erc-slick-dots { position: absolute; bottom: 34px; left: 0; right: 0; text-align: center; z-index: 5; }
+    .erc-slick-dots button { background: rgba(255,255,255,.45) !important; border: none; border-radius: 50px; width: 26px; height: 4px; padding: 0; transition: all .3s ease; }
+    .erc-slick-dots .slick-active button { background: #ffc600 !important; width: 40px; }
+
+    .erc-hero__overlay {
+        position: absolute; inset: 0;
+        background: linear-gradient(100deg, rgba(7, 41, 77, 0.92) 0%, rgba(7, 41, 77, 0.72) 45%, rgba(7, 41, 77, 0.25) 100%);
+    }
+    .single-slider { position: relative; }
+
+    /* ---- Sobre (home) ---- */
+    .erc-habout { display: grid; grid-template-columns: minmax(0,5fr) minmax(0,6fr); gap: 50px; align-items: center; }
+    @media (max-width: 991px) { .erc-habout { grid-template-columns: 1fr; } }
+    .erc-habout__media { position: relative; }
+    .erc-habout__imgwrap {
+        border-radius: 16px; overflow: hidden;
+        background: linear-gradient(135deg, #004aad 0%, #2f6fd6 60%, #4a86e8 100%);
+        box-shadow: 0 14px 40px rgba(0, 74, 173, 0.18);
+    }
+    .erc-habout__img { width: 100%; height: 400px; object-fit: cover; display: block; }
+    .erc-habout__img--fallback { width: auto; max-width: 60%; margin: 0 auto; height: 400px; object-fit: contain; filter: brightness(0) invert(1); opacity: .92; }
+    .erc-habout__accent { position: absolute; right: -20px; bottom: -20px; width: 55%; height: 55%; border: 3px solid #ffc600; border-radius: 16px; z-index: -1; }
+    .erc-habout__title { font-size: 36px; font-weight: 700; color: #1d2025; line-height: 1.25; margin: 0 0 16px; }
+    .erc-habout__text { font-size: 15.5px; line-height: 27px; color: #505050; margin: 0 0 14px; }
+    .erc-habout__actions { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 26px; }
+
+    /* ---- Video/beneficios ---- */
+    .erc-video-band { position: relative; background: linear-gradient(135deg, #07294d 0%, #0b3a6b 60%, #0e4a8f 100%); padding: 90px 0; overflow: hidden; }
+    .erc-video-band::before { content: ''; position: absolute; width: 320px; height: 320px; border-radius: 50%; border: 2px solid rgba(255,198,0,.12); top: -120px; right: -80px; }
+    .erc-video-band::after { content: ''; position: absolute; width: 420px; height: 420px; border-radius: 50%; border: 2px solid rgba(255,198,0,.12); bottom: -180px; left: -120px; }
+    .erc-video-band .container { position: relative; z-index: 1; }
+    .erc-video__playwrap { display: flex; justify-content: center; align-items: center; }
+    .erc-video__play {
+        width: 92px; height: 92px; border-radius: 50%; background: rgba(255,255,255,.08);
+        border: 1px solid rgba(255,255,255,.25); color: #ffc600; font-size: 30px;
+        display: flex; align-items: center; justify-content: center; text-decoration: none;
+        position: relative; transition: all .35s ease;
+    }
+    .erc-video__play::before { content: ''; position: absolute; inset: -14px; border-radius: 50%; border: 2px solid rgba(255,198,0,.35); animation: erc-pulse 2s ease-out infinite; }
+    .erc-video__play:hover { background: #ffc600; color: #07294d; transform: scale(1.06); }
+    @keyframes erc-pulse { 0% { transform: scale(.9); opacity: 1; } 100% { transform: scale(1.25); opacity: 0; } }
+    .erc-video__note { color: rgba(255,255,255,.75); font-size: 13px; letter-spacing: 1px; text-transform: uppercase; font-family: 'Montserrat', sans-serif; margin-top: 20px; text-align: center; }
+    .erc-vfeat-grid { display: grid; grid-template-columns: 1fr; gap: 18px; }
+    .erc-vfeat {
+        display: flex; gap: 16px; align-items: flex-start;
+        background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1);
+        border-radius: 14px; padding: 20px 22px; transition: all .35s ease;
+    }
+    .erc-vfeat:hover { background: rgba(255,255,255,.09); border-color: rgba(255,198,0,.45); transform: translateX(6px); }
+    .erc-vfeat__icon {
+        flex: none; width: 48px; height: 48px; border-radius: 12px;
+        background: rgba(255,198,0,.14); color: #ffc600;
+        display: flex; align-items: center; justify-content: center; font-size: 20px; transition: all .35s ease;
+    }
+    .erc-vfeat:hover .erc-vfeat__icon { background: #ffc600; color: #07294d; }
+    .erc-vfeat h4 { color: #fff; font-size: 17px; font-weight: 700; margin: 0 0 6px; }
+    .erc-vfeat p { color: rgba(255,255,255,.72); font-size: 14px; line-height: 24px; margin: 0; }
+
+    /* ---- Docentes: grid base (el detalle de tarjetas vive en el componente) ---- */
+    .erc-teachers { gap: 26px; }
+    @media (max-width: 991px) { .erc-teachers { grid-template-columns: repeat(2, minmax(0,1fr)) !important; } }
+    @media (max-width: 575px) { .erc-teachers { grid-template-columns: 1fr !important; } }
+
+    /* ---- Testimonios ---- */
+    .erc-testi-band { position: relative; background: linear-gradient(135deg, #004aad 0%, #2f6fd6 60%, #4a86e8 100%); padding: 90px 0; overflow: hidden; }
+    .erc-testi-band::before { content: ''; position: absolute; width: 380px; height: 380px; border-radius: 50%; border: 2px solid rgba(255,255,255,.15); top: -140px; left: -100px; }
+    .erc-testi-band .erc-sec-eyebrow { color: #ffc600; }
+    .erc-testi-band .erc-sec-head h2 { color: #fff; }
+    .erc-testi-band .erc-sec-head p { color: rgba(255,255,255,.78); }
+    .erc-testi-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 26px; }
+    @media (max-width: 991px) { .erc-testi-grid { grid-template-columns: 1fr; } }
+    .erc-testi-card {
+        background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.15);
+        border-radius: 16px; padding: 28px 26px; position: relative;
+        display: flex; flex-direction: column; transition: all .35s ease;
+    }
+    .erc-testi-card:hover { transform: translateY(-6px); background: rgba(255,255,255,.11); border-color: rgba(255,198,0,.5); }
+    .erc-testi-card__quote {
+        position: absolute; top: -18px; right: 24px; width: 44px; height: 44px; border-radius: 12px;
+        background: #ffc600; color: #07294d; display: flex; align-items: center; justify-content: center; font-size: 18px;
+        box-shadow: 0 8px 20px rgba(255,198,0,.4);
+    }
+    .erc-testi-card__text { color: #fff; font-size: 14.5px; line-height: 25px; margin: 0 0 18px; font-style: italic; }
+    .erc-testi-card__author { display: flex; align-items: center; gap: 12px; margin-top: auto; }
+    .erc-testi-card__avatar {
+        flex: none; width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,.5);
+    }
+    .erc-testi-card__avatar--fallback { padding: 12px; filter: brightness(0) invert(1); background: rgba(255,255,255,.15); }
+    .erc-testi-card__name { color: #fff; font-size: 15px; font-weight: 700; margin: 0; }
+    .erc-testi-card__place { color: rgba(255,255,255,.7); font-size: 13px; margin: 0; }
+
+    @media (max-width: 575px) {
+        .erc-hero__title { font-size: 34px; }
+        .erc-sec-head h2, .erc-habout__title { font-size: 27px; }
+    }
+</style>
+@endsection
 
 @section('content')
-    {{-- Navbar --}}
-    @include('components.v2.navbar')
 
-    {{-- Hero --}}
-    @include('components.v2.hero')
+    <!--====== SLIDER PART START ======-->
+    <x-slider />
+    <!--====== SLIDER PART ENDS ======-->
 
-    {{-- Client Logos --}}
-    <section class="py-12 bg-ara-slate-50 border-y border-ara-slate-100">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <p class="text-center text-ara-slate-400 text-sm font-medium mb-8 reveal">Empresas que confían en nosotros</p>
-            <div class="overflow-hidden">
-                <div class="flex items-center justify-center flex-wrap gap-8 md:gap-12">
-                    @php
-                        $clients = ['brise', 'iprase', 'cpa', 'horizonte', 'orbe', 'cprod', 'jrrss', 'zoelife', 'celmovil', 'cap', 'kentha'];
-                    @endphp
-                    @foreach($clients as $client)
-                        <img 
-                            src="{{ asset('themes/webpage/images/customers/' . $client . '.png') }}" 
-                            alt="Cliente {{ ucfirst($client) }}" 
-                            class="ara-client-logo h-10 md:h-12 object-contain"
-                            loading="lazy"
-                        >
-                    @endforeach
+    <!--====== CATEGORY PART START ======-->
+    {{-- <x-category-courses-slider /> --}}
+    <!--====== CATEGORY PART ENDS ======-->
+
+    <!--====== ABOUT PART START ======-->
+    <x-about-one />
+    <!--====== ABOUT PART ENDS ======-->
+
+    <!--====== APPLY PART START ======-->
+    <x-services-one />
+    <!--====== APPLY PART ENDS ======-->
+
+    <!--====== COURSE PART START ======-->
+    {{-- <x-list-courses-carousel /> --}}
+    <!--====== COURSE PART ENDS ======-->
+
+    <!--====== VIDEO BENEFITS PART START ======-->
+    <x-benefits-video />
+    <!--====== VIDEO BENEFITS PART ENDS ======-->
+
+    <!--====== TEACHERS PART START ======-->
+    <x-teachers :limit="6" :show-button="true" />
+    <!--====== TEACHERS PART ENDS ======-->
+
+    <!--====== PUBLICATION PART START ======-->
+
+    {{-- <section id="publication-part" class="pt-115 pb-120 gray-bg">
+        <div class="container">
+            <div class="row align-items-end">
+                <div class="col-lg-6 col-md-8 col-sm-7">
+                    <div class="section-title pb-60">
+                        <h5>Publications</h5>
+                        <h2>From Store </h2>
+                    </div> <!-- section title -->
                 </div>
-            </div>
-        </div>
-    </section>
-
-    {{-- Services Section --}}
-    <section class="py-20 lg:py-28 bg-white">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <x-v2.section-heading
-                badge="Nuestros Servicios"
-                title="Soluciones que transforman negocios"
-                subtitle="Ofrecemos un ecosistema completo de productos y servicios tecnológicos diseñados para impulsar la digitalización de tu empresa."
-                :light="false"
-            />
-
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                @php
-                    $services = [
-                        [
-                            'icon' => '<svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>',
-                            'title' => 'Desarrollo de Software',
-                            'description' => 'Creamos soluciones de software a medida optimizadas para las necesidades específicas de tu empresa.',
-                            'href' => route('solucion_desarrollo'),
-                        ],
-                        [
-                            'icon' => '<svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>',
-                            'title' => 'Automatización',
-                            'description' => 'Automatizamos procesos repetitivos para reducir errores, ahorrar tiempo y aumentar la productividad.',
-                            'href' => route('soluciones'),
-                        ],
-                        [
-                            'icon' => '<svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>',
-                            'title' => 'Inteligencia Artificial',
-                            'description' => 'Integramos IA en cada solución para analizar datos, automatizar decisiones y optimizar operaciones.',
-                            'href' => route('soluciones'),
-                        ],
-                        [
-                            'icon' => '<svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>',
-                            'title' => 'Plataformas Digitales',
-                            'description' => 'Desarrollamos plataformas SaaS escalables que conectan procesos, usuarios y datos en un solo ecosistema.',
-                            'href' => route('soluciones'),
-                        ],
-                        [
-                            'icon' => '<svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/></svg>',
-                            'title' => 'Facturación Electrónica',
-                            'description' => 'Solución completa para la emisión de comprobantes electrónicos, integración con SUNAT y gestión comercial.',
-                            'href' => route('solucion_facturacion'),
-                        ],
-                        [
-                            'icon' => '<svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>',
-                            'title' => 'Transformación Digital',
-                            'description' => 'Te acompañamos en todo el proceso de digitalización, desde la estrategia hasta la implementación.',
-                            'href' => route('soluciones'),
-                        ],
-                    ];
-                @endphp
-
-                @foreach($services as $index => $service)
-                    <x-v2.service-card
-                        :icon="$service['icon']"
-                        :title="$service['title']"
-                        :description="$service['description']"
-                        :href="$service['href']"
-                        :delay="$index + 1"
-                    />
-                @endforeach
-            </div>
-        </div>
-    </section>
-
-    {{-- Featured Products --}}
-    <section class="py-20 lg:py-28 bg-ara-slate-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <x-v2.section-heading
-                badge="Productos Destacados"
-                title="Soluciones listas para usar"
-                subtitle="Descubre nuestros productos diseñados para impulsar la digitalización de tu empresa."
-                :light="false"
-            />
-
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {{-- KAPTA LMS --}}
-                <x-v2.product-card
-                    title="KAPTA LMS"
-                    description="Plataforma SaaS para gestión y formación educativa."
-                    :href="route('solucion_kapta')"
-                    image="{{ asset('themes/webpage/images/misc/s1.jpg') }}"
-                    badge="Plataforma SaaS"
-                    :features="['Gestión de cursos y módulos', 'Aulas virtuales con contenido multimedia', 'Certificación automática', 'Panel administrativo con métricas']"
-                    :delay="1"
-                />
-
-                {{-- Facturación --}}
-                <x-v2.product-card
-                    title="Facturación Electrónica"
-                    description="Solución completa para empresas que necesitan gestionar ventas, facturación y procesos comerciales."
-                    :href="route('solucion_facturacion')"
-                    image="{{ asset('themes/webpage/images/misc/s2.jpg') }}"
-                    badge="SUNAT"
-                    :features="['Facturas, boletas y notas de crédito', 'Integración directa con SUNAT', 'Panel comercial con reportes', 'XML y PDF automáticos']"
-                    :delay="2"
-                />
-            </div>
-        </div>
-    </section>
-
-    {{-- Value Proposition --}}
-    <section class="py-20 lg:py-28 bg-ara-navy relative overflow-hidden">
-        <div class="absolute top-0 right-0 w-96 h-96 bg-ara-blue/10 rounded-full filter blur-3xl pointer-events-none"></div>
-        <div class="absolute bottom-0 left-0 w-64 h-64 bg-ara-green/10 rounded-full filter blur-3xl pointer-events-none"></div>
-        
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-                <div>
-                    <x-v2.section-heading
-                        badge="Propuesta de Valor"
-                        title="¿Qué nos hace diferentes?"
-                        subtitle="En ARACODE, ofrecemos soluciones digitales potenciadas con IA para tu empresa o institución."
-                        align="left"
-                    />
-
-                    <div class="space-y-8 mt-12">
-                        <x-v2.feature-item
-                            icon='<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>'
-                            title="IA integrada en cada solución"
-                            description="Integramos inteligencia artificial en cada una de nuestras soluciones para automatizar procesos y optimizar decisiones."
-                            :delay="1"
-                        />
-
-                        <x-v2.feature-item
-                            icon='<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>'
-                            title="Ecosistema de productos + servicios"
-                            description="Ofrecemos productos listos como LMS, CMS y Facturación Electrónica, junto con servicios a medida."
-                            :delay="2"
-                        />
-
-                        <x-v2.feature-item
-                            icon='<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>'
-                            title="Escalabilidad y adaptabilidad"
-                            description="Software que se adapta a tu empresa, con arquitectura modular que permite añadir funciones conforme evolucionen tus necesidades."
-                            :delay="3"
-                        />
-
-                        <x-v2.feature-item
-                            icon='<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/></svg>'
-                            title="Acompañamiento y soporte constante"
-                            description="Brindamos capacitación y soporte post-implementación, con una relación cercana y profesional con cada cliente."
-                            :delay="4"
-                        />
-                    </div>
+                <div class="col-lg-6 col-md-4 col-sm-5">
+                    <div class="products-btn text-right pb-60">
+                        <a href="#" class="main-btn">All Products</a>
+                    </div> <!-- products btn -->
                 </div>
-
-                <div class="hidden lg:block">
-                    <div class="relative">
-                        <div class="absolute inset-0 bg-gradient-to-r from-ara-blue/20 to-ara-green/20 rounded-2xl transform rotate-3"></div>
-                        <img 
-                            src="{{ asset('themes/webpage/images/about.jpg') }}" 
-                            alt="ARACODE Smart Solutions" 
-                            class="relative rounded-2xl shadow-2xl w-full object-cover"
-                            loading="lazy"
-                        >
-                    </div>
+            </div> <!-- row -->
+            <div class="row justify-content-center">
+                <div class="col-lg-3 col-md-6 col-sm-8">
+                    <div class="single-publication mt-30 text-center">
+                        <div class="image">
+                            <img src="images/publication/p-1.jpg" alt="Publication">
+                            <div class="add-cart">
+                                <ul>
+                                    <li><a href="#"><i class="fa fa-shopping-cart"></i></a></li>
+                                    <li><a href="#"><i class="fa fa-heart-o"></i></a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="content pt-10">
+                            <h5 class="book-title"><a href="#">Stones The Road </a></h5>
+                            <p class="writer-name"><span>By</span> Scott Trench</p>
+                            <div class="price-btn d-flex align-items-center justify-content-between">
+                                <div class="price pt-20">
+                                    <span class="discount-price">$250</span>
+                                    <span class="normal-price">$200</span>
+                                </div>
+                                <div class="button pt-10">
+                                    <a href="#" class="main-btn"><i class="fa fa-cart-plus"></i> Buy Now</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div> <!-- single publication -->
                 </div>
-            </div>
-        </div>
-    </section>
+                <div class="col-lg-3 col-md-6 col-sm-8">
+                    <div class="single-publication mt-30 text-center">
+                        <div class="image">
+                            <img src="images/publication/p-2.jpg" alt="Publication">
+                            <div class="add-cart">
+                                <ul>
+                                    <li><a href="#"><i class="fa fa-shopping-cart"></i></a></li>
+                                    <li><a href="#"><i class="fa fa-heart-o"></i></a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="content pt-10">
+                            <h5 class="book-title"><a href="#">The Stranded </a></h5>
+                            <p class="writer-name"><span>By</span> Scott Trench</p>
+                            <div class="price-btn d-flex align-items-center justify-content-between">
+                                <div class="price pt-20">
+                                    <span class="discount-price">$250</span>
+                                    <span class="normal-price">$200</span>
+                                </div>
+                                <div class="button pt-10">
+                                    <a href="#" class="main-btn"><i class="fa fa-cart-plus"></i> Buy Now</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div> <!-- single publication -->
+                </div>
+                <div class="col-lg-3 col-md-6 col-sm-8">
+                    <div class="single-publication mt-30 text-center">
+                        <div class="image">
+                            <img src="images/publication/p-3.jpg" alt="Publication">
+                            <div class="add-cart">
+                                <ul>
+                                    <li><a href="#"><i class="fa fa-shopping-cart"></i></a></li>
+                                    <li><a href="#"><i class="fa fa-heart-o"></i></a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="content pt-10">
+                            <h5 class="book-title"><a href="#">The Sicario </a></h5>
+                            <p class="writer-name"><span>By</span> Scott Trench</p>
+                            <div class="price-btn d-flex align-items-center justify-content-between">
+                                <div class="price pt-20">
+                                    <span class="discount-price">$250</span>
+                                    <span class="normal-price">$200</span>
+                                </div>
+                                <div class="button pt-10">
+                                    <a href="#" class="main-btn"><i class="fa fa-cart-plus"></i> Buy Now</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div> <!-- single publication -->
+                </div>
+                <div class="col-lg-3 col-md-6 col-sm-8">
+                    <div class="single-publication mt-30 text-center">
+                        <div class="image">
+                            <img src="images/publication/p-4.jpg" alt="Publication">
+                            <div class="add-cart">
+                                <ul>
+                                    <li><a href="#"><i class="fa fa-shopping-cart"></i></a></li>
+                                    <li><a href="#"><i class="fa fa-heart-o"></i></a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="content pt-10">
+                            <h5 class="book-title"><a href="#">There Were None </a></h5>
+                            <p class="writer-name"><span>By</span> Scott Trench</p>
+                            <div class="price-btn d-flex align-items-center justify-content-between">
+                                <div class="price pt-20">
+                                    <span class="discount-price">$250</span>
+                                    <span class="normal-price">$200</span>
+                                </div>
+                                <div class="button pt-10">
+                                    <a href="#" class="main-btn"><i class="fa fa-cart-plus"></i> Buy Now</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div> <!-- single publication -->
+                </div>
+            </div> <!-- row -->
+        </div> <!-- container -->
+    </section> --}}
 
-    {{-- Stats Section --}}
-    <section class="py-16 bg-white border-y border-ara-slate-100">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-8">
-                <x-v2.stats-counter number="100" suffix="+" label="Empresas Atendidas" :delay="1" />
-                <x-v2.stats-counter number="5" suffix="+" label="Años de Experiencia" :delay="2" />
-                <x-v2.stats-counter number="500" suffix="+" label="Usuarios Activos" :delay="3" />
-                <x-v2.stats-counter number="99" suffix="%" label="Uptime Garantizado" :delay="4" />
-            </div>
-        </div>
-    </section>
+    <!--====== PUBLICATION PART ENDS ======-->
 
-    {{-- CTA Section --}}
-    <x-v2.cta-section />
+    <!--====== TEASTIMONIAL PART START ======-->
+    <x-testimonial />
+    <!--====== TEASTIMONIAL PART ENDS ======-->
 
-    {{-- Footer --}}
-    @include('components.v2.footer')
-@endsection
+    <!--====== NEWS PART START ======-->
+
+    {{-- <section id="news-part" class="pt-115 pb-110">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="section-title pb-50">
+                        <h5>Latest News</h5>
+                        <h2>From the news</h2>
+                    </div> <!-- section title -->
+                </div>
+            </div> <!-- row -->
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="single-news mt-30">
+                        <div class="news-thum pb-25">
+                            <img src="{{ asset('themes/webpage/images/news/n-1.jpg') }}" alt="News">
+                        </div>
+                        <div class="news-cont">
+                            <ul>
+                                <li><a href="#"><i class="fa fa-calendar"></i>2 December 2018 </a></li>
+                                <li><a href="#"> <span>By</span> Adam linn</a></li>
+                            </ul>
+                            <a href="blog-single.html"><h3>Tips to grade high cgpa in university life</h3></a>
+                            <p>Lorem ipsum gravida nibh vel velit auctor aliquetn sollicitudirem quibibendum auci elit cons equat ipsutis sem nibh id elit. Duis sed odio sit amet nibh vulputate cursus a sit amet mauris. Morbi accumsan ipsum velit. Nam nec tellus a odio tincidunt .</p>
+                        </div>
+                    </div> <!-- single news -->
+                </div>
+                <div class="col-lg-6">
+                    <div class="single-news news-list">
+                        <div class="row">
+                            <div class="col-sm-4">
+                                <div class="news-thum mt-30">
+                                    <img src="{{ asset('themes/webpage/images/news/n-1.jpg') }}" alt="News">
+                                </div>
+                            </div>
+                            <div class="col-sm-8">
+                                <div class="news-cont mt-30">
+                                    <ul>
+                                        <li><a href="#"><i class="fa fa-calendar"></i>2 December 2018 </a></li>
+                                        <li><a href="#"> <span>By</span> Adam linn</a></li>
+                                    </ul>
+                                    <a href="blog-single.html"><h3>Intellectual communication</h3></a>
+                                    <p>Gravida nibh vel velit auctor aliquetn sollicitudirem quibibendum auci elit cons  vel.</p>
+                                </div>
+                            </div>
+                        </div> <!-- row -->
+                    </div> <!-- single news -->
+                    <div class="single-news news-list">
+                        <div class="row">
+                            <div class="col-sm-4">
+                                <div class="news-thum mt-30">
+                                    <img src="{{ asset('themes/webpage/images/news/n-1.jpg') }}" alt="News">
+                                </div>
+                            </div>
+                            <div class="col-sm-8">
+                                <div class="news-cont mt-30">
+                                    <ul>
+                                        <li><a href="#"><i class="fa fa-calendar"></i>2 December 2018 </a></li>
+                                        <li><a href="#"> <span>By</span> Adam linn</a></li>
+                                    </ul>
+                                    <a href="blog-single.html"><h3>Study makes you perfect</h3></a>
+                                    <p>Gravida nibh vel velit auctor aliquetn sollicitudirem quibibendum auci elit cons  vel.</p>
+                                </div>
+                            </div>
+                        </div> <!-- row -->
+                    </div> <!-- single news -->
+                    <div class="single-news news-list">
+                        <div class="row">
+                            <div class="col-sm-4">
+                                <div class="news-thum mt-30">
+                                    <img src="{{ asset('themes/webpage/images/news/n-1.jpg') }}" alt="News">
+                                </div>
+                            </div>
+                            <div class="col-sm-8">
+                                <div class="news-cont mt-30">
+                                    <ul>
+                                        <li><a href="#"><i class="fa fa-calendar"></i>2 December 2018 </a></li>
+                                        <li><a href="#"> <span>By</span> Adam Linn</a></li>
+                                    </ul>
+                                    <a href="blog-single.html"><h3>Technology eduction is now....</h3></a>
+                                    <p>Gravida nibh vel velit auctor aliquetn sollicitudirem quibibendum auci elit cons  vel.</p>
+                                </div>
+                            </div>
+                        </div> <!-- row -->
+                    </div> <!-- single news -->
+                </div>
+            </div> <!-- row -->
+        </div> <!-- container -->
+    </section> --}}
+
+    <!--====== NEWS PART ENDS ======-->
+
+    <!--====== PATNAR LOGO PART START ======-->
+    {{-- <x-patnar-logo /> --}}
+    <!--====== PATNAR LOGO PART ENDS ======-->
+
+@stop
