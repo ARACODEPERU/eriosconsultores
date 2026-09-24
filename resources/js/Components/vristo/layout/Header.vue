@@ -19,7 +19,7 @@
 
     import IconCaretDown from '@/Components/vristo/icon/icon-caret-down.vue';
 
-    import { faCartPlus, faUserGroup, faChartPie } from  '@fortawesome/free-solid-svg-icons';
+    import { faCartPlus, faUserGroup, faChartPie, faDna } from  '@fortawesome/free-solid-svg-icons';
     import ChatNotifications from 'Modules/CRM/Resources/assets/js/Components/ChatNotifications.vue';
     import ShoppingCartMenu from 'Modules/Onlineshop/Resources/assets/js/Components/ShoppingCartMenu.vue';
     import menuData from './MenuData.js'
@@ -255,6 +255,15 @@
                                         <Link :href="route('profile.edit')" class="dark:hover:text-white" @click="close()">
                                             <icon-user class="w-4.5 h-4.5 ltr:mr-2 rtl:ml-2 shrink-0" />
                                             Perfil
+                                        </Link>
+                                    </li>
+                                    <!-- Acceso directo a Configuraciones > Parametros del sistema:
+                                         la entrada del menu lateral vive dentro del modulo
+                                         "Configuraciones" y es facil no encontrarla. -->
+                                    <li v-can="'parametros'">
+                                        <Link :href="route('parameters')" class="dark:hover:text-white" @click="close()">
+                                            <font-awesome-icon :icon="faDna" class="w-4.5 h-4.5 ltr:mr-2 rtl:ml-2 shrink-0" />
+                                            Parámetros del sistema
                                         </Link>
                                     </li>
                                     <li>

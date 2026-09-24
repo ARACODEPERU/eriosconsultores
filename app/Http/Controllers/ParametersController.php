@@ -49,6 +49,7 @@ class ParametersController extends Controller
                 'json_query_data' => $json_query_data,
                 'value_default' => $parameter->value_default,
                 'sync_status' => $sync_status,
+                'selected_values' => $this->selectedValues($parameter) ?? [],
             ]);
         }
         //dd($formatted);
@@ -140,12 +141,29 @@ class ParametersController extends Controller
         return json_encode($result);
     }
 
-    public function updateDefaultValue($id, $val)
+    /**
+     * Guarda el valor por defecto de un parametro desde la lista de parametros.
+     *
+     * El valor viaja en el cuerpo de la peticion (no en la URL) para admitir
+     * textareas largos (robots.txt, llms.txt) y multiselecciones como JSON.
+     *
+     * Reemplaza al antiguo updateDefaultValue(), que era un GET de dos segmentos
+     * ({id}/{val}) al que el axios.post() del front nunca podia apuntar: guardar
+     * cualquier parametro desde la lista respondia 405.
+     */
+    public function updateDefaultValuePost(Request $request, $id)
     {
-        $parameter = Parameter::find($id);
+        $parameter = Parameter::findOrFail($id);
+
+        $value = $request->input('value', $request->input('value_default', ''));
+
+        // Multiseleccion (chq/chj): el front manda el arreglo de opciones marcadas.
+        if (is_array($value)) {
+            $value = json_encode(array_values($value));
+        }
 
         $parameter->update([
-            'value_default' => $val
+            'value_default' => $value,
         ]);
 
         // Invalidar caches que dependen de valores de parametros (ej: API Key de OpenAI en P000025)
@@ -153,24 +171,27 @@ class ParametersController extends Controller
 
         // Sincronizar archivos (robots.txt, llms.txt)
         $this->syncFileFromParameter($parameter);
+
+        return response()->json([
+            'success' => true,
+            'value_default' => $parameter->value_default,
+            'selected_values' => $this->selectedValues($parameter) ?? [],
+        ]);
     }
 
     /**
-     * Endpoint POST para guardar valores largos (textareas como robots.txt / llms.txt)
-     * desde la lista de parametros, evitando el limite de longitud de URL en GET.
+     * Opciones marcadas de los parametros de multiseleccion (chq/chj).
+     * Se guardan como JSON en value_default y el front las espera decodificadas.
      */
-    public function updateDefaultValuePost(Request $request, $id)
+    private function selectedValues(Parameter $parameter): ?array
     {
-        $parameter = Parameter::find($id);
+        if (!in_array($parameter->control_type, ['chq', 'chj'], true)) {
+            return null;
+        }
 
-        $parameter->update([
-            'value_default' => $request->input('value_default', '')
-        ]);
+        $decoded = json_decode((string) $parameter->value_default, true);
 
-        Cache::forget('academic:openai-api-key:' . $parameter->parameter_code);
-        $this->syncFileFromParameter($parameter);
-
-        return response()->json(['success' => true]);
+        return is_array($decoded) ? array_values($decoded) : [];
     }
 
     /**
