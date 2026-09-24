@@ -18,9 +18,12 @@ use Modules\CRM\Entities\CrmConversation;
 use Modules\CRM\Entities\CrmMessage;
 use Modules\CRM\Entities\CrmParticipant;
 use Modules\CRM\Entities\CrmUser;
+use Modules\CRM\Http\Controllers\Concerns\ResuelveIdentidadAsistente;
 
 class CrmIaController extends Controller
 {
+    use ResuelveIdentidadAsistente;
+
     public function clientDashboard()
     {
         $conversationId = null;
@@ -74,6 +77,11 @@ class CrmIaController extends Controller
             ->limit(200)
             ->get();
 
+        // El alumno nunca ve quien respondio realmente (auditoria interna).
+        $messages->each(function ($message) {
+            $message->makeHidden('sent_by_user_id');
+        });
+
         return Inertia::render('CRM::Chat/studentDashboard', [
             'messages' => $messages,
             'participants' => $participants,
@@ -81,9 +89,10 @@ class CrmIaController extends Controller
         ]);
     }
 
-    public function sendPromptOpenAI(string $message, ?string $archivo = null): string
+    public function sendPromptOpenAI(string $message, ?string $instructions = null, ?string $archivo = null, ?int $userId = null): string
     {
-        return app(OpenAiAssistantService::class)->sendPrompt(Auth::id(), $message, $archivo);
+        // El hilo de la IA es el del usuario efectivo (el asistente suplantado).
+        return app(OpenAiAssistantService::class)->sendPrompt($userId ?: Auth::id(), $message, $archivo, $instructions);
     }
 
     public function sendMessage(Request $request)
@@ -103,7 +112,8 @@ class CrmIaController extends Controller
         $message = CrmMessage::create([
             'conversation_id' => $conversationId,
             'person_id' => $personId,
-            'content' => htmlentities($request->get('text'), ENT_QUOTES, 'UTF-8'),
+            // Se guarda el HTML tal cual para que las etiquetas se rendericen al mostrarse con v-html
+            'content' => $request->get('text'),
             'type' => $request->get('type'),
             'answer_ai' => false,
         ]);
@@ -139,7 +149,7 @@ class CrmIaController extends Controller
         if ($conversation && $this->shouldSendChatEmailNotification($conversation)) {
             Mail::to($P000013)
                 ->cc($P000017)
-                ->send(new NotifyChatMessage($data));
+                ->queue(new NotifyChatMessage($data));
 
             $conversation->update([
                 'last_email_notification_at' => now(),
@@ -157,6 +167,14 @@ class CrmIaController extends Controller
 
     public function broadcastSend($participants, $message, $personId)
     {
+        // Los admins tambien escuchan, para que su campanita agregada
+        // ("Mensaje para tus Asistentes") se actualice sola.
+        $participants = collect($participants)
+            ->merge($this->usuariosNotificadosAdicionales())
+            ->unique()
+            ->values()
+            ->all();
+
         $client = new Client();
 
         $dom = env('VITE_SOCKET_IO_SERVER', 'https://localhost:3000');
@@ -189,21 +207,90 @@ class CrmIaController extends Controller
 
     public function basicQuestionService(Request $request)
     {
-        $response = $this->sendPromptOpenAI($request->input('messageText'));
+        try {
+            $messageText = $request->input('messageText');
+            $instructions = $request->input('instructions');
+            $response = $this->sendPromptOpenAI($messageText, $instructions, null, $this->usuarioEfectivo($request));
 
-        return response()->json([
-            'success' => true,
-            'responseText' => $response,
-        ]);
+            return response()->json([
+                'success' => true,
+                'responseText' => $response,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('CRM basicQuestionService: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 200);
+        }
     }
 
     public function censorTextService(Request $request)
     {
-        $response = app(OpenAiAssistantService::class)->censorText(Auth::id(), $request->input('messageText'));
+        try {
+            $service = app(OpenAiAssistantService::class);
 
-        return response()->json([
-            'success' => true,
-            'responseText' => $response,
-        ]);
+            $questionText = $request->input('messageText');
+            $responseText = $request->input('respond') ?: $questionText;
+
+            $censoredQuestion = $this->censorWithFallback($service, $questionText);
+            $censoredResponse = $this->censorWithFallback($service, $responseText);
+
+            return response()->json([
+                'success' => true,
+                'questionText' => $censoredQuestion,
+                'responseText' => $censoredResponse,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('CRM censorTextService: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 200);
+        }
+    }
+
+    /**
+     * Censura el texto con la IA, pero si la IA "responde" en lugar de censurar
+     * (resultado vacío o mucho más largo que el original) o falla, se usa un
+     * censurado local determinista para no guardar contenido inventado.
+     */
+    private function censorWithFallback(OpenAiAssistantService $service, string $text): string
+    {
+        $text = trim($text);
+
+        if ($text === '') {
+            return $text;
+        }
+
+        try {
+            $censored = $service->censorText(Auth::id(), $text);
+
+            // Alucinación: la IA devolvió una respuesta inventada (mucho más larga)
+            if (trim($censored) === '' || mb_strlen($censored) > mb_strlen($text) * 1.5) {
+                return $this->localCensor($text);
+            }
+
+            return $censored;
+        } catch (\Throwable $e) {
+            Log::error('CRM censorWithFallback: ' . $e->getMessage());
+
+            return $this->localCensor($text);
+        }
+    }
+
+    /**
+     * Censurado local determinista: DNI/RUC/teléfonos y correos electrónicos.
+     */
+    private function localCensor(string $text): string
+    {
+        // DNI (8 dígitos), RUC (11 dígitos) o teléfono (9 dígitos)
+        $censored = preg_replace('/\b\d{8,11}\b/', '********', $text) ?? $text;
+        // Correos electrónicos
+        $censored = preg_replace('/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/', '********', $censored) ?? $censored;
+
+        return $censored;
     }
 }

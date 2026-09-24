@@ -85,7 +85,7 @@
             confirmButtonText: 'Enviar',
             showLoaderOnConfirm: true,
             preConfirm: () => {
-                return axios.get(route('saledocuments_send', [document.document_id,document.invoice_type_doc])).then((res) => {
+                return axios.get(route('saledocuments_send', [document.document_id,document.invoice_type_doc]), { timeout: 120000 }).then((res) => {
                     if (!res.data.success) {
                         var cadena = `Error código: ${res.data.code}<br>Descripción:${res.data.message}`;
                         let notes = res.data.notes;
@@ -95,13 +95,18 @@
                         Swal.showValidationMessage(cadena)
                     }
                     return res
+                }).catch((error) => {
+                    const msg = error.code === 'ECONNABORTED'
+                        ? 'El envío a SUNAT está tardando demasiado (más de 2 minutos). Verifica la conexión o intente de nuevo.'
+                        : (error.response?.data?.message || 'No se pudo enviar el documento. Verifique la conexión con SUNAT.');
+                    Swal.showValidationMessage(msg);
                 });
             },
             allowOutsideClick: () => !Swal.isLoading()
         }).then((result) => {
-            if (result.isConfirmed) {
+            if (result.isConfirmed && result.value && result.value.data && result.value.data.success) {
                 var cadena = "";
-                let array = JSON.parse(result.value.data.notes);
+                let array = JSON.parse(result.value.data.notes || '[]');
                 for (var i = 0; i < array.length; i++) {
                     cadena += array[i] + "<br>";
                 }
@@ -326,7 +331,7 @@
                     allowOutsideClick: () => !Swal.isLoading()
                 }).then((res) => {
                     if (res.isConfirmed) {
-                        showMessage('El documento fue anulado correctamente');
+                        showMessage(res.value?.data?.message || 'El documento fue anulado correctamente');
                     }
                     refreshTable();
                 });
@@ -458,7 +463,7 @@
                                             <a @click="opemModalDetails(props.rowData)" href="javascript:;">Detalles</a>
                                         </li>
                                         <li v-if="props.rowData.status == 1 && props.rowData.invoice_type_doc == '03'">
-                                            <a @click="cancelDocument(index, props.rowData)" href="javascript:;">Anular</a>
+                                            <a @click="cancelDocument(index, props.rowData)" v-can="'invo_documento_anular'" href="javascript:;">Anular</a>
                                         </li>
                                         <li>
                                             <a @click="downloadDocument(props.rowData.document_id,props.rowData.invoice_type_doc,'PDF')" href="javascript:;">PDF A4</a>

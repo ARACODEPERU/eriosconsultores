@@ -3,11 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\Invoice\Certificates\Convert;
+use App\Models\Bank;
+use App\Models\BankAccount;
+use App\Models\BilleteraDigital;
 use App\Models\Company;
+use App\Models\CompanyBilletera;
 use App\Models\Department;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class CompanyController extends Controller
@@ -16,10 +21,24 @@ class CompanyController extends Controller
     {
         $company = Company::with('district.province.department')->first();
         $ubigeo = Department::with('provinces.districts')->get();
+        $banks = Bank::all();
+
+        $bankAccounts = BankAccount::with('bank')->get();;
+        //dd($bankAccounts);
+        $currencyTypes = DB::table('sunat_currency_types')->get();
+
+        // Catalogo de billeteras digitales (combo del modal) y billeteras registradas de la empresa.
+        $billeteras = BilleteraDigital::where('status', true)->orderBy('id')->get();
+        $companyBilleteras = CompanyBilletera::with(['billetera', 'bankAccount.bank'])->orderBy('id')->get();
 
         return Inertia::render('Company/Show', [
             'company'   => $company ? $company : [],
             'ubigeo'    => $ubigeo->toArray(),
+            'banks'     => $banks,
+            'bankAccounts' => $bankAccounts,
+            'currencyTypes' => $currencyTypes,
+            'billeteras' => $billeteras,
+            'companyBilleteras' => $companyBilleteras,
         ]);
     }
     public function updateCreate(Request $request)
@@ -159,7 +178,7 @@ class CompanyController extends Controller
         if ($isotipoNegative) {
 
             $fileData = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $isotipoNegative));
-
+            
             if (PHP_OS == 'WINNT') {
                 $tempFile = tempnam(sys_get_temp_dir(), 'img');
             } else {
@@ -170,8 +189,9 @@ class CompanyController extends Controller
             $mime = mime_content_type($tempFile);
 
             $name = uniqid('', true) . '.' . str_replace('image/', '', $mime);
+            
             $file = new UploadedFile(realpath($tempFile), $name, $mime, null, true);
-
+          
             if ($file) {
                 $original_name = strtolower(trim($file->getClientOriginalName()));
                 $original_name = str_replace(" ", "_", $original_name);

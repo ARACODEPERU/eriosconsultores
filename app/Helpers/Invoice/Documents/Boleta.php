@@ -240,6 +240,17 @@ class Boleta
         try {
             $document = SaleDocument::find($id);
 
+            // Las boletas se informan a SUNAT dentro de un resumen diario, que no
+            // guarda el XML de cada comprobante. Si no quedo guardado, se firma aqui.
+            if (! $document->invoice_xml || ! is_file($document->invoice_xml)) {
+                $invoice = $this->setDocument($document);
+                $see = $this->util->getSee();
+
+                $document->invoice_xml = $this->util->writeXml($invoice, $see->getXmlSigned($invoice));
+                $document->invoice_document_name = $invoice->getName();
+                $document->save();
+            }
+
             return array(
                 'fileName' => $document->invoice_document_name . '.xml',
                 'filePath' => $document->invoice_xml

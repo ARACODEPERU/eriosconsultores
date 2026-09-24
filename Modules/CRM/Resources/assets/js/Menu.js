@@ -38,6 +38,14 @@ const menuCRM = {
             icom: faComments,
         },
         {
+            // Admin/Administrador: entra como un asistente y responde por el.
+            route: route("crm_chat_asistente"),
+            status: false,
+            text: "Chat de consultas",
+            permissions: "crm_chat_asistente",
+            icom: faComments,
+        },
+        {
             route: route("crm_mailbox_dashboard"),
             status: false,
             text: "Buzón de correo",
@@ -47,7 +55,7 @@ const menuCRM = {
         {
             route: route("crm_common_questions"),
             status: false,
-            text: "Dudas Comunes",
+            text: "Banco de Consultas",
             permissions: "crm_dudas_comunes",
             icom: faPersonCircleQuestion,
         },

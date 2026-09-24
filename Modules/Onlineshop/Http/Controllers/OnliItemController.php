@@ -15,6 +15,7 @@ use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Support\Facades\DB;
 use Modules\Academic\Entities\AcaCategoryCourse;
 use Modules\Onlineshop\Entities\OnliItemSpecification;
+use Modules\Academic\Entities\AcaCourseLanding;
 
 class OnliItemController extends Controller
 {
@@ -332,10 +333,17 @@ class OnliItemController extends Controller
 
         $OnliItem->save();
 
+        //actualizando landing si existe....
+        AcaCourseLanding::where('course_id', $OnliItem->item_id)
+                ->update([
+                    'investment_section->items->0->price_now' => $OnliItem->price
+                ]);
+
         $specifications = $request->get('specifications');
+
         OnliItemSpecification::where('onli_item_id', $OnliItem->id)->delete();
 
-        if (count($specifications) > 0) {
+        if ($specifications && count($specifications) > 0) {
             foreach ($specifications as $specification) {
                 OnliItemSpecification::create([
                     'onli_item_id'  => $OnliItem->id,
@@ -391,24 +399,27 @@ class OnliItemController extends Controller
         $ids = $request->get('ids');
         //dd($ids);
         $items = OnliItem::join('aca_courses', 'onli_items.item_id', '=', 'aca_courses.id')
-            ->leftJoin('aca_teachers', 'aca_teachers.id', '=', 'aca_courses.teacher_id')
-            ->join('people', 'people.id', '=', 'aca_teachers.person_id')
-            ->join('users', 'users.person_id', '=', 'people.id')
-            ->whereIn('onli_items.id', $ids)
-            ->select(
-                'onli_items.id as id',
-                'onli_items.name as name',
-                'onli_items.image as image',
-                'onli_items.price as price',
-                'onli_items.category_description', ////sector publico, sector empresarial .....
-                'onli_items.additional as additional', ////tipo curso o diplomado
-                'onli_items.additional1 as additional1', //////modalidad envivo, elearnig.presencial
-                'people.names as teacher',
-                'aca_teachers.id as teacher_id',
-                'users.avatar as avatar',
-                'onli_items.description as description'
-            )
-            ->get();
+        ->leftJoin('aca_teachers', 'aca_teachers.id', '=', 'aca_courses.teacher_id')
+        ->leftJoin('people', 'people.id', '=', 'aca_teachers.person_id')
+        ->leftJoin('users', 'users.person_id', '=', 'people.id')
+        ->leftJoin('aca_course_landings', 'aca_course_landings.course_id', '=', 'aca_courses.id')
+        ->whereIn('onli_items.id', $ids)
+        ->select(
+            'onli_items.id as id',
+            'onli_items.name as name',
+            'onli_items.image as image',
+            'onli_items.price as price',
+            'onli_items.category_description',
+            'onli_items.additional as additional',
+            'onli_items.additional1 as additional1',
+            'people.names as teacher',
+            'aca_teachers.id as teacher_id',
+            'users.avatar as avatar',
+            'onli_items.description as description',
+            'aca_course_landings.url_slug as url_slug',
+            'aca_course_landings.is_published as landing_published'
+        )
+        ->get();
 
         $preference_id = null;
         // Verificar si se encontró el ítem

@@ -29,6 +29,7 @@ use App\Models\Sale;
 use App\Models\SaleDocumentItem;
 use App\Models\SaleProduct;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Greenter\Model\Sale\Cuota;
 class Factura
 {
@@ -51,6 +52,25 @@ class Factura
             $invoice = $this->setDocument($document);
             $see = $this->util->getSee();
             $res = $see->send($invoice);
+
+            // === DEBUG: Log detallado de respuesta SUNAT ===
+            if (!$res->isSuccess()) {
+                $error = $res->getError();
+                Log::error('SUNAT DEBUG - Error en envio de factura:', [
+                    'document_id' => $document_id,
+                    'error_code' => $error ? $error->getCode() : 'N/A',
+                    'error_message' => $error ? $error->getMessage() : 'N/A',
+                    'is_success' => $res->isSuccess(),
+                    'response_type' => get_class($res),
+                ]);
+            } else {
+                Log::info('SUNAT DEBUG - Factura enviada exitosamente:', [
+                    'document_id' => $document_id,
+                    'cdr_code' => $res->getCdrResponse() ? $res->getCdrResponse()->getCode() : 'N/A',
+                ]);
+            }
+            // === FIN DEBUG ===
+
             //fecha en la que se envio a sunat el documento
             $document->invoice_send_date = Carbon::now();
 
@@ -83,13 +103,14 @@ class Factura
                 // === CASO FALLO DE COMUNICACIÓN O ERROR DE SISTEMA ===
                 $error = $res->getError();
                 $codeError = $error->getCode();
-                $messageError = $error->getMessage();
+                $originalMessage = $error->getMessage();
+                $messageError = $originalMessage;
                 $connectionErrorCodes = [130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 1033];
 
                 // Error 0109 - SUNAT autenticación no disponible
                 if ($codeError === '0109' || stripos($messageError, '0109') !== false) {
                     $status = 'Pendiente de Reintento';
-                    $messageError = "SUNAT no responde. El comprobante quedará pendiente para reintento manual.";
+                    $messageError = "SUNAT no responde (error {$codeError}). El comprobante quedará pendiente para reintento manual. Detalle: {$originalMessage}";
                 }
                 // Error 2223 - Archivo ya presentado, intentar recuperar CDR
                 elseif ($codeError === '2223' || stripos($messageError, '2223') !== false) {
@@ -117,11 +138,11 @@ class Factura
                                 }
                             } else {
                                 $status = 'Pendiente de Reintento';
-                                $messageError = "El archivo ya fue presentado pero no se pudo recuperar la constancia. Ticket: {$ticket}";
+                                $messageError = "El archivo ya fue presentado (error {$codeError}) pero no se pudo recuperar la constancia. Ticket: {$ticket}. Detalle: {$originalMessage}";
                             }
                         } catch (\Exception $e) {
                             $status = 'Pendiente de Reintento';
-                            $messageError = "Error al consultar ticket recuperado: ".$e->getMessage();
+                            $messageError = "Error al consultar ticket recuperado (error {$codeError}): ".$e->getMessage().". Detalle SUNAT: {$originalMessage}";
                         }
                     } else {
                         if (in_array((int)$codeError, $connectionErrorCodes) || (int)$codeError === -1 || (int)$codeError === 0) {
@@ -131,14 +152,20 @@ class Factura
                         }
                     }
                 }
-                // Otros errores
+                // Error HTTP - SUNAT respondió con error HTTP (ej: 502 Bad Gateway, 400 Bad Request)
+                elseif (!is_numeric($codeError) && strtolower($codeError) === 'http') {
+                    $status = 'Pendiente de Reintento';
+                    $messageError = "SUNAT respondió con error HTTP ({$originalMessage}). Es probable que SUNAT esté presentando picos de sobrecarga. Reintente más tarde. Si el error persiste, verifique: credenciales SOL, certificado digital o datos del XML.";
+                }
+                // Otros errores numéricos
                 else {
                     $code = (int)$codeError;
                     if (in_array($code, $connectionErrorCodes) || $code === -1 || $code === 0) {
                         $status = 'Error de Conexión';
-                        $messageError = "SUNAT no responde. El comprobante está en espera para reintento automático.";
+                        $messageError = "SUNAT no responde (error {$codeError}). El comprobante está en espera para reintento automático. Detalle: {$originalMessage}";
                     } else {
                         $status = 'Rechazada';
+                        $messageError = "Error de SUNAT (error {$codeError}). Detalle: {$originalMessage}";
                     }
                 }
             }
@@ -161,8 +188,8 @@ class Factura
         $province = $establishment->district->province;
 
         $department = $province->department;
-        $broadcast_date = new DateTime($document->invoice_broadcast_date . ' ' . Carbon::parse($document->created_at)->format('H:m:s'));
-        $due_date = new DateTime($document->invoice_due_date . ' ' . Carbon::parse($document->created_at)->format('H:m:s'));
+        $broadcast_date = new DateTime($document->invoice_broadcast_date . ' ' . Carbon::parse($document->created_at)->format('H:i:s'));
+        $due_date = new DateTime($document->invoice_due_date . ' ' . Carbon::parse($document->created_at)->format('H:i:s'));
         // Cliente
         $clientCity = District::with('province.department')->where('id',$document->client_ubigeo_code)->first();
 
@@ -311,7 +338,7 @@ class Factura
                     ->setCodBienDetraccion($tipDet) // catalog. 54
                     // Deposito en cuenta
                     ->setCodMedioPago($ipMeP) // catalog. 59
-                    ->setCtaBanco($this->mycompany->withdrawal_account_number)
+                    ->setCtaBanco($this->resolveDetractionAccount($this->mycompany->withdrawal_account_number))
                     ->setPercent($percent)
                     ->setMount($detMount)
             );
@@ -331,6 +358,29 @@ class Factura
 
         //dd($invoice);
         return $invoice;
+    }
+
+    /**
+     * La cuenta de detraccion debe ser un numero valido (CCI o cuenta).
+     * Si el dato trae texto (p. ej. "B.N. 00-002-235269 o CCI 0180..."), extraemos
+     * el CCI para que el XML no quede con un campo invalido que SUNAT rechaza/corta.
+     */
+    private function resolveDetractionAccount(?string $raw): string
+    {
+        $raw = $raw ?: '';
+
+        // Si hay un CCI (20 digitos), lo usamos.
+        if (preg_match('/\b(\d{20})\b/', $raw, $m)) {
+            return $m[1];
+        }
+
+        // Si hay una cuenta (8 a 20 digitos), quitamos separadores y usamos el primer bloque numerico.
+        $digits = preg_replace('/\D/', '', $raw);
+        if ($digits !== '' ) {
+            return $digits;
+        }
+
+        return '0000';
     }
 
     public function getFacturaDomPdf($id, $format = 'A4')
@@ -385,12 +435,49 @@ class Factura
         try {
             $document = SaleDocument::find($id);
 
+            if (! $document) {
+                return null;
+            }
+
+            $this->ensureXmlFile($document);
+
+            $name = $document->invoice_document_name
+                ?: trim($document->invoice_serie.'-'.$document->invoice_correlative, '-');
+
             return array(
-                'fileName' => $document->invoice_document_name . '.xml',
+                'fileName' => $name . '.xml',
                 'filePath' => $document->invoice_xml
             );
         } catch (Exception $e) {
             var_dump($e);
+        }
+    }
+
+    /**
+     * Se asegura de que el XML del comprobante exista en disco. El XML se guarda
+     * recién al enviar el comprobante a SUNAT; si todavía no fue enviado (o el
+     * archivo ya no está en el servidor) se genera y firma ahora mismo, con el
+     * mismo builder que usa el envío, sin comunicarse con SUNAT, y se registra
+     * en el documento igual que hace create().
+     */
+    private function ensureXmlFile(SaleDocument $document): void
+    {
+        if ($document->invoice_xml && file_exists($document->invoice_xml)) {
+            return;
+        }
+
+        try {
+            $invoice = $this->setDocument($document);
+            $path = $this->util->writeSignedXml($invoice);
+
+            if ($path) {
+                $document->invoice_xml = $path;
+                $document->invoice_document_name = $invoice->getName();
+                $document->save();
+            }
+        } catch (\Throwable $e) {
+            // Sin XML el correo sale igual, solo que sin ese adjunto.
+            Log::warning('No se pudo generar el XML de la factura '.$document->id.': '.$e->getMessage());
         }
     }
     public function getFacturaCDR($id)

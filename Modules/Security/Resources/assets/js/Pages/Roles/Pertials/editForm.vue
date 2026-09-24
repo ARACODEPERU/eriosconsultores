@@ -55,8 +55,6 @@
         });
     };
 
-    const isPermissionChecked = (name) => (form.permissions ?? []).includes(name);
-
     const selectAllCheckbox = (event) => {
         if(event.target.checked){
             const allPermissions = props.permissions;
@@ -113,37 +111,14 @@
                             <ul class="mt-2 ltr:pl-14 rtl:pr-14">
                                 <li class="py-[5px]">
                                     <div v-if="row.permissions && row.permissions.length > 0">
-                                        <div
-                                            v-for="(item, key) in row.permissions"
-                                            :key="item.id ?? item.name"
-                                            class="flex items-center justify-between gap-4 rounded-md px-2 py-1.5 transition-colors hover:bg-gray-100 dark:hover:bg-[#191e3a]"
-                                        >
-                                            <!-- Candado: se mantiene fijo a la izquierda -->
-                                            <div class="flex min-w-0 items-center gap-3">
-                                                <!-- From Uiverse.io by catraco -->
-                                                <div class="can-container shrink-0" :class="{ 'is-checked': isPermissionChecked(item.name) }">
-                                                    <input :id="'permission-'+item.id" v-model="form.permissions" :value="item.name" type="checkbox">
-                                                    <svg viewBox="0 0 576 512" height="1em" xmlns="http://www.w3.org/2000/svg" class="lock"><path d="M352 144c0-44.2 35.8-80 80-80s80 35.8 80 80v48c0 17.7 14.3 32 32 32s32-14.3 32-32V144C576 64.5 511.5 0 432 0S288 64.5 288 144v48H64c-35.3 0-64 28.7-64 64V448c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V256c0-35.3-28.7-64-64-64H352V144z"></path></svg>
-                                                    <svg viewBox="0 0 448 512" height="1em" xmlns="http://www.w3.org/2000/svg" class="lock-open"><path d="M144 144v48H304V144c0-44.2-35.8-80-80-80s-80 35.8-80 80zM80 192V144C80 64.5 144.5 0 224 0s144 64.5 144 144v48h16c35.3 0 64 28.7 64 64V448c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V256c0-35.3 28.7-64 64-64H80z"></path></svg>
-                                                </div>
-                                                <span class="truncate">{{ item.name }}</span>
+                                        <div v-for="(item, key) in row.permissions" class="flex items-center space-x-4">
+                                            <!-- From Uiverse.io by catraco -->
+                                            <div class="can-container">
+                                                <input :id="'checkbox'+index+key" v-model="form.permissions" :value="item.name" checked="checked" type="checkbox">
+                                                <svg viewBox="0 0 576 512" height="1em" xmlns="http://www.w3.org/2000/svg" class="lock"><path d="M352 144c0-44.2 35.8-80 80-80s80 35.8 80 80v48c0 17.7 14.3 32 32 32s32-14.3 32-32V144C576 64.5 511.5 0 432 0S288 64.5 288 144v48H64c-35.3 0-64 28.7-64 64V448c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V256c0-35.3-28.7-64-64-64H352V144z"></path></svg>
+                                                <svg viewBox="0 0 448 512" height="1em" xmlns="http://www.w3.org/2000/svg" class="lock-open"><path d="M144 144v48H304V144c0-44.2-35.8-80-80-80s-80 35.8-80 80zM80 192V144C80 64.5 144.5 0 224 0s144 64.5 144 144v48h16c35.3 0 64 28.7 64 64V448c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V256c0-35.3 28.7-64 64-64H80z"></path></svg>
                                             </div>
-
-                                            <!-- Selector: la perilla se muestra a la derecha si está activo y a la izquierda si no -->
-                                            <label
-                                                :for="'permission-'+item.id"
-                                                class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center"
-                                                :title="item.name"
-                                            >
-                                                <span
-                                                    class="absolute inset-0 rounded-full transition-colors duration-200"
-                                                    :class="isPermissionChecked(item.name) ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'"
-                                                ></span>
-                                                <span
-                                                    class="absolute left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200"
-                                                    :class="isPermissionChecked(item.name) ? 'translate-x-5' : 'translate-x-0'"
-                                                ></span>
-                                            </label>
+                                            <label :for="'checkbox'+index+key">{{ item.name }}</label>
                                         </div>
                                     </div>
                                 </li>
@@ -177,18 +152,10 @@
     justify-content: center;
     align-items: center;
     position: relative;
-    cursor: default;
+    cursor: pointer;
     font-size: var(--size);
     user-select: none;
     fill: var(--color);
-    /* Tamaño fijo: el candado nunca se mueve de su sitio */
-    width: 1.25em;
-    height: 1.25em;
-}
-
-/* Candado cerrado y en color de éxito cuando el permiso está activo */
-.can-container.is-checked {
-    --color: #00ab55;
 }
 
 .can-container .lock-open {

@@ -114,18 +114,6 @@ class RolesController extends Controller
             ];
         }
 
-        // Ordenar alfabéticamente los permisos dentro de cada módulo
-        $grouped = collect($grouped)
-            ->map(function (array $group) {
-                $group['permissions'] = collect($group['permissions'])
-                    ->sortBy(fn (array $permission) => mb_strtolower($permission['name']))
-                    ->values()
-                    ->all();
-
-                return $group;
-            })
-            ->all();
-
         // Reordenar dejando "Otros permisos" al final
         $otros = $grouped['Otros'] ?? null; // <- Asegúrate de usar la misma clave
         unset($grouped['Otros']);

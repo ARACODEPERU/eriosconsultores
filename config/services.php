@@ -33,6 +33,20 @@ return [
 
     'mercadopago' => [
         'key' => env('MERCADOPAGO_KEY'),
-        'token' => env('MERCADOPAGO_TOKEN')
-    ]
+        'token' => env('MERCADOPAGO_TOKEN'),
+        'max_installments' => (int) env('MERCADOPAGO_MAX_INSTALLMENTS', 12),
+    ],
+    'recaptcha' => [
+    'site_key' => env('RECAPTCHA_SITE_KEY'),
+    'secret_key' => env('RECAPTCHA_SECRET_KEY'),
+    ],
+    'email' => [
+        'mail_from_address' => env('MAIL_FROM_ADDRESS'),
+        'mail_from_name' => env('MAIL_FROM_NAME'),
+        'app_name' => env('APP_NAME'),
+        // Buzon de administracion (MAIL_ADMIN): recibe los avisos operativos, como
+        // la negociacion confirmada del modulo Commercial. MailSender::adminAddress()
+        // lo lee y aplica el respaldo si el .env no trae un correo util.
+        'admin_address' => env('MAIL_ADMIN'),
+    ],
 ];

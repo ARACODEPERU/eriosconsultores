@@ -1,17 +1,31 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-
+@php
+    $company = \App\Models\Company::first();
+@endphp
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <title inertia>{{ config('app.name', 'Laravel') }}</title>
-    <link rel="icon" href="{{ asset('img/isotipo.png') }}">
+    @if($company && $company->isotipo)
+        <link rel="icon" href="{{ asset('storage/' . $company->isotipo) }}">
+    @else
+        <link rel="icon" href="{{ asset('img/isotipo.png') }}">
+    @endif
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap"
         rel="stylesheet" />
+
+    {{-- @php
+        $parameters = new \App\Models\Parameter();
+        $P000022=$parameters->where('parameter_code', 'P000022')->value('value_default')?? "";
+        $cadena_decodificada = htmlspecialchars_decode($P000022, ENT_QUOTES);
+    @endphp
+    {!! $cadena_decodificada !!} --}}
+
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <!-- Scripts -->
     @routes

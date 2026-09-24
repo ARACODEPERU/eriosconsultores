@@ -13,6 +13,6 @@ class VerifyCsrfToken extends Middleware
      */
     protected $except = [
         '/webhook',
-        '/ai/*',
+        'negotiations/registro-de-inscripcion/*',
     ];
 }

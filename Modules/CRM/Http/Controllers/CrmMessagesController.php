@@ -20,11 +20,14 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Modules\CRM\Emails\ClientHelpEmail;
 use Modules\CRM\Entities\CrmInformationBank;
+use Modules\CRM\Http\Controllers\Concerns\ResuelveIdentidadAsistente;
+use App\Models\User;
 use GuzzleHttp\Client;
 
 class CrmMessagesController extends Controller
 {
     use ValidatesRequests;
+    use ResuelveIdentidadAsistente;
 
     public function sendMessage(Request $request)
     {
@@ -36,7 +39,10 @@ class CrmMessagesController extends Controller
             ]
         );
 
-        $personId = Auth::user()->person_id;
+        // Identidad efectiva: permite que un admin responda como un asistente.
+        $personId = $this->personaEfectiva($request);
+        $usuarioEfectivo = $this->usuarioEfectivo($request);
+        $suplantando = $usuarioEfectivo !== Auth::id();
 
         if ($personId) {
             $contactId = $request->get('fromUserId');
@@ -53,7 +59,7 @@ class CrmMessagesController extends Controller
                 // Crear nueva conversación
                 $conversation = CrmConversation::create([
                     'title' => 'private',
-                    'user_id' => Auth::id(),
+                    'user_id' => $usuarioEfectivo,
                     'type_name' => 'chat',
                     'type_action' => null
                 ]);
@@ -62,7 +68,7 @@ class CrmMessagesController extends Controller
                 CrmParticipant::create([
                     'conversation_id' => $conversation->id,
                     'person_id' => $personId,
-                    'user_id' => Auth::id()
+                    'user_id' => $usuarioEfectivo
                 ]);
 
                 CrmParticipant::create([
@@ -75,16 +81,26 @@ class CrmMessagesController extends Controller
             }
             // buscamos a todos los participantes de la conversacion ecepto el que lo envia
             $participants = CrmParticipant::where('conversation_id', $conversationId)
-                ->where('user_id', '<>', Auth::id())
+                ->where('user_id', '<>', $usuarioEfectivo)
                 ->pluck('user_id');
-            // Crear el mensaje
+            // Crear el mensaje (se guarda el HTML tal cual para que las etiquetas
+            // se rendericen al mostrarse con v-html)
             $message = CrmMessage::create([
                 'conversation_id' => $conversationId,
                 'person_id' => $personId,
-                'content' => htmlentities($request->get('text'), ENT_QUOTES, "UTF-8"),
+                'content' => $request->get('text'),
                 'type' => $request->get('type'),
-                'answer_ai' => $request->has('answer_ai') ? $request->get('answer_ai') : false
+                'answer_ai' => $request->has('answer_ai') ? $request->get('answer_ai') : false,
+                // Auditoria: quien respondio realmente cuando hubo suplantacion.
+                'sent_by_user_id' => $suplantando ? Auth::id() : null,
             ]);
+
+            // Auditoria en el eco del socket: el listado ya expone sent_by_name, asi
+            // que el mensaje recien pintado debe traerlo tambien (no se guarda en la
+            // base, solo viaja en el payload del broadcast).
+            if ($suplantando) {
+                $message->sent_by_name = Auth::user()?->name;
+            }
 
             // Devolver la conversación con los mensajes
             //broadcast(new SendMessage($participants, $message, ['ofUserId' => $personId], $conversationId));
@@ -95,7 +111,15 @@ class CrmMessagesController extends Controller
                 'new_message' => true,
             ]);
 
-            return response()->json(['success' => true], 201);
+            // El id real permite al cliente reconocer el eco que llega por socket y
+            // no pintar el mensaje dos veces (una como mio y otra como del alumno).
+            return response()->json([
+                'success' => true,
+                'message' => [
+                    'id' => $message->id,
+                    'conversation_id' => $message->conversation_id,
+                ],
+            ], 201);
         } else {
             return response()->json(['success' => false], 201);
         }
@@ -103,6 +127,14 @@ class CrmMessagesController extends Controller
 
     public function broadcastSend($participants, $message, $personId)
     {
+        // Los admins tambien escuchan, para que su campanita agregada
+        // ("Mensaje para tus Asistentes") se actualice sola.
+        $participants = collect($participants)
+            ->merge($this->usuariosNotificadosAdicionales())
+            ->unique()
+            ->values()
+            ->all();
+
         $client = new Client();
 
         $dom = env('VITE_SOCKET_IO_SERVER', 'https://localhost:3000');
@@ -135,7 +167,7 @@ class CrmMessagesController extends Controller
         $conversationId = $request->get('conversationId');
         $personId = $request->get('personId');
 
-        $AuthpersonId = Auth::user()->person_id;
+        $AuthpersonId = $this->personaEfectiva($request);
 
         $messages = CrmMessage::where('conversation_id', $conversationId)
             ->orderBy('id')
@@ -146,11 +178,16 @@ class CrmMessagesController extends Controller
             ->orderByDesc('id')
             ->first();
 
-        $formattedMessages = $messages->map(function ($message) use ($AuthpersonId, $personId) {
+        // Nombre del admin que respondio realmente (auditoria de suplantacion).
+        $auditores = User::whereIn('id', $messages->pluck('sent_by_user_id')->filter()->unique())
+            ->pluck('name', 'id');
+
+        $formattedMessages = $messages->map(function ($message) use ($AuthpersonId, $personId, $auditores) {
             $message->fromUserId = ($message->person_id == $AuthpersonId ? $personId : 0);
             $message->toUserId = ($message->person_id == $AuthpersonId ? 0 : $personId);
             $message->text = $message->content;
             $message->time = timeElapsed($message->created_at);
+            $message->sent_by_name = $message->sent_by_user_id ? ($auditores[$message->sent_by_user_id] ?? null) : null;
             return $message;
         });
 
@@ -323,9 +360,55 @@ class CrmMessagesController extends Controller
 
     private function sendMail($data)
     {
-        Mail::to($data[1]->email_for)->send(new ClientHelpEmail($data));
+        Mail::to($data[1]->email_for)->queue(new ClientHelpEmail($data));
 
         return true;
+    }
+
+    public function destroyMessage(Request $request)
+    {
+        $authUser = Auth::user();
+
+        // Solo docentes y administradores pueden eliminar mensajes
+        if (!$authUser->hasAnyRole(['Docente', 'admin', 'Administrador'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No tienes permisos para eliminar mensajes.'
+            ], 403);
+        }
+
+        try {
+            $msg = CrmMessage::findOrFail($request->get('message_id'));
+
+            // Solo puede eliminar mensajes que él mismo haya enviado (o el admin
+            // que los envió actuando como el asistente)
+            if ($msg->person_id != $this->personaEfectiva($request)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Solo puedes eliminar tus propios mensajes.'
+                ], 403);
+            }
+
+            // Solo puede eliminar mensajes enviados hace menos de una hora
+            if (!$msg->created_at || $msg->created_at->lt(now()->subHour())) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Solo puedes eliminar mensajes enviados hace menos de una hora.'
+                ], 403);
+            }
+
+            $msg->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Mensaje eliminado correctamente.'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pudo eliminar el mensaje. Intenta nuevamente.'
+            ], 500);
+        }
     }
 
     public function frequentlyQuestionsStore(Request $request)

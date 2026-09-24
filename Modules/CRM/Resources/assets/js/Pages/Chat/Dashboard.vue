@@ -22,6 +22,7 @@
     import IconSend from '@/Components/vristo/icon/icon-send.vue';
     import IconCamera from '@/Components/vristo/icon/icon-camera.vue';
     import IconMessage from '@/Components/vristo/icon/icon-message.vue';
+    import IconInfoCircle from '@/Components/vristo/icon/icon-info-circle.vue';
     import { useForm, Link, usePage } from '@inertiajs/vue3';
     import AudioRecord from './Partials/AudioRecord.vue';
     import UploadFile from './Partials/UploadFile.vue';
@@ -40,6 +41,25 @@
         P000010: {
             type: String,
             default: null
+        },
+        // Chat de consultas (solo admins): elegir un asistente y operar como el.
+        modoAsistentes: {
+            type: Boolean,
+            default: false
+        },
+        asistentes: {
+            type: Array,
+            default: () => []
+        },
+        asistenteSeleccionado: {
+            type: Object,
+            default: null
+        },
+        // Mensaje del backend cuando el chat de consultas no puede operar como un
+        // asistente (no existe ninguno con ese rol, o el pedido ya no lo tiene).
+        avisoAsistentes: {
+            type: String,
+            default: null
         }
     });
 
@@ -55,7 +75,7 @@
 
     const fetchPosts = async () => {
         try {
-            axios.get(route('crm_chat_contacts_data')).then( (response) => {
+            chatGet(route('crm_chat_contacts_data')).then( (response) => {
                 data.posts = response.data;
             });
         } catch (error) {
@@ -65,7 +85,7 @@
 
     const fetchNextPosts = async () => {
         try {
-            axios.get(`${route('crm_chat_contacts_data')}?page=${data.posts.current_page += 1}`).then((response) => {
+            chatGet(`${route('crm_chat_contacts_data')}?page=${data.posts.current_page += 1}`).then((response) => {
                 response.data.data.map(item => {
                     data.posts.data.push(item);
                 });
@@ -98,7 +118,7 @@
 
     const searchUsers = async () => {
         try {
-            const response = await axios.get(`${route('crm_chat_contacts_data')}?search=${searchUser.value}`);
+            const response = await chatGet(`${route('crm_chat_contacts_data')}?search=${searchUser.value}`);
             console.log(response);
             data.posts = response.data;
         } catch (error) {
@@ -118,7 +138,7 @@
         }
 
         try {
-            axios.post(route('crm_list_message'),{
+            chatPost(route('crm_list_message'),{
                 conversationId: user.conversationId,
                 personId: user.userId
             }).then((response) => {
@@ -137,6 +157,66 @@
 
     };
 
+    // Compara ids sin depender del tipo (el id del socket puede llegar como texto).
+    const mismoMensaje = (a, b) => a != null && b != null && String(a) === String(b);
+
+    const listaMensajes = () => selectedUser.value?.messages ?? (selectedUser.value.messages = []);
+
+    // Mensajes que acabo de enviar y cuyo eco aun no ha llegado: permite reconocer
+    // como propio el eco del socket aunque venga sin id o sin person_id.
+    const propiosEnVuelo = ref([]);
+
+    const registrarPropio = (msg) => {
+        propiosEnVuelo.value.push({ text: msg.text, type: msg.type, at: Date.now() });
+    };
+
+    const olvidarPropio = (msg) => {
+        const i = propiosEnVuelo.value.findIndex((p) => p.text === msg.text && p.type === msg.type);
+        if (i > -1) propiosEnVuelo.value.splice(i, 1);
+    };
+
+    // Consume (una sola vez) la coincidencia con un mensaje propio en vuelo.
+    const consumePropioEnVuelo = (msg) => {
+        propiosEnVuelo.value = propiosEnVuelo.value.filter((p) => Date.now() - p.at < 60000);
+        const i = propiosEnVuelo.value.findIndex((p) => p.text === msg.text && p.type === msg.type);
+        if (i === -1) return false;
+        propiosEnVuelo.value.splice(i, 1);
+        return true;
+    };
+
+    // Pinta (o completa) un mensaje en la conversacion abierta sin duplicarlo.
+    //
+    // El eco del socket y la respuesta del POST describen el mismo mensaje y pueden
+    // llegar en cualquier orden, con o sin id: se busca primero por id real y, si el
+    // eco vino sin id, por contenido+tipo. El lado ya pintado como mio nunca se
+    // degrada a "del alumno".
+    const pintarMensaje = (msg, esMio) => {
+        if (! selectedUser.value) return;
+
+        const mensajes = listaMensajes();
+        const mio = selectedUser.value.userId;
+        const porId = msg.id != null ? mensajes.find((m) => mismoMensaje(m.id, msg.id)) : null;
+        const existente = porId ?? mensajes.find((m) => m.id == null && m.text === msg.text && m.type === msg.type);
+
+        if (existente) {
+            if (msg.id != null) existente.id = msg.id;
+            if (esMio || ! mismoMensaje(existente.fromUserId, mio)) {
+                existente.fromUserId = esMio ? mio : 0;
+            }
+            if (msg.time) existente.time = msg.time;
+            scrollToBottom();
+            return;
+        }
+
+        mensajes.push({ ...msg, fromUserId: esMio ? mio : 0 });
+        scrollToBottom();
+    };
+
+    // Pinta un mensaje propio evitando duplicados: el eco del socket puede llegar
+    // antes o despues de la respuesta del POST, y en los dos ordenes debe quedar un
+    // solo mensaje, pintado como mio.
+    const pushMensajePropio = (msg) => pintarMensaje(msg, true);
+
     const sendMessage = () => {
         if (textMessage.value.trim()) {
             isShowLoadingSend.value = true;
@@ -148,16 +228,18 @@
                 type: 'text',
                 id: null
             };
-            axios.post(route('crm_send_message'),msg).then((response) => {
+            registrarPropio(msg);
+            chatPost(route('crm_send_message'),msg).then((response) => {
                 return response.data;
             }).then((res) => {
                 if(res.success){
-                    selectedUser.value.messages.push(msg);
+                    msg.id = res.message?.id ?? null;
+                    pushMensajePropio(msg);
                     textMessage.value = '';
-                    scrollToBottom();
                 }else{
                     showMessage('No puede enviar mensajes en este momento. Por favor, complete su información personal en su perfil para habilitar esta función.','info');
                 }
+                olvidarPropio(msg);
                 isShowLoadingSend.value = false;
             });
         }
@@ -191,11 +273,13 @@
                 type: 'audio',
                 id: null
             };
-            axios.post(route('crm_send_message'),msg).then((response) => {
+            registrarPropio(msg);
+            chatPost(route('crm_send_message'),msg).then((response) => {
                 return response.data;
             }).then((res) => {
-                selectedUser.value.messages.push(msg);
-                scrollToBottom();
+                msg.id = res.message?.id ?? null;
+                pushMensajePropio(msg);
+                olvidarPropio(msg);
                 isShowLoadingSend.value = false;
             });
         }
@@ -212,11 +296,13 @@
                 type: 'file',
                 id: null
             };
-            axios.post(route('crm_send_message'),msg).then((response) => {
+            registrarPropio(msg);
+            chatPost(route('crm_send_message'),msg).then((response) => {
                 return response.data;
             }).then((res) => {
-                selectedUser.value.messages.push(msg);
-                scrollToBottom();
+                msg.id = res.message?.id ?? null;
+                pushMensajePropio(msg);
+                olvidarPropio(msg);
                 isShowLoadingSend.value = false;
             });
         }
@@ -225,26 +311,118 @@
     // Configura tu conexión a Socket.IO
     const authUser = usePage().props.auth.user;
 
+    // ---------------------------------------------------------------------
+    // Chat de consultas: un admin entra "como" un asistente y desde ese momento
+    // todo el chat (contactos, mensajes, IA) se hace con acting_person_id /
+    // acting_user_id, y el backend responde y firma como el asistente.
+    // ---------------------------------------------------------------------
+    // Asistente activo: arranca con el de la URL (?asistente=) y se puede
+    // cambiar en caliente desde el selector, sin recargar la pagina.
+    const asistenteActivo = ref(props.asistenteSeleccionado);
+
+    const suplantando = computed(() => !!asistenteActivo.value);
+
+    const actingParams = computed(() => suplantando.value ? {
+        acting_person_id: asistenteActivo.value.person_id,
+        acting_user_id: asistenteActivo.value.user_id,
+    } : {});
+
+    // Id de usuario con el que se compara lo que llega por socket.
+    const effectiveUserId = computed(() => asistenteActivo.value?.user_id ?? authUser.id);
+
+    const withActing = (config = {}) => ({
+        ...config,
+        params: { ...(config.params || {}), ...actingParams.value },
+    });
+
+    const chatGet = (url, config = {}) => axios.get(url, withActing(config));
+    const chatPost = (url, data = {}, config = {}) => axios.post(url, data, withActing(config));
+    const chatDelete = (url, config = {}) => axios.delete(url, withActing(config));
+
+    // Mantiene la URL sincronizada para que un refresh conserve la seleccion.
+    const actualizarUrl = (asistente = null) => {
+        try {
+            window.history.replaceState(
+                {},
+                '',
+                asistente
+                    ? route('crm_chat_asistente', { asistente: asistente.person_id })
+                    : route('crm_chat_asistente')
+            );
+        } catch (error) {
+            // Sin Ziggy disponible: el selector sigue funcionando en memoria.
+        }
+    };
+
+    // Cambia de identidad (null = "Yo") y recarga la bandeja del nuevo perfil.
+    const aplicarIdentidad = (asistente = null) => {
+        asistenteActivo.value = asistente;
+
+        selectedUser.value = null;
+        isShowUserChat.value = false;
+        isShowChatMenu.value = false;
+        textMessage.value = '';
+        data.posts = { data: [], current_page: 1, total: 0 };
+
+        actualizarUrl(asistente);
+        fetchPosts();
+    };
+
+    const entrarComoAsistente = (asistente) => aplicarIdentidad(asistente);
+    const salirModoAsistente = () => aplicarIdentidad(null);
+
+    const getAsistenteImage = (image) => {
+        if (!image) return null;
+        if (image.startsWith('/img/')) return `${xasset}${image}`;
+        return `${xasset}storage/${image}`;
+    };
+
     onMounted(() => {
         window.socketIo.on(channelListenChat, (result) => {
             let participants = result.data.participants;
             let conversationId = result.data.message.conversation_id;
+
+            // El backend manda "ofUserId" = person_id de quien ENVIO. Esta vista
+            // pinta como propio (derecha) lo que trae fromUserId igual al person_id
+            // del contacto, asi que hay que traducirlo: si el emisor soy yo, va como
+            // mio; si no, va como del alumno.
+            const ofUserId = Number(result.data.ofUserId);
+            const mensajeEco = result.data.message ?? {};
+            // Se compara contra todas mis identidades: la persona suplantada (si
+            // estoy respondiendo como un asistente) y mi propia persona. El
+            // person_id que guarda el mensaje es el dato de la base, asi que sirve
+            // de respaldo si el socket manda el emisor de otra forma. Ademas,
+            // sent_by_user_id solo se llena cuando un admin responde en nombre de un
+            // asistente, asi que tambien confirma que el mensaje lo escribi yo.
+            // El eco de un mensaje que acabo de enviar es mio aunque el payload
+            // llegue incompleto: se compara con la cola de propios en vuelo.
+            const enVuelo = consumePropioEnVuelo({ text: mensajeEco.content, type: mensajeEco.type });
+            const misPersonas = [asistenteActivo.value?.person_id, authUser.person_id]
+                .filter(persona => persona != null)
+                .map(Number);
+            const esMio = enVuelo
+                || misPersonas.includes(ofUserId)
+                || misPersonas.includes(Number(mensajeEco.person_id))
+                || mensajeEco.sent_by_user_id != null;
+
             const newmsg = {
-                fromUserId: result.data.ofUserId,
+                fromUserId: esMio ? (selectedUser.value?.userId ?? ofUserId) : 0,
                 toUserId: 0,
-                text: result.data.message.content,
+                text: mensajeEco.content,
                 time: 'En este momento',
-                type: result.data.message.type,
-                id: result.data.message.id
+                type: mensajeEco.type,
+                id: mensajeEco.id,
+                sent_by_name: mensajeEco.sent_by_name ?? null
             };
 
             participants.forEach(item => {
-                if(authUser.id == item){
+                if(effectiveUserId.value == item){
                     fetchPosts()
                     if(selectedUser.value){
                         if(conversationId == selectedUser.value.conversationId){
-                            selectedUser.value.messages.push(newmsg);
-                            scrollToBottom();
+                            // Se completa el mensaje que ya estaba en pantalla (eco
+                            // adelantado o respuesta del POST) o se agrega una sola vez.
+                            pintarMensaje(newmsg, esMio);
                         }
                     }
 
@@ -272,6 +450,22 @@
         });
     };
 
+    // Aviso bloqueante (modal) para los problemas que impiden operar el chat de
+    // consultas: no hay ningun usuario con rol Asistente, o el pedido ya no lo tiene.
+    const mostrarAvisoAsistentes = () => {
+        if (! props.avisoAsistentes) return;
+
+        Swal.fire({
+            icon: 'warning',
+            title: 'Chat de consultas',
+            text: props.avisoAsistentes,
+            confirmButtonText: 'Entendido',
+            confirmButtonColor: '#3b5bdb',
+        });
+    };
+
+    onMounted(() => mostrarAvisoAsistentes());
+
     const formIaconsulta = useForm({
         messageText: null,
         instructions: null,
@@ -280,14 +474,38 @@
         routeBackend: null,
         userId: null
     });
+
+    const instructionsPorDefecto = `Eres un contador y un experto en NIIF y NIA, responde la consulta. La respuesta debe combinar lenguaje técnico sencillo de entender, y tener la siguiente estructura:
+Análisis - Desarrollo - Conclusiones y Recomendaciones
+responde usando etiquetas html
+Limitate a responder las consultas, y no ofrescas algo más para continuar.`;
+
+    const displayModalRespuestaAi = ref(false);
+    const displayModalConfirmarAi = ref(false);
+    const censoredQuestion = ref(null);
+    const censoredResponse = ref(null);
+    // Bandera: tras guardar en banco de consultas, ¿se debe enviar la respuesta al usuario?
+    const sendAfterSave = ref(false);
+
     const openModalQuestionAI = (item) => {
         formIaconsulta.messageText = item.content
-        formIaconsulta.instructions = item.content
+        formIaconsulta.instructions = instructionsPorDefecto
         displayModalAi.value = true;
+        displayModalRespuestaAi.value = false;
+    };
+
+    const openModalRespuestaAI = () => {
+        displayModalAi.value = false;
+        displayModalRespuestaAi.value = true;
     };
 
     const closeModalQuestionAI = () => {
         displayModalAi.value = false;
+        displayModalRespuestaAi.value = false;
+        displayModalConfirmarAi.value = false;
+        censoredQuestion.value = null;
+        censoredResponse.value = null;
+        sendAfterSave.value = false;
         formIaconsulta.reset();
     };
 
@@ -304,13 +522,22 @@
     const sendPromptOpenAI = () => {
         formIaconsulta.processing = true;
         const url = route('crm_application_ai_prompt_send_message_openai');
-        axios.post(url,formIaconsulta,{
+        chatPost(url,formIaconsulta,{
             headers: {
                 'Content-Type': 'application/json'
             },
             timeout: 0,
         }).then((result) => {
-            formIaconsulta.respond = result.data.responseText
+            if (result.data.success) {
+                formIaconsulta.respond = result.data.responseText
+                openModalRespuestaAI()
+            } else {
+                showMessage(result.data.message || 'No se pudo consultar la IA.', 'error')
+                displayModalAi.value = false
+            }
+        }).catch((error) => {
+            showMessage(error.response?.data?.message || 'Error al consultar la IA. Intenta nuevamente.', 'error')
+            displayModalAi.value = false
         }).finally(()=>{
             formIaconsulta.processing = false;;
         });
@@ -331,38 +558,82 @@
         }).then((result) => {
             formIaconsulta.respond = result.data.responseText
             //zformIaconsulta.respond = clearHTMLdelimiters(result.data.responseText)
+            openModalRespuestaAI()
         }).finally(()=>{
             formIaconsulta.processing = false;;
         });
     }
 
     const sendMessageAi = () => {
-        if (formIaconsulta.respond.trim()) {
-            isShowLoadingSend.value = true;
-            const msg = {
-                fromUserId: selectedUser.value.userId,
-                toUserId: 0,
-                text: formIaconsulta.respond,
-                time: 'En este momento',
-                type: 'text',
-                id: null,
-                answer_ai: true
-            };
-            axios.post(route('crm_send_message'), msg).then((response) => {
-                return response.data;
-            }).then((res) => {
-                if(res.success){
-                    selectedUser.value.messages.push(msg);
-                    textMessage.value = '';
-                    scrollToBottom();
-                }else{
-                    showMessage('No puede enviar mensajes en este momento. Por favor, complete su información personal en su perfil para habilitar esta función.','info');
+        if (formIaconsulta.respond?.trim()) {
+            Swal.fire({
+                title: '¿Quieres guardar la respuesta en el banco de consultas?',
+                text: 'Si eliges sí, podrás revisarla antes de enviarla.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Sí, guardar y enviar',
+                cancelButtonText: 'No, solo enviar',
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    sendAfterSave.value = true;
+                    saveQuestionResult();
+                } else {
+                    sendAfterSave.value = false;
+                    doSendMessageAi();
                 }
-                isShowLoadingSend.value = false;
-            }).finally(() => {
-                closeModalQuestionAI();
             });
         }
+    };
+
+    const doSendMessageAi = () => {
+        if (!formIaconsulta.respond?.trim()) return;
+        isShowLoadingSend.value = true;
+        const msg = {
+            fromUserId: selectedUser.value.userId,
+            toUserId: 0,
+            text: formIaconsulta.respond,
+            time: 'En este momento',
+            type: 'text',
+            id: null,
+            answer_ai: true
+        };
+        registrarPropio(msg);
+        chatPost(route('crm_send_message'), msg).then((response) => {
+            return response.data;
+        }).then((res) => {
+            if(res.success){
+                msg.id = res.message?.id ?? null;
+                pushMensajePropio(msg);
+                olvidarPropio(msg);
+                textMessage.value = '';
+            }else{
+                showMessage('No puede enviar mensajes en este momento. Por favor, complete su información personal en su perfil para habilitar esta función.','info');
+            }
+            isShowLoadingSend.value = false;
+        }).finally(() => {
+            closeModalQuestionAI();
+        });
+    };
+
+    // Tras guardar en banco de consultas (desde el botón Guardar), preguntar si enviar al usuario
+    const askSendAfterSave = () => {
+        Swal.fire({
+            title: '¿Quieres enviar la respuesta al usuario?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Sí, enviar',
+            cancelButtonText: 'No',
+        }).then((result) => {
+            if (result.isConfirmed) {
+                doSendMessageAi();
+            } else {
+                closeModalQuestionAI();
+            }
+        });
     };
 
     const clearHTMLdelimiters = (cadena) => {
@@ -395,6 +666,12 @@
         }).then((result) => {
             if(result.data.success){
                 showMessage('Información guardada correctamente.','success');
+                if (sendAfterSave.value) {
+                    sendAfterSave.value = false;
+                    doSendMessageAi();
+                } else {
+                    askSendAfterSave();
+                }
             }
         }).finally(()=>{
             censorLoader.value = false;
@@ -404,25 +681,112 @@
     const sendCensorTextOpenAI = () => {
         formIaconsulta.processing = true;
         const url = route('crm_respond_frequently_questions_store');
-        axios.post(url,formIaconsulta,{
+        chatPost(url,formIaconsulta,{
             headers: {
                 'Content-Type': 'application/json'
             },
             timeout: 0,
         }).then((result) => {
             if(result.data.success){
-                showMessage('Información guardada correctamente. puede visualizarlo en DUDAS COMUNES','success');
+                censoredQuestion.value = result.data.questionText;
+                censoredResponse.value = result.data.responseText;
+                displayModalRespuestaAi.value = false;
+                displayModalConfirmarAi.value = true;
+            } else {
+                showMessage(result.data.message || 'No se pudo censurar la respuesta.', 'error')
             }
+        }).catch((error) => {
+            showMessage(error.response?.data?.message || 'Error al censurar la respuesta. Intenta nuevamente.', 'error')
         }).finally(()=>{
             formIaconsulta.processing = false;;
         });
     }
+
+    const closeModalConfirmarAI = () => {
+        displayModalConfirmarAi.value = false;
+        displayModalRespuestaAi.value = true;
+        sendAfterSave.value = false;
+    };
+
+    const confirmSaveQuestion = () => {
+        if (!censoredQuestion.value?.trim() || !censoredResponse.value?.trim()) {
+            showMessage('La pregunta y la respuesta no pueden estar vacías.', 'warning');
+            return;
+        }
+        censorLoader.value = true;
+        chatPost(route('crm_common_questions_store'), {
+            question_text: censoredQuestion.value,
+            response_text: censoredResponse.value,
+            user_id: effectiveUserId.value,
+        }, {
+            headers: {
+                'Content-Type': 'application/json'
+            },
+        }).then((result) => {
+            if (result.data.ibank) {
+                showMessage('Información guardada correctamente. puede visualizarlo en Banco de Consultas','success');
+                if (sendAfterSave.value) {
+                    sendAfterSave.value = false;
+                    doSendMessageAi();
+                } else {
+                    askSendAfterSave();
+                }
+            } else {
+                showMessage('No se pudo guardar la respuesta.', 'error');
+            }
+        }).catch((error) => {
+            showMessage(error.response?.data?.message || 'Error al guardar la respuesta. Intenta nuevamente.', 'error');
+        }).finally(() => {
+            censorLoader.value = false;
+        });
+    };
 
     const stripHtml = (html) => {
         const div = document.createElement('div');
         div.innerHTML = html;
         return div.textContent || div.innerText || '';
     }
+
+    const hasAnyRole = (rolesToCheck) => {
+        return (authUser.roles || []).some(role => rolesToCheck.includes(role.name));
+    };
+
+    const canDeleteMessage = (message) => {
+        if (!message || !message.id || !message.created_at) return false;
+        if (!hasAnyRole(['Docente', 'admin', 'Administrador'])) return false;
+        if (selectedUser.value?.userId !== message.fromUserId) return false;
+        const createdAt = new Date(message.created_at);
+        if (isNaN(createdAt.getTime())) return false;
+        return Date.now() - createdAt.getTime() < 60 * 60 * 1000;
+    };
+
+    const deleteMessage = (message, index) => {
+        Swal.fire({
+            title: '¿Estás seguro de eliminar este mensaje?',
+            text: 'Esta acción no se puede deshacer.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar',
+        }).then((result) => {
+            if (result.isConfirmed) {
+                chatDelete(route('crm_chat_message_destroy'), {
+                    data: { message_id: message.id },
+                }).then((response) => {
+                    if (response.data.success) {
+                        selectedUser.value.messages.splice(index, 1);
+                        showMessage(response.data.message || 'Mensaje eliminado correctamente.', 'success');
+                    } else {
+                        showMessage(response.data.message || 'No se pudo eliminar el mensaje.', 'error');
+                    }
+                }).catch((error) => {
+                    showMessage(error.response?.data?.message || 'Error al eliminar el mensaje. Intenta nuevamente.', 'error');
+                });
+            }
+        });
+    };
 </script>
 <template>
     <AppLayout title="Chat">
@@ -433,7 +797,249 @@
         </Navigation>
         <div class="mt-5">
 
+            <!-- Chat de consultas: el selector queda siempre visible para poder
+                 cambiar entre "Yo" y cada asistente sin perder el contexto. -->
+            <div v-if="modoAsistentes" class="mb-4 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+                <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                        <p class="text-sm font-bold text-gray-700 dark:text-gray-200">
+                            Chat de consultas
+                        </p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            Elige con quién chatear: tú mismo o uno de los asistentes.
+                        </p>
+                    </div>
+                    <span
+                        v-if="suplantando"
+                        class="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200"
+                    >
+                        Escribiendo como {{ asistenteActivo.full_name }}
+                    </span>
+                </div>
+                <!-- Aviso cuando no hay con quien operar: ningun usuario con rol
+                     Asistente, o el asistente pedido ya no tiene el rol. -->
+                <div
+                    v-if="avisoAsistentes"
+                    class="mb-3 flex items-start gap-2 rounded-md border border-warning/40 bg-warning/10 p-3 text-xs text-warning"
+                >
+                    <IconInfoCircle class="mt-0.5 h-4 w-4 flex-none" />
+                    <p>{{ avisoAsistentes }}</p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button
+                        type="button"
+                        class="flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition"
+                        :class="suplantando
+                            ? 'border-gray-200 text-gray-700 hover:border-indigo-400 hover:text-indigo-700 dark:border-gray-700 dark:text-gray-200 dark:hover:text-indigo-300'
+                            : 'border-indigo-500 bg-indigo-50 font-semibold text-indigo-700 dark:border-indigo-400 dark:bg-indigo-900/40 dark:text-indigo-200'"
+                        @click="salirModoAsistente"
+                    >
+                        <img
+                            v-if="authUser.avatar"
+                            :src="getImage(authUser.avatar)"
+                            class="h-6 w-6 rounded-full object-cover"
+                            alt=""
+                        />
+                        <img
+                            v-else
+                            :src="'https://ui-avatars.com/api/?name=' + authUser.name + '&size=48&rounded=true'"
+                            class="h-6 w-6 rounded-full object-cover"
+                            alt=""
+                        />
+                        Yo
+                    </button>
+                    <button
+                        v-for="asistente in asistentes"
+                        :key="asistente.person_id"
+                        type="button"
+                        class="flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition"
+                        :class="asistenteActivo && asistenteActivo.person_id === asistente.person_id
+                            ? 'border-indigo-500 bg-indigo-50 font-semibold text-indigo-700 dark:border-indigo-400 dark:bg-indigo-900/40 dark:text-indigo-200'
+                            : 'border-gray-200 text-gray-700 hover:border-indigo-400 hover:text-indigo-700 dark:border-gray-700 dark:text-gray-200 dark:hover:text-indigo-300'"
+                        @click="entrarComoAsistente(asistente)"
+                    >
+                        <img
+                            v-if="getAsistenteImage(asistente.image)"
+                            :src="getAsistenteImage(asistente.image)"
+                            class="h-6 w-6 rounded-full object-cover"
+                            alt=""
+                        />
+                        <img
+                            v-else
+                            :src="'https://ui-avatars.com/api/?name=' + asistente.full_name + '&size=48&rounded=true'"
+                            class="h-6 w-6 rounded-full object-cover"
+                            alt=""
+                        />
+                        {{ asistente.full_name }}
+                    </button>
+                </div>
+                <p v-if="!asistentes.length" class="mt-2 text-xs text-gray-500">
+                    Aún no hay usuarios con el rol Asistente: créalo para poder responder como él.
+                </p>
+                <p v-else-if="!suplantando" class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    Estás viendo tu propio chat: elige un asistente de la lista para responder como él.
+                </p>
+            </div>
+
             <div class="flex gap-5 relative sm:h-[calc(100vh_-_150px)] h-full sm:min-h-0" :class="{ 'min-h-[999px]': isShowChatMenu }">
+                <!-- Modal de Consulta AI - Primera pantalla -->
+                <ModalLargeX :show="displayModalAi" :onClose="closeModalQuestionAI" :icon="'/img/ai.png'" :loading="formIaconsulta.processing">
+                    <template #title>Inteligencia Artificial</template>
+                    <template #message>Mejora tu respuesta</template>
+                    <template #content>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Consulta del usuario</label>
+                                <textarea
+                                    class="form-textarea text-gray-900 font-medium"
+                                    style="border-color:#3b5bdb"
+                                    rows="4"
+                                    v-model="formIaconsulta.messageText"
+                                ></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500">Instrucciones</label>
+                                <div class="relative">
+                                    <textarea
+                                        class="form-textarea text-gray-400 opacity-75"
+                                        rows="6"
+                                        v-model="formIaconsulta.instructions"
+                                    ></textarea>
+                                    <button
+                                        type="button"
+                                        @click="formIaconsulta.instructions = instructionsPorDefecto"
+                                        class="absolute bottom-2 right-2 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded text-gray-600"
+                                    >
+                                        Restablecer
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                    <template #buttons>
+                        <PrimaryButton @click="selectServerAI" type="button" :class="{ 'opacity-25': formIaconsulta.processing }" :disabled="formIaconsulta.processing">
+                            <svg v-show="formIaconsulta.processing" aria-hidden="true" role="status" class="inline w-4 h-4 mr-3 text-gray-200 animate-spin dark:text-gray-600" viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z" fill="currentColor"/>
+                                <path d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z" fill="#1C64F2"/>
+                            </svg>
+                            Consultar
+                        </PrimaryButton>
+                    </template>
+                </ModalLargeX>
+
+                <!-- Modal de Respuesta AI - Segunda pantalla -->
+                <ModalLargeX :show="displayModalRespuestaAi" :onClose="closeModalQuestionAI" :icon="'/img/ai.png'" :loading="censorLoader || formIaconsulta.processing">
+                    <template #title>Inteligencia Artificial</template>
+                    <template #message>Respuesta generada</template>
+                    <template #content>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Consulta del usuario</label>
+                                <textarea
+                                    class="form-textarea text-gray-900 font-medium"
+                                    style="border-color:#3b5bdb"
+                                    rows="3"
+                                    v-model="formIaconsulta.messageText"
+                                ></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500">Instrucciones</label>
+                                <div class="relative">
+                                    <textarea
+                                        class="form-textarea text-gray-400 opacity-75"
+                                        rows="5"
+                                        v-model="formIaconsulta.instructions"
+                                    ></textarea>
+                                    <button
+                                        type="button"
+                                        @click="formIaconsulta.instructions = instructionsPorDefecto"
+                                        class="absolute bottom-2 right-2 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded text-gray-600"
+                                    >
+                                        Restablecer
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded-md border">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Respuesta de la IA</label>
+                                <Editor
+                                    id="respondTxt"
+                                    :api-key="P000010"
+                                    v-model="formIaconsulta.respond"
+                                />
+                            </div>
+                        </div>
+                    </template>
+                    <template #buttons>
+                        <button
+                            type="button"
+                            @click="saveQuestionResult"
+                            class="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 disabled:opacity-50"
+                            :disabled="censorLoader"
+                        >
+                            Guardar en Banco de consultas
+                        </button>
+                        <button
+                            type="button"
+                            @click="sendMessageAi"
+                            class="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark disabled:opacity-50"
+                            :disabled="!formIaconsulta.respond?.trim() || formIaconsulta.processing"
+                        >
+                            Enviar respuesta
+                        </button>
+                        <button
+                            type="button"
+                            @click="displayModalRespuestaAi = false; displayModalAi = true"
+                            class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                        >
+                            Modificar
+                        </button>
+                    </template>
+                </ModalLargeX>
+
+                <!-- Modal de Confirmacion de Guardado - Tercera pantalla -->
+                <ModalLargeX :show="displayModalConfirmarAi" :onClose="closeModalConfirmarAI" :icon="'/img/ai.png'" :loading="censorLoader">
+                    <template #title>Inteligencia Artificial</template>
+                    <template #message>Revisa la pregunta y la respuesta antes de guardarla en Banco de Consultas</template>
+                    <template #content>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Pregunta</label>
+                                <textarea
+                                    class="form-textarea text-gray-900 font-medium"
+                                    style="border-color:#3b5bdb"
+                                    rows="3"
+                                    v-model="censoredQuestion"
+                                ></textarea>
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded-md border">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Respuesta</label>
+                                <Editor
+                                    id="confirmarRespondTxt"
+                                    :api-key="P000010"
+                                    v-model="censoredResponse"
+                                />
+                            </div>
+                        </div>
+                    </template>
+                    <template #buttons>
+                        <button
+                            type="button"
+                            @click="confirmSaveQuestion"
+                            class="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 disabled:opacity-50"
+                            :disabled="censorLoader"
+                        >
+                            Guardar
+                        </button>
+                        <button
+                            type="button"
+                            @click="closeModalConfirmarAI"
+                            class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                        >
+                            Cancelar
+                        </button>
+                    </template>
+                </ModalLargeX>
+
                 <div
                     class="panel p-4 flex-none max-w-xs w-full absolute xl:relative z-10 space-y-4 h-full hidden xl:block overflow-hidden"
                     :class="isShowChatMenu && '!block !overflow-y-auto'"
@@ -847,7 +1453,7 @@
                                         </div>
                                         <template v-if="selectedUser.messages && selectedUser.messages.length">
                                             <div v-for="(message, index) in selectedUser.messages" :key="index">
-                                                <div class="flex items-start gap-3" :class="{ 'justify-end': selectedUser.userId === message.fromUserId }">
+                                                <div class="flex items-start gap-3 group" :class="{ 'justify-end': selectedUser.userId === message.fromUserId }">
                                                     <div class="flex-none" :class="{ 'order-2': selectedUser.userId === message.fromUserId }">
                                                         <template v-if="selectedUser.userId === message.fromUserId">
                                                             <img v-if="$page.props.auth.user.avatar" :src="getImage($page.props.auth.user.avatar)" class="rounded-full h-10 w-10 object-cover" />
@@ -860,6 +1466,16 @@
                                                     </div>
                                                     <div class="space-y-2">
                                                         <div class="flex items-center gap-3">
+
+                                                                <button
+                                                                    v-if="canDeleteMessage(message)"
+                                                                    type="button"
+                                                                    class="hidden group-hover:flex items-center text-white-dark hover:text-danger"
+                                                                    title="Eliminar mensaje"
+                                                                    @click="deleteMessage(message, index)"
+                                                                >
+                                                                    <icon-trash-lines class="w-4.5 h-4.5" />
+                                                                </button>
 
                                                                 <div class="dark:bg-gray-800 p-4 py-2 rounded-md bg-black/10"
                                                                     :class="message.fromUserId == selectedUser.userId ? 'ltr:rounded-br-none rtl:rounded-bl-none !bg-primary text-white': 'ltr:rounded-tl-none rtl:rounded-tr-none'"
@@ -892,6 +1508,13 @@
                                                             :class="{ 'ltr:text-right rtl:text-left': selectedUser.userId === message.fromUserId }"
                                                         >
                                                             {{ message.time ? message.time : '5h ago' }}
+                                                        </div>
+                                                        <div
+                                                            v-if="message.sent_by_name"
+                                                            class="text-[11px] font-semibold text-warning"
+                                                            :class="{ 'ltr:text-right rtl:text-left': selectedUser.userId === message.fromUserId }"
+                                                        >
+                                                            Respondido por {{ message.sent_by_name }}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -939,61 +1562,5 @@
                 </div>
             </div>
         </div>
-        <ModalLargeX :show="displayModalAi" :onClose="closeModalQuestionAI" :icon="'/img/ai.png'">
-            <template #title>Inteligencia Artificial</template>
-            <template #message>Mejora tu respuesta</template>
-            <template #content>
-
-                <div v-show="formIaconsulta.respond" class="p-4 mb-4 text-blue-800 border border-blue-300 rounded-lg bg-blue-50 dark:bg-gray-800 dark:text-blue-400 dark:border-blue-800" role="alert">
-                    <div class="flex items-center">
-                        <svg class="shrink-0 w-4 h-4 me-2" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z"/>
-                        </svg>
-                        <span class="sr-only">Info</span>
-                        <h3 class="text-lg font-medium">Respuesta IA</h3>
-                    </div>
-                    <!-- <div class="mt-2 mb-4 text-sm" v-html="clearHTMLdelimiters(formIaconsulta.respond)"></div>
-                    {{ formIaconsulta.respond }} -->
-                    <div class="mt-2 mb-4 text-sm">
-                        <Editor
-                            id="respondTxt"
-                            :api-key="P000010"
-                            v-model="formIaconsulta.respond"
-                        />
-                    </div>
-                    <div class="flex">
-                        <button @click="saveQuestionResult" type="button" class="text-white bg-yellow-800 hover:bg-yellow-900 focus:ring-4 focus:outline-none focus:ring-yellow-200 font-medium rounded-lg text-xs px-3 py-1.5 me-2 text-center inline-flex items-center dark:bg-yellow-600 dark:hover:bg-yellow-700 dark:focus:ring-yellow-800">
-                            <svg v-if="censorLoader" aria-hidden="true" role="status" class="inline w-4 h-4 mr-3 text-gray-200 animate-spin dark:text-gray-600" viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z" fill="currentColor"/>
-                                <path d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z" fill="#1C64F2"/>
-                            </svg>
-                            <svg v-else class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512">
-                                <path fill="currentColor" d="M64 32C28.7 32 0 60.7 0 96L0 416c0 35.3 28.7 64 64 64l320 0c35.3 0 64-28.7 64-64l0-242.7c0-17-6.7-33.3-18.7-45.3L352 50.7C340 38.7 323.7 32 306.7 32L64 32zm0 96c0-17.7 14.3-32 32-32l192 0c17.7 0 32 14.3 32 32l0 64c0 17.7-14.3 32-32 32L96 224c-17.7 0-32-14.3-32-32l0-64zM224 288a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/>
-                            </svg>
-                            Guardar respuesta
-                        </button>
-                        <button @click="sendMessageAi"  :class="{ 'opacity-25': isShowLoadingSend }" :disabled="isShowLoadingSend" type="button" class="text-white bg-blue-800 hover:bg-blue-900 focus:ring-4 focus:outline-none focus:ring-blue-200 font-medium rounded-lg text-xs px-3 py-1.5 me-2 text-center inline-flex items-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
-                            <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-                                <path fill="currentColor" d="M307 34.8c-11.5 5.1-19 16.6-19 29.2l0 64-112 0C78.8 128 0 206.8 0 304C0 417.3 81.5 467.9 100.2 478.1c2.5 1.4 5.3 1.9 8.1 1.9c10.9 0 19.7-8.9 19.7-19.7c0-7.5-4.3-14.4-9.8-19.5C108.8 431.9 96 414.4 96 384c0-53 43-96 96-96l96 0 0 64c0 12.6 7.4 24.1 19 29.2s25 3 34.4-5.4l160-144c6.7-6.1 10.6-14.7 10.6-23.8s-3.8-17.7-10.6-23.8l-160-144c-9.4-8.5-22.9-10.6-34.4-5.4z"/>
-                            </svg>
-                            Enviar al alumno
-                        </button>
-                    </div>
-                </div>
-                <div>
-                    <label>Instrucciones</label>
-                    <textarea v-model="formIaconsulta.instructions" class="form-textarea" rows="8"></textarea>
-                </div>
-            </template>
-            <template #buttons>
-                <PrimaryButton @click="selectServerAI" type="button" :class="{ 'opacity-25': formIaconsulta.processing }" :disabled="formIaconsulta.processing">
-                    <svg v-show="formIaconsulta.processing" aria-hidden="true" role="status" class="inline w-4 h-4 mr-3 text-gray-200 animate-spin dark:text-gray-600" viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z" fill="currentColor"/>
-                        <path d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z" fill="#1C64F2"/>
-                    </svg>
-                    Consultar
-                </PrimaryButton>
-            </template>
-        </ModalLargeX>
     </AppLayout>
 </template>

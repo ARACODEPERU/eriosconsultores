@@ -11,12 +11,14 @@
 |
 */
 
+use App\Http\Controllers\WebPageController;
+use Modules\Blog\Http\Controllers\BlogAiController;
 use Modules\Blog\Http\Controllers\BlogArticlesController;
 use Modules\Blog\Http\Controllers\BlogCategoriesController;
 use Modules\Blog\Http\Controllers\BlogCommentController;
 
 Route::prefix('blog')->group(function () {
-    Route::get('/', 'BlogController@index');
+    Route::get('/', [WebPageController::class, 'blog_index'])->name('blog_principal');
 
     Route::middleware(['auth'])->group(function () {
         Route::middleware(['middleware' => 'permission:blog_dashboard'])
@@ -61,5 +63,13 @@ Route::prefix('blog')->group(function () {
 
         Route::post('articles/search/title', [BlogArticlesController::class, 'searchArticles'])
             ->name('blog_search_articles');
+
+        // Rutas de asistente IA para artículos
+        Route::post('ai/correct-spelling', [BlogAiController::class, 'correctSpelling'])
+            ->name('blog_ai_correct_spelling');
+        Route::post('ai/generate-article', [BlogAiController::class, 'generateArticle'])
+            ->name('blog_ai_generate_article');
+        Route::post('ai/verify-content', [BlogAiController::class, 'verifyContent'])
+            ->name('blog_ai_verify_content');
     });
 });
