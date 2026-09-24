@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Str;
 use Modules\Onlineshop\Entities\OnliItem;
 
 class AcaCourse extends Model
@@ -123,5 +124,21 @@ class AcaCourse extends Model
     {
         // 'course_id' es la columna en aca_course_landings que apunta a este curso
         return $this->hasOne(AcaCourseLanding::class, 'course_id');
+    }
+
+    /**
+     * Slug público del curso: el de su landing publicada cuando existe y, si no,
+     * el derivado de su nombre. Es la URL canónica de /curso/{slug} y el único
+     * sitio donde se decide, para que listado, ficha y controlador no diverjan.
+     */
+    public function publicSlug(): ?string
+    {
+        $landing = $this->relationLoaded('landing') ? $this->getRelation('landing') : $this->landing;
+
+        if ($landing && $landing->is_published && filled($landing->url_slug)) {
+            return (string) $landing->url_slug;
+        }
+
+        return Str::slug((string) $this->description) ?: null;
     }
 }

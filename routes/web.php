@@ -36,6 +36,10 @@ Route::get('/nosotros', [WebPageController::class, 'about'])->name('web_about');
 Route::get('/servicios', [WebPageController::class, 'services'])->name('web_services');
 Route::get('/cursos', [WebPageController::class, 'courses'])->name('web_courses');
 Route::get('/curso/{slug}', [WebPageController::class, 'coursedescription'])->name('web_course_description');
+// Mismo destino que /curso/{slug}, con el nombre que ya usan el aula
+// (Students/Courses.vue) y las landings de campaña para abrir la ficha de un
+// curso: es el name 'course_url_slug' de globalcpa.
+Route::get('/curso/landing/{slug}', [WebPageController::class, 'coursedescription'])->name('course_url_slug');
 Route::get('/carrito', [WebPageController::class, 'shopcart'])->name('web_carrito');
 Route::get('/pagar', [WebPageController::class, 'pay'])->name('web_pay');
 Route::get('/gracias', [WebPageController::class, 'thanks'])->name('web_thanks');
