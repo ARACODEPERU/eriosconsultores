@@ -20,13 +20,32 @@ import menuBibliodata from 'Modules/Bibliodata/Resources/assets/js/Menu.js';
 import menuIntegrationhub from 'Modules/Integrationhub/Resources/assets/js/Menu.js';
 import menuCommercial from 'Modules/Commercial/Resources/assets/js/Menu.js';
 import menuTreasury from 'Modules/Treasury/Resources/assets/js/Menu.js';
+import { menuRoute } from '@/utils/menuRoute';
 
-const MenuData = ref([
+/**
+ * Quita del menu las entradas cuyo enlace no existe.
+ *
+ * Ziggy lanza ("Ziggy error: route 'x' is not in the route list") cuando el nombre
+ * pedido no esta en el listado que el servidor genero al renderizar la pagina: un
+ * modulo deshabilitado no registra sus rutas y sus Menu.js quedan con enlaces
+ * invalidos. Los Menu.js usan menuRoute(), que devuelve null en ese caso; aqui se
+ * descartan esas entradas y los grupos que se quedan sin hijos, para que el modulo
+ * desaparezca del menu en lugar de dejar enlaces vacios.
+ *
+ * Se aplica una sola vez, en el unico punto por el que pasan todos los
+ * consumidores del menu (Sidebar-Admin, Sidebar, Header y Sidebar-Old).
+ */
+const sanitizeItems = (items = []) =>
+    items
+        .map((item) => (item && item.items ? { ...item, items: sanitizeItems(item.items) } : item))
+        .filter((item) => item && item.route !== null && (!item.items || item.items.length > 0));
+
+const MenuData = ref(sanitizeItems([
     {
         status: false,
         text: 'Dashboard',
         icom: faPoll,
-        route: route("dashboard"),
+        route: menuRoute("dashboard"),
         permissions: 'dashboard',
         // items:[
         //     {
@@ -63,5 +82,5 @@ const MenuData = ref([
     menuIntegrationhub,
     menuCommercial,
     menuTreasury
-]);
+]));
 export default MenuData;
