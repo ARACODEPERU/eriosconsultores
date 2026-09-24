@@ -29,101 +29,78 @@ use Spatie\Permission\Models\Role;
 
 class WebPageController extends Controller
 {
-    protected $listcard;
 
     public function __construct()
     {
 
-        $this->listcard = CmsSection::where('component_id', 'cursos_area_5')
-            ->join('cms_section_items', 'section_id', 'cms_sections.id')
-            ->join('cms_items', 'cms_section_items.item_id', 'cms_items.id')
-            ->select(
-                'cms_items.content',
-                'cms_section_items.position'
-            )
-            ->orderBy('cms_section_items.position')
-            ->get();
     }
 
     public function index()
     {
-        return view('pages.home', [
-            'listcard' => $this->listcard
-        ]);
+        return view('pages.home');
     }
 
-    public function nosotros()
+    public function about()
     {
-
-        $banner = CmsSection::where('component_id', 'nosotros_banner_area_11')  //siempre cambiar el id del componente
-            ->join('cms_section_items', 'section_id', 'cms_sections.id')
-            ->join('cms_items', 'cms_section_items.item_id', 'cms_items.id')
-            ->select(
-                'cms_items.content',
-                'cms_section_items.position'
-            )
-            ->orderBy('cms_section_items.position')
-            ->first();
-
-
-        $visions = CmsSection::where('component_id', 'nosotros_vision_area_12')  //siempre cambiar el id del componente
-            ->join('cms_section_items', 'section_id', 'cms_sections.id')
-            ->join('cms_items', 'cms_section_items.item_id', 'cms_items.id')
-            ->select(
-                'cms_items.content',
-                'cms_section_items.position'
-            )
-            ->orderBy('cms_section_items.position')
-            ->get();
-
-        $lider = CmsSection::where('component_id', 'nosotros_lider_area_13')  //siempre cambiar el id del componente
-            ->join('cms_section_items', 'section_id', 'cms_sections.id')
-            ->join('cms_items', 'cms_section_items.item_id', 'cms_items.id')
-            ->select(
-                'cms_items.content',
-                'cms_section_items.position'
-            )
-            ->orderBy('cms_section_items.position')
-            ->get();
-
-        return view('pages.nosotros', [
-            'banner' => $banner,
-            'visions' => $visions,
-            'lider' => $lider
-        ]);
+        return view('pages.about');
     }
 
-    public function cursos()
+    public function services()
     {
-        $courses = OnliItem::with('course')->get();
-        $courses = $courses->shuffle();
-        $categories = AcaCategoryCourse::all();
+        return view('pages.services');
+    }
 
-        $banner = CmsSection::where('component_id', 'cursos_banner_area_14')  //siempre cambiar el id del componente
-            ->join('cms_section_items', 'section_id', 'cms_sections.id')
-            ->join('cms_items', 'cms_section_items.item_id', 'cms_items.id')
-            ->select(
-                'cms_items.content',
-                'cms_section_items.position'
-            )
-            ->orderBy('cms_section_items.position')
-            ->first();
-
-        $title = CmsSection::where('component_id', 'cursos_titulo_area_15')  //siempre cambiar el id del componente
-            ->join('cms_section_items', 'section_id', 'cms_sections.id')
-            ->join('cms_items', 'cms_section_items.item_id', 'cms_items.id')
-            ->select(
-                'cms_items.content',
-                'cms_section_items.position'
-            )
-            ->orderBy('cms_section_items.position')
+    public function courses()
+    {
+        $courses = OnliItem::with('course.category', 'course.modality')
+            ->where('status', true)
+            ->orderBy('id', 'desc')
             ->get();
 
-        return view('pages.cursos', [
-            'courses' => $courses,
+        $categories = $courses
+            ->map(function ($c) {
+                return $c->category_description ?: optional(optional($c->course)->category)->description;
+            })
+            ->filter()
+            ->unique()
+            ->values();
+
+        return view('pages.courses', [
+            'courses'    => $courses,
             'categories' => $categories,
-            'banner' => $banner,
-            'title' => $title
+        ]);
+    }
+
+    public function coursedescription()
+    {
+        return view('pages.course-description');
+    }
+
+    public function cursodescripcion($id)
+    {
+        $item = OnliItem::find($id);
+
+        $course = AcaCourse::with('category')
+            ->with('modality')
+            ->with('modules')
+            ->with('teachers.teacher.person.resumes')
+            ->with('brochure')
+            ->with('agreements')
+            ->where('id', $item->item_id)
+            ->first();
+
+        $latest_courses = OnliItem::with('course')
+            ->orderBy('id', 'desc')
+            ->where('id', '!=', $id)
+            ->take(10)
+            ->get()
+            ->shuffle()
+            ->take(3);
+
+        return view('pages.curso-descripcion', [
+            'course' => $course,
+            'item' => $item,
+            'latest_courses' => $latest_courses
         ]);
     }
 
@@ -156,207 +133,53 @@ class WebPageController extends Controller
         ]);
     }
 
-    public function capacitacion()
+
+    public function teachers()
     {
-
-        $banner = CmsSection::where('component_id', 'cursos_banner_area_14')  //siempre cambiar el id del componente
-            ->join('cms_section_items', 'section_id', 'cms_sections.id')
-            ->join('cms_items', 'cms_section_items.item_id', 'cms_items.id')
-            ->select(
-                'cms_items.content',
-                'cms_section_items.position'
-            )
-            ->orderBy('cms_section_items.position')
-            ->first();
-
-        $title = CmsSection::where('component_id', 'cursos_titulo_area_15')  //siempre cambiar el id del componente
-            ->join('cms_section_items', 'section_id', 'cms_sections.id')
-            ->join('cms_items', 'cms_section_items.item_id', 'cms_items.id')
-            ->select(
-                'cms_items.content',
-                'cms_section_items.position'
-            )
-            ->orderBy('cms_section_items.position')
-            ->get();
-
-        return view('pages.capacitacion', [
-            'banner' => $banner,
-            'title' => $title
-        ]);
+        return view('pages.teachers');
     }
 
-    public function suscripcion()
+    public function contact()
     {
+        // $banner = CmsSection::where('component_id', 'nosotros_banner_area_11')  //siempre cambiar el id del componente
+        //     ->join('cms_section_items', 'section_id', 'cms_sections.id')
+        //     ->join('cms_items', 'cms_section_items.item_id', 'cms_items.id')
+        //     ->select(
+        //         'cms_items.content',
+        //         'cms_section_items.position'
+        //     )
+        //     ->orderBy('cms_section_items.position')
+        //     ->first();
 
-        $banner = CmsSection::where('component_id', 'cursos_banner_area_14')  //siempre cambiar el id del componente
-            ->join('cms_section_items', 'section_id', 'cms_sections.id')
-            ->join('cms_items', 'cms_section_items.item_id', 'cms_items.id')
-            ->select(
-                'cms_items.content',
-                'cms_section_items.position'
-            )
-            ->orderBy('cms_section_items.position')
-            ->first();
+        // $title = CmsSection::where('component_id', 'header_area_1')  //siempre cambiar el id del componente
+        //     ->join('cms_section_items', 'section_id', 'cms_sections.id')
+        //     ->join('cms_items', 'cms_section_items.item_id', 'cms_items.id')
+        //     ->select(
+        //         'cms_items.content',
+        //         'cms_section_items.position'
+        //     )
+        //     ->orderBy('cms_section_items.position')
+        //     ->get();
 
-        $title = CmsSection::where('component_id', 'cursos_titulo_area_15')  //siempre cambiar el id del componente
-            ->join('cms_section_items', 'section_id', 'cms_sections.id')
-            ->join('cms_items', 'cms_section_items.item_id', 'cms_items.id')
-            ->select(
-                'cms_items.content',
-                'cms_section_items.position'
-            )
-            ->orderBy('cms_section_items.position')
-            ->get();
 
-        return view('pages.suscripcion', [
-            'banner' => $banner,
-            'title' => $title
-        ]);
+        // return view('pages.contacto', [
+        //     'banner' => $banner,
+        //     'title' => $title
+        // ]);
+
+        return view('pages.contact');
     }
 
-    public function automatizacion()
+    public function privacypolicies()
     {
-
-        $banner = CmsSection::where('component_id', 'cursos_banner_area_14')  //siempre cambiar el id del componente
-            ->join('cms_section_items', 'section_id', 'cms_sections.id')
-            ->join('cms_items', 'cms_section_items.item_id', 'cms_items.id')
-            ->select(
-                'cms_items.content',
-                'cms_section_items.position'
-            )
-            ->orderBy('cms_section_items.position')
-            ->first();
-
-        $title = CmsSection::where('component_id', 'cursos_titulo_area_15')  //siempre cambiar el id del componente
-            ->join('cms_section_items', 'section_id', 'cms_sections.id')
-            ->join('cms_items', 'cms_section_items.item_id', 'cms_items.id')
-            ->select(
-                'cms_items.content',
-                'cms_section_items.position'
-            )
-            ->orderBy('cms_section_items.position')
-            ->get();
-
-        return view('pages.automatizacion', [
-            'banner' => $banner,
-            'title' => $title
-        ]);
+        return view('pages/privacy-policies');
     }
 
-    public function agencia()
+    public function returnpolicies()
     {
-
-        $banner = CmsSection::where('component_id', 'cursos_banner_area_14')  //siempre cambiar el id del componente
-            ->join('cms_section_items', 'section_id', 'cms_sections.id')
-            ->join('cms_items', 'cms_section_items.item_id', 'cms_items.id')
-            ->select(
-                'cms_items.content',
-                'cms_section_items.position'
-            )
-            ->orderBy('cms_section_items.position')
-            ->first();
-
-        $title = CmsSection::where('component_id', 'cursos_titulo_area_15')  //siempre cambiar el id del componente
-            ->join('cms_section_items', 'section_id', 'cms_sections.id')
-            ->join('cms_items', 'cms_section_items.item_id', 'cms_items.id')
-            ->select(
-                'cms_items.content',
-                'cms_section_items.position'
-            )
-            ->orderBy('cms_section_items.position')
-            ->get();
-
-        return view('pages.agencia', [
-            'banner' => $banner,
-            'title' => $title
-        ]);
+        return view('pages/return-policy');
     }
 
-    public function imagenprofesional()
-    {
-
-        $banner = CmsSection::where('component_id', 'cursos_banner_area_14')  //siempre cambiar el id del componente
-            ->join('cms_section_items', 'section_id', 'cms_sections.id')
-            ->join('cms_items', 'cms_section_items.item_id', 'cms_items.id')
-            ->select(
-                'cms_items.content',
-                'cms_section_items.position'
-            )
-            ->orderBy('cms_section_items.position')
-            ->first();
-
-        $title = CmsSection::where('component_id', 'cursos_titulo_area_15')  //siempre cambiar el id del componente
-            ->join('cms_section_items', 'section_id', 'cms_sections.id')
-            ->join('cms_items', 'cms_section_items.item_id', 'cms_items.id')
-            ->select(
-                'cms_items.content',
-                'cms_section_items.position'
-            )
-            ->orderBy('cms_section_items.position')
-            ->get();
-
-        return view('pages.imagen-profesional', [
-            'banner' => $banner,
-            'title' => $title
-        ]);
-    }
-
-    public function cursodescripcion($id)
-    {
-        $item = OnliItem::find($id);
-
-        $course = AcaCourse::with('category')
-            ->with('modality')
-            ->with('modules')
-            ->with('teachers.teacher.person.resumes')
-            ->with('brochure')
-            ->with('agreements')
-            ->where('id', $item->item_id)
-            ->first();
-
-        $latest_courses = OnliItem::with('course')
-            ->orderBy('id', 'desc')
-            ->where('id', '!=', $id)
-            ->take(10)
-            ->get()
-            ->shuffle()
-            ->take(3);
-
-        return view('pages.curso-descripcion', [
-            'course' => $course,
-            'item' => $item,
-            'latest_courses' => $latest_courses
-        ]);
-    }
-
-    public function contacto()
-    {
-        $banner = CmsSection::where('component_id', 'nosotros_banner_area_11')  //siempre cambiar el id del componente
-            ->join('cms_section_items', 'section_id', 'cms_sections.id')
-            ->join('cms_items', 'cms_section_items.item_id', 'cms_items.id')
-            ->select(
-                'cms_items.content',
-                'cms_section_items.position'
-            )
-            ->orderBy('cms_section_items.position')
-            ->first();
-
-        $title = CmsSection::where('component_id', 'header_area_1')  //siempre cambiar el id del componente
-            ->join('cms_section_items', 'section_id', 'cms_sections.id')
-            ->join('cms_items', 'cms_section_items.item_id', 'cms_items.id')
-            ->select(
-                'cms_items.content',
-                'cms_section_items.position'
-            )
-            ->orderBy('cms_section_items.position')
-            ->get();
-
-
-        return view('pages.contacto', [
-            'banner' => $banner,
-            'title' => $title
-        ]);
-    }
 
     public function carrito()
     {
@@ -530,11 +353,6 @@ class WebPageController extends Controller
         return view('pages.politicas-de-privacidad', [
             'banner' => $banner
         ]);
-    }
-
-    public function construction()
-    {
-        return view('pages.construction');
     }
 
     public function processPayment(Request $request, $id)
