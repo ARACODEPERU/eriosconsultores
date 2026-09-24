@@ -29,6 +29,13 @@ use Modules\Sales\Http\Controllers\SalesController;
 // Rutas en Blade
 // Route::get('/home', [WebPageController::class, 'index'])->name('index_main');
 
+
+// Soluciones
+Route::get('/soluciones', [WebPageController::class, 'soluciones'])->name('soluciones');
+Route::get('/soluciones/kapta', [WebPageController::class, 'solucionKapta'])->name('solucion_kapta');
+Route::get('/soluciones/facturacion', [WebPageController::class, 'solucionFacturacion'])->name('solucion_facturacion');
+Route::get('/soluciones/desarrollo', [WebPageController::class, 'solucionDesarrollo'])->name('solucion_desarrollo');
+
 // Route::get('/', [WebPageController::class, 'construction'])->name('construction');
 Route::get('/', [WebPageController::class, 'index'])->name('index_main');
 Route::get('/nosotros', [WebPageController::class, 'about'])->name('web_about');
