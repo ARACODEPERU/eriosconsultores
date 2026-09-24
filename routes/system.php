@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\BankAccountController;
+use App\Http\Controllers\ComplaintsBookController;
+use App\Http\Controllers\CompanyBilleteraController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -9,7 +11,14 @@ Route::middleware('auth')->group(function () {
         ->name('bank-account-store');
     Route::delete('bank/account/destroy/{id}', [BankAccountController::class, 'destroy'])
         ->name('bank-account-destroy');
-
+    Route::post('company/billetera/store', [CompanyBilleteraController::class, 'storeOrUpdate'])
+        ->name('company-billetera-store');
+    Route::delete('company/billetera/destroy/{id}', [CompanyBilleteraController::class, 'destroy'])
+        ->name('company-billetera-destroy');
     ///users///
-    Route::get('datatables/users', [UserController::class, 'getUsers'])->name('users-tables-list');
+    Route::middleware(['permission:usuarios'])
+        ->get('datatables/users', [UserController::class, 'getUsers'])->name('users-tables-list');
 });
+
+Route::get('complaints-book', [ComplaintsBookController::class, 'createdByClient'])->name('complaints_book');
+Route::post('complaints-book/store', [ComplaintsBookController::class, 'storeByClient'])->name('complaints_book_store');

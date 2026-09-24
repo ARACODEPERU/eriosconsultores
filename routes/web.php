@@ -1,21 +1,18 @@
 <?php
 
-use App\Http\Controllers\CalendarController;
+use App\Http\Controllers\InternalJobTokenController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\KardexController;
-use App\Http\Controllers\LocalSaleController;
-use App\Http\Controllers\ParametersController;
-use App\Http\Controllers\PersonController;
-use App\Http\Controllers\WebController;
-use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
-
-use App\Http\Controllers\UserController;
+use App\Http\Controllers\JobOffersController;
 use App\Http\Controllers\LandingController;
+use App\Http\Controllers\LocalSaleController;
 use App\Http\Controllers\MetaController;
 use App\Http\Controllers\ModuloController;
+use App\Http\Controllers\ParametersController;
+use App\Http\Controllers\PersonController;
+use App\Http\Controllers\UserController;
 use App\Http\Controllers\WebPageController;
 use App\Mail\StudentRegistrationMailable;
 use App\Models\District;
@@ -23,32 +20,88 @@ use App\Models\Person;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 use Modules\Blog\Http\Controllers\BlogController;
 use Modules\Sales\Http\Controllers\SalesController;
+use App\Http\Controllers\CalendarController;
 
-// Rutas en Blade
-// Route::get('/home', [WebPageController::class, 'index'])->name('index_main');
+// ========================================
+// ARACODE Smart Solutions — Website
+// ========================================
 
-// Route::get('/', [WebPageController::class, 'construction'])->name('construction');
+// Homepage — respeta el parametro PW00001 (1 = Aracode Principal, 2 = Aracode Torneos)
 Route::get('/', [WebPageController::class, 'index'])->name('index_main');
-Route::get('/nosotros', [WebPageController::class, 'about'])->name('web_about');
-Route::get('/servicios', [WebPageController::class, 'services'])->name('web_services');
-Route::get('/cursos', [WebPageController::class, 'courses'])->name('web_courses');
-Route::get('/curso-descripcion',  [WebPageController::class, 'coursedescription'])->name('web_course_description');
-// Route::get('/curso-descripcion/{id}', [WebPageController::class, 'coursedescription'])->name('web_course_description');
-Route::get('/carrito', [WebPageController::class, 'shopcart'])->name('web_carrito');
-Route::get('/pagar', [WebPageController::class, 'pay'])->name('web_pay');
-Route::get('/gracias', [WebPageController::class, 'thanks'])->name('web_thanks');
-Route::get('/email', [WebPageController::class, 'email'])->name('web_email');
-Route::get('/contactanos', [WebPageController::class, 'contact'])->name('web_contact_us');
-Route::get('/docentes', [WebPageController::class, 'teachers'])->name('web_teachers');
-Route::get('/politicas-privacidad', [WebPageController::class, 'privacypolicies'])->name('web_privacy_policies');
-Route::get('/politicas-de-devoluciones', [WebPageController::class, 'returnpolicies'])->name('web_return_policies');
+Route::get('/home', fn () => redirect()->route('index_main'));
+
+// Soluciones
+Route::get('/soluciones', [WebPageController::class, 'soluciones'])->name('soluciones');
+Route::get('/soluciones/kapta', [WebPageController::class, 'solucionKapta'])->name('solucion_kapta');
+Route::get('/soluciones/facturacion', [WebPageController::class, 'solucionFacturacion'])->name('solucion_facturacion');
+Route::get('/soluciones/desarrollo', [WebPageController::class, 'solucionDesarrollo'])->name('solucion_desarrollo');
+
+// Empresa y Contacto
+Route::get('/empresa', [WebPageController::class, 'empresa'])->name('empresa');
+Route::get('/contacto', [WebPageController::class, 'contacto'])->name('contacto');
+Route::post('/contacto', [WebPageController::class, 'contactoStore'])->name('contacto_store');
+Route::post('/blog/subscribe', [WebPageController::class, 'blogSubscriberStore'])->name('blog.subscribe');
+
+// Blog
+Route::get('/blog', [WebPageController::class, 'blog_index'])->name('blog_principal');
+// El wildcard {url} captura cualquier slug de artículo público. Se marca como
+// fallback para que NO tape las rutas del admin del módulo Blog
+// (/blog/blog-article, /blog/blog-category, /blog/dashboard), que se registran
+// después. Sin fallback, /blog/blog-article caía aquí y devolvía 404 porque
+// no existe ningún artículo con ese slug.
+Route::get('/blog/{url}', [WebPageController::class, 'blog_article'])
+    ->name('blog_article')
+    ->fallback();
+
+// Registro de la vista del articulo. Va aparte del render para que el navegador
+// decida con localStorage si corresponde contarla (una vez por dia por articulo).
+Route::post('/blog/{url}/vista', [WebPageController::class, 'blog_article_view'])
+    ->name('blog_article_view');
+
+// Páginas adicionales
+Route::get('/casos-exito', [WebPageController::class, 'casosExito'])->name('casos_exito');
+Route::get('/faq', [WebPageController::class, 'faq'])->name('faq');
+Route::get('/trabaja-con-nosotros', [WebPageController::class, 'trabajaNosotros'])->name('trabaja_nosotros');
+Route::get('/politica-privacidad', [WebPageController::class, 'politicaPrivacidad'])->name('politica_privacidad');
+Route::get('/terminos-condiciones', [WebPageController::class, 'terminosCondiciones'])->name('terminos_condiciones');
+Route::get('/libro-reclamaciones', [WebPageController::class, 'libroReclamaciones'])->name('libro_reclamaciones');
+Route::get('/politica-cookies', [WebPageController::class, 'politicaCookies'])->name('politica_cookies');
+Route::get('/portafolio', [WebPageController::class, 'portafolio'])->name('portafolio');
+Route::get('/precios', [WebPageController::class, 'precios'])->name('precios');
+Route::get('/equipo', [WebPageController::class, 'equipo'])->name('equipo');
+
+// Redirecciones de rutas antiguas
+Route::get('/nosotros', fn () => redirect()->route('empresa'));
+Route::get('/v2', fn () => redirect()->route('index_main'));
+Route::get('/sitios-webs', fn () => redirect()->route('solucion_kapta'));
+Route::get('/tienda-online', fn () => redirect()->route('soluciones'));
+Route::get('/e-learning', fn () => redirect()->route('solucion_kapta'));
+Route::get('/facturador', fn () => redirect()->route('solucion_facturacion'));
+Route::get('/contacto-v2', fn () => redirect()->route('contacto'));
+
+// Route::get('/', [LandingController::class, 'index'])->name('index_main');
+// Route::get('/facturador', [LandingController::class, 'biller'])->name('biller_main');
+Route::get('/news', [LandingController::class, 'blog'])->name('blog_main');
+Route::get('/terms', [LandingController::class, 'terms'])->name('terms_main');
+Route::get('/computer/store', [LandingController::class, 'computerStore'])->name('index_computer_store');
 Route::get('/prices/academic', [LandingController::class, 'academicPrices'])->name('academic_prices');
-//////mensajes de whatsapp///////
+Route::get('/curso-descripcion/{id}', [WebPageController::class, 'cursodescripcion'])->name('web_curso_descripcion');
+
+Route::get('/academy/{slug}', [Modules\Academic\Http\Controllers\AcaCourseLandingController::class, 'show'])
+    ->name('academy_landing');
+
+Route::get('/api-docs', function() {
+    return view('pages.api-docs');
+})->name('api_docs');
+
+// ////mensajes de whatsapp///////
 Route::get('/ask/product/{id}', [LandingController::class, 'redirectToWhatsApp'])->name('whatsapp_send');
 
-/////cunsulta comprobante electronico ///////////
+// ///cunsulta comprobante electronico ///////////
 Route::get('/find/invoice', [SalesController::class, 'findInvoice'])->name('find_electronic_invoice');
 Route::post('/find/invoice', [SalesController::class, 'clientSearchDocument'])->name('client_search_electronic_invoice');
 
@@ -62,32 +115,35 @@ Route::get('/stories/article/{url}', [BlogController::class, 'storiesArticle'])-
 Route::get('/stories/policies', [BlogController::class, 'storiesPolicies'])->name('blog_stories_policies');
 Route::get('/stories/contact-us', [BlogController::class, 'storiesContactUs'])->name('blog_stories_contact_us');
 
-
-Route::get('/mipais', function () {
-    $ip = $_SERVER['REMOTE_ADDR']; // Esto contendrá la ip de la solicitud.
-
-    // Puedes usar un método más sofisticado para recuperar el contenido de una página web con PHP usando una biblioteca o algo así
-    // Vamos a recuperar los datos rápidamente con file_get_contents
-    $dataArray = json_decode(file_get_contents("http://www.geoplugin.net/json.gp?ip=" . $ip));
-
-    //var_dump($dataArray);
-
-    dd($dataArray);
-});
-
 // Route::get('/email', function () {
 //     Mail::to('elrodriguez2423@gmail.com')
 //         ->send(new StudentRegistrationMailable('data'));
 //     return 'mensaje enviado';
 // });
 
-
-
-Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', [DashboardController::class, 'index'])
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard');
 
 Route::middleware('auth')->group(function () {
+    Route::get('csrf-token', fn () => response()->json(['token' => csrf_token()]))->name('csrf.token');
+    Route::post('internal/job-token', [InternalJobTokenController::class, 'store'])->name('internal.job_token');
     Route::resource('clients', ClientController::class);
-    Route::resource('users', UserController::class);
+
+    // Gestión de usuarios (protegida por permisos)
+    Route::middleware(['permission:usuarios'])
+        ->get('users', [UserController::class, 'index'])->name('users.index');
+    Route::middleware(['permission:usuarios_nuevo'])
+        ->get('users/create', [UserController::class, 'create'])->name('users.create');
+    Route::middleware(['permission:usuarios_nuevo'])
+        ->post('users', [UserController::class, 'store'])->name('users.store');
+    Route::middleware(['permission:usuarios_editar'])
+        ->get('users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
+    Route::middleware(['permission:usuarios_editar'])
+        ->put('users/{user}', [UserController::class, 'update'])->name('users.update');
+    Route::middleware(['permission:usuarios_eliminar'])
+        ->delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+
     Route::resource('establishments', LocalSaleController::class);
     Route::resource('modulos', ModuloController::class);
     Route::get('modulos/permissions/{id}/add', [ModuloController::class, 'permissions'])->name('modulos_permissions');
@@ -115,7 +171,6 @@ Route::middleware('auth')->group(function () {
         [PersonController::class, 'searchByNumberTypeApies']
     )->name('search_person_apies');
 
-
     Route::post(
         'save/person/update/create',
         [PersonController::class, 'saveUpdateOrCreate']
@@ -130,8 +185,6 @@ Route::middleware('auth')->group(function () {
         'general/stock',
         [KardexController::class, 'generalStock']
     )->name('generalstock');
-
-
 
     Route::get(
         'company/show',
@@ -168,16 +221,36 @@ Route::middleware('auth')->group(function () {
         [CompanyController::class, 'uploadImages']
     )->name('company_upload_images');
 
+    Route::post(
+        'user/persom/info/store',
+        [PersonController::class, 'updateInfoPersonByUser']
+    )->name('user_persom_info_store');
+
+        // Ofertas Laborales (iframe configurable desde el parametro PC00001)
+        Route::get('ofertas-laborales', [JobOffersController::class, 'index'])->name('job_offers');
+
     Route::get('parameters/list', [ParametersController::class, 'index'])->name('parameters');
     Route::get('parameters/create', [ParametersController::class, 'create'])->name('parameters_create');
     Route::post('parameters/store', [ParametersController::class, 'store'])->name('parameters_store');
     Route::get('parameters/{id}/edit', [ParametersController::class, 'edit'])->name('parameters_edit');
     Route::put('parameters/update/{id}', [ParametersController::class, 'update'])->name('parameters_update');
-    Route::get('parameters/{id}/{val}/default', [ParametersController::class, 'updateDefaultValue'])->name('parameters_update_default_value');
+    Route::get('parameters/{id}/{val}/default', [ParametersController::class, 'updateDefaultValue'])->name('parameters_update_default_value_get');
+    Route::post('parameters/{id}/default', [ParametersController::class, 'updateDefaultValuePost'])->name('parameters_update_default_value');
+    Route::get('parameters/{id}/{val}/default_legacy', [ParametersController::class, 'updateDefaultValue'])->name('parameters_update_default_value_legacy');
 
-    ////////////////actualizar informacion de personas
+    // //////////////actualizar informacion de personas
     Route::get('person/update_information', function () {
-        $person = Person::find(Auth::user()->person_id);
+        if (!Auth::user()->hasRole('Alumno')) {
+            return back();
+        }
+
+        // Si el usuario no tiene una persona vinculada, no hay nada que mostrar/actualizar.
+        // Se evita pasar un "person" nulo a la vista (causa el error 500 en estos casos).
+        $person = Auth::user()->person_id ? Person::find(Auth::user()->person_id) : null;
+        if (!$person) {
+            return redirect()->route('dashboard');
+        }
+
         $identityDocumentTypes = DB::table('identity_document_type')->get();
 
         $ubigeo = District::join('provinces', 'province_id', 'provinces.id')
@@ -190,14 +263,23 @@ Route::middleware('auth')->group(function () {
             )
             ->get();
 
-        if (Auth::user()->hasRole('Alumno')) {
+        try {
+            $countries = \App\Models\Country::where('status', true)->orderBy('description')->get();
+
             return Inertia::render('Person/UpdateInformation', [
                 'person' => $person,
                 'identityDocumentTypes' => $identityDocumentTypes,
-                'ubigeo' => $ubigeo
+                'ubigeo' => $ubigeo,
+                'countries' => $countries
             ]);
-        } else {
-            return back();
+        } catch (\Throwable $e) {
+
+            return response()->json([
+                'exception' => get_class($e),
+                'message'   => $e->getMessage(),
+                'file'      => $e->getFile() . ':' . $e->getLine(),
+                'trace'     => collect($e->getTrace())->take(3) // Muestra las primeras 3 líneas del fallo
+            ], 500);
         }
     })->name('user-update-profile');
 
@@ -206,23 +288,18 @@ Route::middleware('auth')->group(function () {
         [PersonController::class, 'updateInformationPerson']
     )->name('user-update-profile-store');
 
-	Route::post(
+    Route::post(
         'person/birthdays',
         [PersonController::class, 'getBirthdays']
     )->name('person-birthdays');
-	
+
     Route::get('calendar/index', [CalendarController::class, 'index'])->name('calendar');
-    ///////////////META FACEBOOK WHATSAPP/////////////////
+
+    // /////////////META FACEBOOK WHATSAPP/////////////////
 
     Route::post('meta/whatsapp/message/send', [MetaController::class, 'sendMessageWhatsapp'])->name('meta_whatsapp_message_send');
+
 });
 
-
-//CERTIFICADOS AUTOMATIZACIÓN Y PRUEBAS
-Route::get('/test-image/{student_id}/{certificate_id}', [WebController::class, 'testimage'])->name('test-image');
-
-Route::post('online/client/pay/form', [WebPageController::class, 'formMercadopagoBlade'])->name('web_client_account_store');
-Route::post('online/client/pay/process', [WebPageController::class, 'processPaymentMercadopago'])->name('web_client_account_process');
-Route::get('online/client/pay/{id}/congratulations', [WebPageController::class, 'graciasCompra'])->name('web_felicitaciones_compra');
-require __DIR__ . '/auth.php';
-require __DIR__ . '/system.php';
+require __DIR__.'/auth.php';
+require __DIR__.'/system.php';
