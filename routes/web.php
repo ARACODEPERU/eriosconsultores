@@ -170,12 +170,23 @@ Route::middleware('auth')->group(function () {
         [CompanyController::class, 'uploadImages']
     )->name('company_upload_images');
 
-    Route::get('parameters/list', [ParametersController::class, 'index'])->name('parameters');
-    Route::get('parameters/create', [ParametersController::class, 'create'])->name('parameters_create');
-    Route::post('parameters/store', [ParametersController::class, 'store'])->name('parameters_store');
-    Route::get('parameters/{id}/edit', [ParametersController::class, 'edit'])->name('parameters_edit');
-    Route::put('parameters/update/{id}', [ParametersController::class, 'update'])->name('parameters_update');
-    Route::get('parameters/{id}/{val}/default', [ParametersController::class, 'updateDefaultValue'])->name('parameters_update_default_value');
+    // Los parametros del sistema cambian el comportamiento global de la app: se
+    // piden los mismos permisos que ya exige la entrada del menu lateral
+    // (Security/Menu.js -> permissions: 'parametros').
+    Route::middleware('permission:parametros')->group(function () {
+        Route::get('parameters/list', [ParametersController::class, 'index'])->name('parameters');
+        Route::get('parameters/create', [ParametersController::class, 'create'])->name('parameters_create');
+        Route::post('parameters/store', [ParametersController::class, 'store'])->name('parameters_store');
+        Route::get('parameters/{id}/edit', [ParametersController::class, 'edit'])->name('parameters_edit');
+        Route::put('parameters/update/{id}', [ParametersController::class, 'update'])->name('parameters_update');
+
+        // Guardado rapido desde la lista (switch, select, multiseleccion, textarea).
+        // Antes era un GET de dos segmentos ({id}/{val}) que no podia atender al
+        // axios.post() del front: la lista siempre respondia 405 al guardar y el
+        // usuario veia "No se pudo guardar el valor" sin poder tocar ningun parametro.
+        Route::post('parameters/{id}/default', [ParametersController::class, 'updateDefaultValuePost'])
+            ->name('parameters_update_default_value');
+    });
 
     ////////////////actualizar informacion de personas
     Route::get('person/update_information', function () {
