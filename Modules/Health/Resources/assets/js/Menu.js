@@ -11,6 +11,10 @@ import {
     faGear
 } from "@fortawesome/free-solid-svg-icons";
 import menuDental from 'Modules/Dental/Resources/assets/js/Menu.js';
+// menuRoute() no lanza cuando la ruta no esta en el listado de Ziggy (modulo
+// deshabilitado o nombre desincronizado): la entrada queda sin enlace en lugar
+// de romper la carga de todo el panel.
+import { menuRoute } from "@/utils/menuRoute";
 
 const menuHealth = {
     status:false,
@@ -20,42 +24,42 @@ const menuHealth = {
     permissions: 'heal_dashboard',
     items: [
         {
-            route: route('heal_doctors_list'),
+            route: menuRoute('heal_doctors_list'),
             status: false,
             text: 'Doctores',
             icom: faUserDoctor,
             permissions: 'heal_doctores_listado',
         },
         {
-            route: route('heal_patients_list'),
+            route: menuRoute('heal_patients_list'),
             status: false,
             text: 'Pacientes',
             icom: faWheelchair,
             permissions: 'heal_pacientes_listado',
         },
         {
-            route: route('heal_attentions_list'),
+            route: menuRoute('heal_attentions_list'),
             status: false,
             text: 'Atenciones',
             icom: faNotesMedical,
             permissions: 'heal_atenciones_listado',
         },
         {
-            route: route('heal_agendas_list'),
+            route: menuRoute('heal_agendas_list'),
             status: false,
             text: 'Agendas',
             icom: faCalendarDays,
             permissions: 'heal_citas_listado',
         },
         {
-            route: route('heal_clinical_records_list'),
+            route: menuRoute('heal_clinical_records_list'),
             status: false,
             text: 'Historias Clínicas',
             icom: faFileMedical,
             permissions: 'heal_pacientes_listado',
         },
         {
-            route: route('heal_procedure_charges_list'),
+            route: menuRoute('heal_procedure_charges_list'),
             status: false,
             text: 'Procedimientos/cobros',
             icom: faCashRegister,
@@ -63,14 +67,14 @@ const menuHealth = {
         },
         menuDental,
         {
-            route: route('heal_activities_list'),
+            route: menuRoute('heal_activities_list'),
             status: false,
             text: 'Registro de Actividades',
             icom: faClipboardList,
             permissions: 'heal_actividades_listado',
         },
         {
-            route: route('heal_settings'),
+            route: menuRoute('heal_settings'),
             status: false,
             text: 'Configuración',
             icom: faGear,
