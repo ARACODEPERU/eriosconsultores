@@ -119,16 +119,12 @@
         box-shadow: 0 16px 40px rgba(0, 74, 173, 0.14);
     }
     .erc-course-card__media {
-        /* flex para que la portada estire y cubra el recuadro (object-fit: cover):
-           con height:100% a secas el navegador lo resolvía como alto automático. */
-        display: flex;
         position: relative;
         height: 180px;
         background: linear-gradient(135deg, #07294d 0%, #0b3a6b 60%, #0e4a8f 100%);
         overflow: hidden;
     }
     .erc-course-card__img {
-        flex: 1 1 auto;
         width: 100%;
         height: 100%;
         object-fit: cover;
@@ -137,16 +133,13 @@
     }
     .erc-course-card:hover .erc-course-card__img { transform: scale(1.06); }
     .erc-course-card__img--fallback {
-        /* Curso sin portada: el logo de ERIOS queda centrado, sin desbordar la tarjeta. */
-        position: absolute;
-        inset: 0;
         width: auto;
         height: 92px;
-        max-width: 72%;
-        margin: auto;
+        margin: 0 auto;
         object-fit: contain;
         filter: brightness(0) invert(1);
         opacity: .92;
+        padding: 0 28px;
     }
     .erc-course-card__price {
         position: absolute;
@@ -343,11 +336,7 @@
                             $price = $course->discount > 0 && $course->discount < $course->price ? $course->discount : $course->price;
                             $price = $price > 0 ? 'S/ ' . number_format($price, 0) : 'Consultar';
                             $desc = trim(strip_tags($course->description ?? ''));
-                            // Slug público: manda el del curso (AcaCourse::publicSlug) y, si el
-                            // artículo no tiene curso asociado, se deriva del nombre del artículo.
-                            $courseSlug = $aca?->publicSlug() ?: \Illuminate\Support\Str::of($course->name)->trim()->replace(['.', ','], '')->slug('-')->lower();
-                            $cardImage = filled($course->getRawOriginal('image')) ? $course->image : null;
-                            $fallbackImage = asset('themes/webpage/images/Logo_Web_Negativo.png');
+                            $courseSlug = optional($aca?->landing)->url_slug ?: \Illuminate\Support\Str::of($course->name)->trim()->replace(['.', ','], '')->slug('-')->lower();
                             $modalityIcon = match ($modality) {
                                 'Presencial' => 'fa-university',
                                 'E-learning' => 'fa-laptop',
@@ -357,9 +346,8 @@
                         <article class="erc-course-card" data-category="{{ $category }}" data-reveal
                             data-reveal-delay="{{ ($loop->index % 3) * 110 }}">
                             <div class="erc-course-card__media">
-                                <img src="{{ $cardImage ?: $fallbackImage }}" alt="{{ $course->name }}"
-                                    class="erc-course-card__img @unless ($cardImage) erc-course-card__img--fallback @endunless"
-                                    onerror="this.onerror=null;this.src='{{ $fallbackImage }}';this.classList.add('erc-course-card__img--fallback');">
+                                <img src="{{ $course->image }}" alt="{{ $course->name }}" class="erc-course-card__img"
+                                    onerror="this.onerror=null;this.src='{{ asset('themes/webpage/images/logo-2.png') }}';this.classList.add('erc-course-card__img--fallback');">
                                 <span class="erc-course-card__modality">
                                     <i class="fa {{ $modalityIcon }}" aria-hidden="true"></i> {{ $modality ?? 'A distancia' }}
                                 </span>

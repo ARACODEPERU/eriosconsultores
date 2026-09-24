@@ -1,19 +1,24 @@
 @extends('layouts.webpage')
 
 @php
-    // Título, portada, precio y texto los resuelve el controlador
-    // (WebPageController::publicCourseData) a partir del curso y, si existe, de
-    // su artículo de tienda: aquí solo se pintan.
-    $whatsappLink = $public['whatsapp'];
-    $title = $public['title'];
-    $mainImage = $public['image'] ?: asset('themes/webpage/images/course/img-1.png');
-    $hasImage = filled($public['image']);
-    $fallbackImage = asset('themes/webpage/images/Logo_Web_Negativo.png');
-    $hasPrice = $public['has_price'];
-    $priceFormatted = $public['price'];
-    $priceOld = $public['price_old'];
-    $metaTitle = $public['meta_title'];
-    $metaDescription = $public['meta_description'];
+    $landing = $course?->landing;
+    $whatsappLink = $landing?->whatsapp_link ?: 'https://wa.link/9q9g9v';
+
+    // Slug público (idéntico al del controlador)
+    $slug = $landing && $landing->is_published && $landing->url_slug
+        ? $landing->url_slug
+        : \Illuminate\Support\Str::of($item->name)->trim()->replace(['.', ','], '')->slug('-')->lower();
+
+    // Precio efectivo (descuento si aplica)
+    $priceValue = $item->discount > 0 && $item->discount < $item->price ? $item->discount : $item->price;
+    $hasPrice = $priceValue > 0;
+    $priceFormatted = $hasPrice ? 'S/ ' . number_format($priceValue, 2) : 'Consultar';
+    $showStrikethrough = $item->discount > 0 && $item->discount < $item->price && $hasPrice;
+
+    // Descripción limpia para meta/OG
+    $cleanDesc = trim(str_limit(strip_tags($item->description ?? ''), 155));
+    $metaTitle = filled($course?->certificate_title) ? $course->certificate_title : $item->name;
+    $metaDescription = filled($cleanDesc) ? $cleanDesc : 'Curso de ' . $item->name . ' de ERIOS CONSULTORES: temario, docentes, modalidad e inversión. Inscríbete hoy.';
 
     // Docentes únicos (persona + reanudación académica)
     $teachersList = collect();
@@ -28,6 +33,9 @@
         ]);
     }
     $teachersList = $teachersList->unique('name')->values();
+
+    // Imagen principal
+    $mainImage = $item->image ?: asset('themes/webpage/images/course/img-1.png');
 
     // Fechas del curso (day/month/year)
     $startDate = null;
@@ -48,7 +56,7 @@
     $jsonLd = [
         '@context' => 'https://schema.org',
         '@type' => 'Course',
-        'name' => $title,
+        'name' => $item->name,
         'description' => $metaDescription,
         'url' => route('web_course_description', ['slug' => $slug]),
         'image' => $mainImage,
@@ -68,7 +76,7 @@
         ...($hasPrice ? [
             'offers' => [
                 '@type' => 'Offer',
-                'price' => $public['price_value'],
+                'price' => $priceValue,
                 'priceCurrency' => 'PEN',
                 'availability' => 'https://schema.org/InStock',
                 'url' => route('web_course_description', ['slug' => $slug]),
@@ -229,7 +237,7 @@
 @section('content')
 
     {{-- ======== Hero compartido ======== --}}
-    <x-page-hero eyebrow="Formación ERIOS" title="{{ $title }}"
+    <x-page-hero eyebrow="Formación ERIOS" title="{{ $item->name }}"
         subtitle="{{ filled($modality) ? 'Modalidad: ' . $modality . ($startDate ? ' · Inicia ' . $startDate->translatedFormat('d \d\e F \d\e Y') : '') : 'Capacitación especializada con certificación.' }}" />
 
     <section class="erc-cd">
@@ -240,18 +248,17 @@
                 <div class="col-lg-8">
                     <div class="erc-cd__card" data-reveal>
                         <div class="erc-cd__media">
-                            <img src="{{ $mainImage }}" alt="{{ $title }}"
-                                class="erc-cd__img @unless ($hasImage) erc-cd__img--fallback @endunless"
-                                onerror="this.onerror=null;this.src='{{ $fallbackImage }}';this.classList.add('erc-cd__img--fallback');">
+                            <img src="{{ $mainImage }}" alt="{{ $item->name }}" class="erc-cd__img"
+                                onerror="this.onerror=null;this.src='{{ asset('themes/webpage/images/logo-2.png') }}';this.classList.add('erc-cd__img--fallback');">
                             @if (filled($modality))
                                 <span class="erc-cd__modality"><i class="fa {{ $modalityIcon }}" aria-hidden="true"></i> {{ $modality }}</span>
                             @endif
                         </div>
 
                         <div class="erc-cd__body">
-                            <span class="erc-cd__category">{{ $public['category'] }}</span>
-                            <h1 class="erc-cd__title">{{ $title }}</h1>
-                            @if (filled(optional($item)->scor))
+                            <span class="erc-cd__category">{{ optional($course?->category)->description ?: $item->category_description ?: 'General' }}</span>
+                            <h1 class="erc-cd__title">{{ $item->name }}</h1>
+                            @if (filled($item->scor))
                                 <span class="erc-cd__price-note"><i class="fa fa-star" aria-hidden="true"></i> {{ $item->scor }}</span>
                             @endif
                         </div>
@@ -273,12 +280,10 @@
                         </div>
 
                         {{-- Descripción --}}
-                        @if (filled($public['description_html']) || filled($public['description']))
+                        @if (filled(strip_tags($item->description ?? '')))
                             <div class="erc-cd__section">
                                 <h3>Descripción</h3>
-                                <div class="erc-cd__desc">
-                                    {!! $public['description_html'] ?: nl2br(e($public['description'])) !!}
-                                </div>
+                                <div class="erc-cd__desc">{!! $item->description !!}</div>
                             </div>
                         @endif
 
@@ -339,11 +344,11 @@
                             <span class="erc-cd__price-label">Inversión</span>
                             <div>
                                 <span class="erc-cd__price {{ $hasPrice ? '' : 'erc-cd__price--consult' }}">{{ $priceFormatted }}</span>
-                                @if ($priceOld)
-                                    <span class="erc-cd__price-old">{{ $priceOld }}</span>
+                                @if ($showStrikethrough)
+                                    <span class="erc-cd__price-old">S/ {{ number_format($item->price, 2) }}</span>
                                 @endif
                             </div>
-                            @if ($priceOld)
+                            @if ($showStrikethrough)
                                 <span class="erc-cd__price-note"><i class="fa fa-tag" aria-hidden="true"></i> Precio promocional</span>
                             @endif
 
@@ -354,13 +359,10 @@
                                 <li><i class="fa fa-check-circle" aria-hidden="true"></i> Soporte del docente</li>
                             </ul>
 
-                            {{-- El carrito solo aparece cuando el curso tiene artículo de tienda publicado. --}}
-                            @if ($item)
-                                <button type="button" class="erc-cd__btn erc-cd__btn--cart" id="btn-add-cart"
-                                    data-item-id="{{ $item->id }}" data-item-name="{{ $item->name }}">
-                                    <i class="fa fa-shopping-cart" aria-hidden="true"></i> Agregar al carrito
-                                </button>
-                            @endif
+                            <button type="button" class="erc-cd__btn erc-cd__btn--cart" id="btn-add-cart"
+                                data-item-id="{{ $item->id }}" data-item-name="{{ $item->name }}">
+                                <i class="fa fa-shopping-cart" aria-hidden="true"></i> Agregar al carrito
+                            </button>
                             <a href="{{ $whatsappLink }}" target="_blank" rel="noopener" class="erc-cd__btn erc-cd__btn--wa">
                                 <i class="fab fa-whatsapp" aria-hidden="true"></i> Consultar por WhatsApp
                             </a>
@@ -371,7 +373,7 @@
             </div>
 
             {{-- ======== Relacionados ======== --}}
-            @if ($related->count())
+            @if ($latest_courses->count())
                 <div class="erc-cd__related" data-reveal>
                     <div class="erc-cd__related-head">
                         <h3>Otros cursos que te pueden interesar</h3>
@@ -380,16 +382,20 @@
                         </a>
                     </div>
                     <div class="erc-cd__related-grid">
-                        @foreach ($related as $rel)
-                            <a href="{{ route('web_course_description', ['slug' => $rel['slug']]) }}" class="erc-cd__rel-card">
+                        @foreach ($latest_courses as $rel)
+                            @php
+                                $relSlug = optional($rel->course?->landing)->url_slug ?: \Illuminate\Support\Str::of($rel->name)->trim()->replace(['.', ','], '')->slug('-')->lower();
+                                $relPrice = $rel->discount > 0 && $rel->discount < $rel->price ? $rel->discount : $rel->price;
+                                $relPrice = $relPrice > 0 ? 'S/ ' . number_format($relPrice, 0) : 'Consultar';
+                            @endphp
+                            <a href="{{ route('web_course_description', ['slug' => $relSlug]) }}" class="erc-cd__rel-card">
                                 <div class="erc-cd__rel-media">
-                                    <img src="{{ $rel['image'] ?: $fallbackImage }}" alt="{{ $rel['title'] }}" loading="lazy"
-                                        @unless ($rel['image']) class="erc-cd__rimg--fallback" @endunless
-                                        onerror="this.onerror=null;this.src='{{ $fallbackImage }}';this.classList.add('erc-cd__rimg--fallback');">
+                                    <img src="{{ $rel->image ?: asset('themes/webpage/images/logo-2.png') }}" alt="{{ $rel->name }}" loading="lazy"
+                                        onerror="this.onerror=null;this.src='{{ asset('themes/webpage/images/logo-2.png') }}';this.classList.add('erc-cd__rimg--fallback');">
                                 </div>
                                 <div class="erc-cd__rel-body">
-                                    <span>{{ $rel['meta'] }}</span>
-                                    <h4>{{ \Illuminate\Support\Str::limit($rel['title'], 70) }}</h4>
+                                    <span>{{ $rel->category_description ?: 'Curso' }} · {{ $relPrice }}</span>
+                                    <h4>{{ \Illuminate\Support\Str::limit($rel->name, 70) }}</h4>
                                 </div>
                             </a>
                         @endforeach
@@ -401,7 +407,6 @@
     </section>
 
     {{-- ======== JS: agregar al carrito (localStorage, mismo formato que /carrito) ======== --}}
-    @if ($item)
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -427,7 +432,7 @@
                 Swal.fire({
                     icon: 'success',
                     title: 'Curso agregado',
-                    html: '«{{ \Illuminate\Support\Str::limit(\Illuminate\Support\Str::before($title, ':'), 60) }}» ya está en tu carrito.',
+                    html: '«{{ \Illuminate\Support\Str::limit(\Illuminate\Support\Str::before($item->name, ':'), 60) }}» ya está en tu carrito.',
                     showCancelButton: true,
                     confirmButtonText: 'Ir al carrito',
                     cancelButtonText: 'Seguir viendo',
@@ -440,5 +445,4 @@
             });
         });
     </script>
-    @endif
 @endsection
