@@ -1,414 +1,320 @@
 @extends('layouts.webpage')
 
+@section('meta_title', 'Cursos')
+@section('meta_description', 'Catálogo de cursos y diplomados de ERIOS CONSULTORES: modalidades En Vivo, Presencial y E-learning, horarios flexibles y certificación incluida. ¡Inscríbete ya!')
+
+@section('page_styles')
+<style>
+    /* ============ Catálogo de cursos: pestañas + paginación ============ */
+    .cursos-catalogo { padding: 24px 0 80px; }
+
+    .cursos-catalogo__banner { width: 100%; border-radius: 14px; }
+
+    .cursos-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        border: 0;
+        margin: 26px 0 22px;
+    }
+
+    .cursos-tabs .nav-link {
+        background: #fff;
+        border: 1px solid #dbe4f0;
+        border-radius: 999px;
+        color: #004aad;
+        font-size: 14px;
+        font-weight: 700;
+        padding: 8px 18px;
+        cursor: pointer;
+    }
+
+    .cursos-tabs .nav-link.active,
+    .cursos-tabs .nav-link:hover {
+        background: #004aad;
+        border-color: #004aad;
+        color: #fff;
+    }
+
+    .cursos-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 24px;
+    }
+
+    .curso-card {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        background: #fff;
+        border: 1px solid #e6ebf2;
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 6px 24px rgba(14, 23, 38, .05);
+        transition: transform .3s ease, box-shadow .3s ease;
+    }
+
+    .curso-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 16px 40px rgba(0, 74, 173, .14);
+    }
+
+    .curso-card__media {
+        position: relative;
+        display: block;
+        aspect-ratio: 16 / 10;
+        background: #f4f7fb;
+    }
+
+    .curso-card__media img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .curso-card__off {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: #e30613;
+        border-radius: 999px;
+        color: #fff;
+        font-size: 13px;
+        font-weight: 700;
+        padding: 4px 10px;
+    }
+
+    .curso-card__body {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        gap: 10px;
+        padding: 18px;
+    }
+
+    .curso-card__tipo {
+        color: #e30613;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: .4px;
+        text-transform: uppercase;
+    }
+
+    .curso-card__title,
+    .curso-card__title-link {
+        color: #1d2025;
+        font-size: 18px;
+        font-weight: 700;
+        line-height: 26px;
+        margin: 0;
+        min-height: 52px;
+        text-decoration: none;
+    }
+
+    .curso-card__title-link:hover { color: #004aad; }
+
+    .curso-card__actions {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: auto;
+    }
+
+    .curso-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: 0;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 700;
+        padding: 9px 16px;
+        text-decoration: none;
+    }
+
+    .curso-btn--info { background: #eef3fb; color: #004aad; }
+    .curso-btn--info:hover { background: #004aad; color: #fff; }
+    .curso-btn--primary { background: #004aad; color: #fff; }
+    .curso-btn--primary:hover { background: #00397f; color: #fff; }
+    .curso-btn del { font-weight: 500; opacity: .7; }
+
+    .curso-card__subs { color: #6a4c93; font-size: 12px; }
+
+    .cursos-empty {
+        background: #fff;
+        border: 1px dashed #dbe4f0;
+        border-radius: 14px;
+        color: #505050;
+        padding: 48px 24px;
+        text-align: center;
+    }
+
+    .cursos-pager {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        margin-top: 32px;
+    }
+
+    .cursos-pager button {
+        min-width: 40px;
+        height: 40px;
+        background: #fff;
+        border: 1px solid #dbe4f0;
+        border-radius: 10px;
+        color: #004aad;
+        cursor: pointer;
+        font-weight: 700;
+        padding: 0 14px;
+    }
+
+    .cursos-pager button.active { background: #004aad; border-color: #004aad; color: #fff; }
+    .cursos-pager button:disabled { cursor: default; opacity: .45; }
+
+    @media (max-width: 991px) {
+        .cursos-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 575px) {
+        .cursos-grid { grid-template-columns: 1fr; }
+    }
+</style>
+@endsection
+
 @section('content')
+    @php
+        // Items por pagina del listado "Todos" (3 columnas x 3 filas).
+        $perPage = 9;
+        $total = $courses->count();
+        $totalPages = max(1, (int) ceil($total / $perPage));
+    @endphp
 
-    {{-- Schema markup (JSON-LD): listado de cursos --}}
-    @if (!empty($coursesSchema))
-        <script type="application/ld+json">
-            {!! json_encode($coursesSchema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}
-        </script>
-    @endif
+    <div class="cursos-catalogo">
+        <div class="container-fluid">
+            <br>
+            <img class="cursos-catalogo__banner" src="{{ asset('themes/webpage/images/courses-page.jpg') }}"
+                alt="Cursos ERIOS CONSULTORES">
+        </div>
 
-    <!-- Loader starts-->
-    <!-- Loader ends-->
-    <!-- tap on top starts-->
-    <div class="tap-top"><i data-feather="chevrons-up"></i></div>
-    <!-- tap on tap ends-->
+        <div class="container">
+            <ul class="nav cursos-tabs" id="cursos-tabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link active" id="todos-tab" data-toggle="pill" href="#todos" role="tab"
+                        aria-controls="todos" aria-selected="true" onclick="cursosMostrarTodos()">Todos</a>
+                </li>
 
+                @foreach ($types as $index => $type)
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link" id="tipo-{{ $index }}-tab" data-toggle="pill" href="#tipo-{{ $index }}"
+                            role="tab" aria-controls="tipo-{{ $index }}" aria-selected="false"
+                            onclick="cursosMostrarTipo()">{{ $type }}</a>
+                    </li>
+                @endforeach
+            </ul>
 
-    <!-- page-wrapper Start-->
-    <div class="page-wrapper" id="pageWrapper">
-        <!-- Page Header Start-->
-        <x-header />
-        <!-- Page Header Ends-->
-        <!-- Page Body Start-->
-        <div class="page-body-wrapper">
-            <div class="page-body">
-                <div class="container-fluid"></div>
-                <div class="container-fluid">
-                    <br><br><br>
-                    <img style="
-                    width: 100%;"
-                        src="{{ asset('themes/webpage/images/courses-page.jpg') }}" alt="">
-                </div>
-                <br>
-                <!-- Container-fluid starts-->
-                <div class="container-fluid dashboard_default">
-                    <div class="row">
-                        <div class="col-xl-12">
-                            <div class="card height-equal" style="min-height: 310.797px; background: none;">
-                                <div class="card-body">
-                                    <ul class="nav nav-pills nav-primary" id="pills-tab" role="tablist">
-
-                                        <li class="nav-item" role="presentation">
-                                            <a class="f-w-600 nav-link active" id="todos-tab" data-bs-toggle="pill"
-                                                onclick="show_paginator()" href="#todos" role="tab"
-                                                aria-controls="todos" aria-selected="false" tabindex="-1">Todos
-                                            </a>
-                                        </li>
-                                        @foreach ($types as $type)
-                                            <li class="nav-item" role="presentation">
-                                                <a class="f-w-600 nav-link "
-                                                    onclick="unhidden('{{ str_replace(' ', '', $type) }}')"
-                                                    id="{{ str_replace(' ', '', $type) }}-tab" data-bs-toggle="pill"
-                                                    href="#{{ str_replace(' ', '', $type) }}" role="tab"
-                                                    aria-controls="{{ str_replace(' ', '', $type) }}" aria-selected="true">
-                                                    {{ $type }}
-                                                </a>
-                                            </li>
-                                        @endforeach
-                                    </ul>
-                                    <div class="tab-content" id="pills-tabContent">
-                                        <div class="tab-pane fade show active" id="todos" role="tabpanel"
-                                            aria-labelledby="todos-tab">
-
-                                            @php
-                                                $xx = count($courses);
-                                                $yy = $xx / $p; //$p paginacion
-                                                $yy = ceil($yy);
-                                            @endphp
-
-
-                                            <br>
-                                            @for ($i = 0; $i < $yy; $i++)
-                                                <div class="row widget-grid page-group page-{{ $i + 1 }}"
-                                                    id="course-list" style="display: {{ $i + 1 == 1 ? '' : 'none' }};">
-
-                                                    @foreach ($courses->skip($p * $i)->take($p) as $item)
-                                                        @php
-                                                            $hasPublishedLanding = filled($item->course?->landing?->url_slug) && ($item->course?->landing?->is_published ?? false);
-                                                            $courseUrl = $hasPublishedLanding ? route('course_url_slug', $item->course?->landing?->url_slug) : route('web_curso_descripcion', $item->course?->slug ?? $item->id);
-                                                        @endphp
-                                                        <div class="col-xl-4 col-md-6 col-sm-12 box-col-4">
-                                                            <div class="card weekend-card">
-                                                                <div class="card-body">
-                                                                    <a href="{{ $courseUrl }}">
-                                                                        @if($item->course?->image)
-                                                                        <img class="w-100 mb-3"
-                                                                            src="{{ asset('storage/' . $item->course->image) }}"
-                                                                            alt="{{ $item->course->name ?? 'Imagen' }}">
-                                                                    @endif
-                                                                    </a>
-                                                                    <br>
-                                                                    <span
-                                                                        style="color: #e30613;">{{ $item->additional }}</span>
-                                                                    <br>
-                                                                    <a href="{{ $courseUrl }}"
-                                                                        style="text-decoration: none;">
-                                                                        <h4 style=" height: 30px;">
-                                                                            {{ $item->name }}</h4>
-                                                                    </a>
-                                                                    <br>
-                                                                    <div class="card">
-                                                                        <div class="">
-                                                                            <div class="btn-showcase">
-                                                                                <a href="{{ $courseUrl }}">
-                                                                                    <button
-                                                                                        class="btn btn-pill btn-light btn-air-light btn-sm"
-                                                                                        type="button"
-                                                                                        data-bs-original-title="btn btn-pill btn-light btn-air-light btn-sm">
-                                                                                        Leer Más
-                                                                                    </button>
-                                                                                </a>
-                                                                                <a
-                                                                                    onclick="agregarAlCarrito({ id: {{ $item->id }}, nombre: '{{ $item->name }}', precio: {{ $item->price }} })">
-                                                                                    <button
-                                                                                        class="btn btn-pill btn-primary btn-air-primary btn-sm"
-                                                                                        type="button"
-                                                                                        data-bs-original-title="btn btn-pill btn-primary btn-air-primary btn-sm">
-                                                                                        <i class="fa fa-cart-plus"
-                                                                                            aria-hidden="true"
-                                                                                            style="font-size: 18px;"></i>
-                                                                                        &nbsp; {{ (float) $item->price <= 0 ? 'Gratis' : 'S/ ' . $item->price }}
-                                                                                    </button>
-                                                                                </a>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    @endforeach
-                                                </div>
-                                            @endfor
-
-
-
-
-                                        </div>
-
-
-                                        @foreach ($types as $type)
-                                            <div hidden class="tab-pane fade show active"
-                                                id="{{ str_replace(' ', '', $type) }}" role="tabpanel"
-                                                aria-labelledby="{{ str_replace(' ', '', $type) }}-tab">
-                                                <br>
-                                                <div class="row widget-grid">
-                                                    @foreach ($courses as $item)
-                                                        @if (strtolower($item->additional) == strtolower($type))
-                                                            @php
-                                                                $hasPublishedLanding = filled($item->course?->landing?->url_slug) && ($item->course?->landing?->is_published ?? false);
-                                                                $courseUrl = $hasPublishedLanding ? route('course_url_slug', $item->course?->landing?->url_slug) : route('web_curso_descripcion', $item->course?->slug ?? $item->id);
-                                                            @endphp
-                                                            <div class="col-xl-4 col-md-6 col-sm-12 box-col-4">
-                                                                <div class="card weekend-card">
-                                                                    <div class="card-body">
-                                                                        <a href="{{ $courseUrl }}">
-                                                                            @if($item->course?->image)
-                                                                            {{-- Si hay imagen, la mostramos --}}
-                                                                            <img class="w-100 mb-3"
-                                                                                 src="{{ asset('storage/' . $item->course->image) }}"
-                                                                                 alt="{{ $item->course->name }}">
-                                                                        @else
-                                                                            {{-- Si NO hay imagen (o no hay curso), mandamos el log para investigar --}}
-                                                                            <script>
-                                                                                console.warn("⚠️ Item sin imagen detectado (ID: {{ $item->id ?? 'N/A' }}):", @json($item));
-                                                                            </script>
-                                                                        @endif
-                                                                        </a>
-                                                                        <br>
-                                                                        <span
-                                                                            style="color: #6a4c93;">{{ $item->additional }}</span>
-                                                                        <br>
-                                                                        <a href="{{ $courseUrl }}"
-                                                                            style="text-decoration: none;">
-                                                                            <h4 style=" height: 30px; color: #000;">
-                                                                                {{ $item->name }}</h4>
-                                                                        </a>
-                                                                        <br>
-                                                                        <div class="card">
-                                                                            <div class="">
-                                                                                <div class="btn-showcase">
-                                                                                    <a href="{{ $courseUrl }}">
-                                                                                        <button
-                                                                                            class="btn btn-pill btn-light btn-air-light btn-sm"
-                                                                                            type="button"
-                                                                                            data-bs-original-title="btn btn-pill btn-light btn-air-light btn-sm">
-                                                                                            Leer Más
-                                                                                        </button>
-                                                                                    </a>
-                                                                                    <a
-                                                                                        onclick="agregarAlCarrito({ id: {{ $item->id }}, nombre: '{{ $item->name }}', precio: {{ $item->price }} })">
-                                                                                        <button
-                                                                                            class="btn btn-pill btn-primary btn-air-primary btn-sm"
-                                                                                            type="button"
-                                                                                            data-bs-original-title="btn btn-pill btn-primary btn-air-primary btn-sm">
-                                                                                            <i class="fa fa-cart-plus"
-                                                                                                aria-hidden="true"
-                                                                                                style="font-size: 18px;"></i>
-                                                                                            &nbsp; {{ (float) $item->price <= 0 ? 'Gratis' : 'S/ ' . $item->price }}
-                                                                                        </button>
-                                                                                    </a>
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        @endif
-                                                    @endforeach
-                                                </div>
-                                            </div>
-                                        @endforeach
-                                    </div>
-
-                                </div>
-
-
-
-
-                                <div class="row" id="paginator">
-                                    <div class="col-md-12">
-                                        <div class="card-body pagination-container">
-                                            <nav aria-label="...">
-                                                <ul class="pagination pagination-success pagin-border-success">
-                                                    <li class="page-item disabled" id="prev-page">
-                                                        <a class="page-link" href="javascript:void(0)"
-                                                            tabindex="-1">Previo</a>
-                                                    </li>
-                                                    @for ($i = 0; $i < $yy; $i++)
-                                                        <li class="page-item">
-                                                            <a class="pagination-link page-link"
-                                                                data-page="{{ $i + 1 }}">{{ $i + 1 }}</a>
-                                                        </li>
-                                                    @endfor
-                                                    <li class="page-item" id="next-page">
-                                                        <a class="page-link" href="javascript:void(0)">Siguiente</a>
-                                                    </li>
-                                                </ul>
-                                            </nav>
-                                        </div>
-                                    </div>
-                                </div>
+            <div class="tab-content" id="cursos-tab-content">
+                <div class="tab-pane fade show active" id="todos" role="tabpanel" aria-labelledby="todos-tab">
+                    @if ($total === 0)
+                        <div class="cursos-empty">Todavía no hay cursos publicados en el catálogo.</div>
+                    @else
+                        @for ($page = 0; $page < $totalPages; $page++)
+                            <div class="cursos-grid cursos-page-group cursos-page-{{ $page + 1 }}"
+                                @if ($page > 0) style="display: none;" @endif>
+                                @foreach ($courses->slice($page * $perPage, $perPage) as $card)
+                                    <x-course-card :card="$card" />
+                                @endforeach
                             </div>
+                        @endfor
+                    @endif
+                </div>
+
+                @foreach ($types as $index => $type)
+                    <div class="tab-pane fade" id="tipo-{{ $index }}" role="tabpanel"
+                        aria-labelledby="tipo-{{ $index }}-tab">
+                        <div class="cursos-grid">
+                            @foreach ($courses->where('type', $type) as $card)
+                                <x-course-card :card="$card" />
+                            @endforeach
                         </div>
                     </div>
-                </div>
+                @endforeach
             </div>
+
+            @if ($total > 0)
+                <div class="cursos-pager" id="cursos-pager">
+                    <button type="button" id="cursos-prev" disabled>Previo</button>
+
+                    @for ($i = 1; $i <= $totalPages; $i++)
+                        <button type="button" class="cursos-page-link @if ($i === 1) active @endif"
+                            data-page="{{ $i }}">{{ $i }}</button>
+                    @endfor
+
+                    <button type="button" id="cursos-next" @if ($totalPages === 1) disabled @endif>Siguiente</button>
+                </div>
+            @endif
         </div>
-        <!-- footer start-->
-        <x-footer />
     </div>
 
-
-
-
+    @include('components.onli-cart-script')
 
     <script>
-        let currentIndex = 0;
-        const slides = document.querySelector('.slides');
-        const totalSlides = document.querySelectorAll('.slide').length;
-
-        function showNextSlide() {
-            currentIndex = (currentIndex + 1) % totalSlides;
-            const offset = -currentIndex * 100;
-            slides.style.transform = `translateX(${offset}%)`;
+        // El paginador solo aplica al listado "Todos": al abrir una pestaña por
+        // tipo se oculta para no mostrar botones de páginas que no existen.
+        function cursosMostrarTodos() {
+            var pager = document.getElementById('cursos-pager');
+            if (pager) pager.hidden = false;
         }
 
-        setInterval(showNextSlide, 3000); // Cambia cada 3 segundos
-    </script>
-
-
-    <script>
-        const headers = document.querySelectorAll('.accordion-header-aracode');
-        headers.forEach(header => {
-            header.addEventListener('click', function() {
-                const content = this.nextElementSibling;
-                const isVisible = content.style.maxHeight;
-
-                // Ocultar todos los contenidos y resetear iconos
-                document.querySelectorAll('.accordion-content-aracode').forEach(item => {
-                    item.style.maxHeight = null;
-                    item.style.padding = '0';
-                    item.setAttribute('aria-hidden', 'true');
-                });
-                headers.forEach(h => {
-                    h.classList.remove('active');
-                    h.querySelector('.accordion-icon-aracode').textContent =
-                        '►'; // Restablecer icono
-                    h.setAttribute('aria-expanded', 'false');
-                });
-
-                // Mostrar el contenido del header clicado
-                if (!isVisible) {
-                    content.style.maxHeight = content.scrollHeight + "px";
-                    content.style.padding = '15px';
-                    this.classList.add('active'); // Añadir clase activa al encabezado clicado
-                    this.querySelector('.accordion-icon-aracode').textContent =
-                        '▼'; // Cambiar icono al expandido
-                    this.setAttribute('aria-expanded', 'true');
-                    content.setAttribute('aria-hidden', 'false');
-                }
-            });
-        });
-    </script>
-    <script>
-        // window.onload = function() {
-        //     // Espera 1 segundo para mejorar la experiencia de usuario
-        //     setTimeout(function() {
-        //         // Redirecciona a la misma URL con el fragmento #todos al final
-        //         window.location.href = window.location.href.split('#')[0] + '#todos';
-        //     }, 500);
-        // };
-
-        function unhidden(id) {
-            // 1. Obtener el elemento por su ID
-            const miElemento = document.getElementById(id);
-
-            // 2. Eliminar el atributo 'hidden'
-            miElemento.removeAttribute('hidden');
-            document.getElementById('paginator').hidden = true;
+        function cursosMostrarTipo() {
+            var pager = document.getElementById('cursos-pager');
+            if (pager) pager.hidden = true;
         }
 
-        function show_paginator() {
-            document.getElementById('paginator').removeAttribute('hidden');
-        }
-    </script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var links = document.querySelectorAll('.cursos-page-link');
+            var prev = document.getElementById('cursos-prev');
+            var next = document.getElementById('cursos-next');
+            var totalPages = links.length;
 
-    <script>
-        //codigo del paginador
-        document.addEventListener('DOMContentLoaded', function() {
-            // Selectores para todos los elementos necesarios
-            const paginationLinks = document.querySelectorAll('.pagination-link');
-            const prevPageBtn = document.getElementById('prev-page');
-            const nextPageBtn = document.getElementById('next-page');
-            const totalPages = paginationLinks.length;
-            let currentPage = 1;
+            if (!totalPages || !prev || !next) return;
 
-            // Función para mostrar la página correcta y actualizar los botones
-            function updatePagination(newPage) {
-                // Asegurarse de que la página no exceda los límites
-                if (newPage < 1) {
-                    newPage = 1;
-                } else if (newPage > totalPages) {
-                    newPage = totalPages;
-                }
-                currentPage = newPage;
+            var currentPage = 1;
 
-                // Ocultar todas las páginas de contenido
-                const allPages = document.querySelectorAll('.page-group');
-                allPages.forEach(page => {
-                    page.style.display = 'none';
+            function showPage(page) {
+                if (page < 1) page = 1;
+                if (page > totalPages) page = totalPages;
+                currentPage = page;
+
+                document.querySelectorAll('.cursos-page-group').forEach(function (group) {
+                    group.style.display = 'none';
                 });
 
-                // Mostrar la página seleccionada
-                const selectedPage = document.querySelector(`.page-${currentPage}`);
-                if (selectedPage) {
-                    selectedPage.style.display = '';
-                }
+                var selected = document.querySelector('.cursos-page-' + currentPage);
+                if (selected) selected.style.display = '';
 
-                // Actualizar el estado de los botones de números de página
-                paginationLinks.forEach(pLink => {
-                    pLink.parentElement.classList.remove('active');
-                    if (parseInt(pLink.getAttribute('data-page')) === currentPage) {
-                        pLink.parentElement.classList.add('active');
-                    }
+                links.forEach(function (link) {
+                    link.classList.toggle('active', parseInt(link.dataset.page, 10) === currentPage);
                 });
 
-                // Actualizar el estado de los botones "Previous" y "Next"
-                if (currentPage === 1) {
-                    prevPageBtn.classList.add('disabled');
-                } else {
-                    prevPageBtn.classList.remove('disabled');
-                }
-
-                if (currentPage === totalPages) {
-                    nextPageBtn.classList.add('disabled');
-                } else {
-                    nextPageBtn.classList.remove('disabled');
-                }
+                prev.disabled = currentPage === 1;
+                next.disabled = currentPage === totalPages;
             }
 
-            // Event Listeners para los botones de números de página
-            paginationLinks.forEach(link => {
-                link.addEventListener('click', function(event) {
+            links.forEach(function (link) {
+                link.addEventListener('click', function (event) {
                     event.preventDefault();
-                    const pageNumber = parseInt(this.getAttribute('data-page'));
-                    updatePagination(pageNumber);
+                    showPage(parseInt(this.dataset.page, 10));
                 });
             });
 
-            // Event Listener para el botón "Previous"
-            prevPageBtn.addEventListener('click', function(event) {
-                event.preventDefault();
-                // Solo si el botón no está deshabilitado
-                if (!this.classList.contains('disabled')) {
-                    updatePagination(currentPage - 1);
-                }
-            });
+            prev.addEventListener('click', function () { showPage(currentPage - 1); });
+            next.addEventListener('click', function () { showPage(currentPage + 1); });
 
-            // Event Listener para el botón "Next"
-            nextPageBtn.addEventListener('click', function(event) {
-                event.preventDefault();
-                // Solo si el botón no está deshabilitado
-                if (!this.classList.contains('disabled')) {
-                    updatePagination(currentPage + 1);
-                }
-            });
-
-            // Inicializar la paginación al cargar la página (mostrar la primera página)
-            updatePagination(1);
+            showPage(1);
         });
     </script>
-
-@stop
+@endsection

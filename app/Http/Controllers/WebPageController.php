@@ -77,6 +77,8 @@ class WebPageController extends Controller
         return view('pages.courses', [
             'courses'    => $cards,
             'categories' => $cards->pluck('category')->filter()->unique()->values(),
+            // Pestanas del catalogo: un tab por tipo (onli_items.additional).
+            'types'      => $cards->pluck('type')->filter()->unique()->values(),
         ]);
     }
 
@@ -121,6 +123,13 @@ class WebPageController extends Controller
         $description = trim(preg_replace('/\s+/', ' ', strip_tags((string) $item->description)) ?? '');
 
         return [
+            // Datos que necesita el carrito publico: guarda el id del item de tienda
+            // (onli_items.id) y consulta titulo/precio al servidor.
+            'id'               => $item->id,
+            'type'             => $item->additional,
+            'slug'             => $course->slug,
+            'item_price'       => (float) $item->price,
+
             'title'            => filled($item->name) ? $item->name : ($course->description ?: 'Curso'),
             'description'      => $description !== '' ? Str::limit($description, 160) : (string) $course->description,
             'image'            => filled($item->getRawOriginal('image'))
