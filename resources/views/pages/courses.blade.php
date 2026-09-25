@@ -194,13 +194,14 @@
     @endphp
 
     <div class="cursos-catalogo">
-        <div class="container-fluid">
-            <br>
-            <img class="cursos-catalogo__banner" src="{{ asset('themes/webpage/images/courses-page.jpg') }}"
-                alt="Cursos ERIOS CONSULTORES">
-        </div>
+        
+    {{-- ======== Hero de la página ======== --}}
+    <x-page-hero eyebrow="Formación ERIOS" title="Catálogo de Cursos"
+        subtitle="Capacítate con especialistas en materia tributaria, contable y empresarial: modalidades En Vivo, Presencial y E-learning, con certificación incluida."
+        heroComponent="hero_cursos_15" />
 
         <div class="container">
+            
             <ul class="nav cursos-tabs" id="cursos-tabs" role="tablist">
                 <li class="nav-item" role="presentation">
                     <a class="nav-link active" id="todos-tab" data-toggle="pill" href="#todos" role="tab"
