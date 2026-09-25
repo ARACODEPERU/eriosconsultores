@@ -48,7 +48,15 @@ const props = defineProps({
             </li>
         </Navigation>
         <div class="mt-5">
-            <EditForm :item="item" :type="type" :tiny_api_key="tiny_api_key" /> 
+            <EditForm
+                :item="item"
+                :type="type"
+                :tiny_api_key="tiny_api_key"
+                :modalitiesCourses="modalitiesCourses"
+                :categoriesCourses="categoriesCourses"
+                :typesCourses="typesCourses"
+                :sectorsCourses="sectorsCourses"
+            /> 
         </div>
     </AppLayout>
 </template>

@@ -24,8 +24,14 @@ use App\Mail\ConfirmPurchaseMail;
 use Carbon\Carbon;
 use Modules\Academic\Entities\AcaStudent;
 use Modules\Academic\Entities\AcaCapRegistration;
+use Modules\Academic\Entities\AcaCourseLanding;
+use Modules\Academic\Entities\AcaSubscriptionType;
+use Modules\Academic\Entities\AcaTeacher;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
+use Modules\CMS\Entities\CmsTestimony;
+use Illuminate\Support\Str;
+use App\Support\CourseLandingPresenter;
 
 class WebPageController extends Controller
 {
@@ -52,23 +58,93 @@ class WebPageController extends Controller
 
     public function courses()
     {
-        $courses = OnliItem::with('course.category', 'course.modality')
+        $courses = OnliItem::query()
+            ->with(['course.category', 'course.modality', 'course.landing'])
+            // Catalogo: solo items de tienda activos cuyo curso exista y este activo.
             ->where('status', true)
-            ->orderBy('id', 'desc')
+            ->whereHas('course', fn ($q) => $q->where('status', true))
+            ->orderByDesc('id')
             ->get();
 
-        $categories = $courses
-            ->map(function ($c) {
-                return $c->category_description ?: optional(optional($c->course)->category)->description;
-            })
+        // Planes de suscripcion activos: se resuelven una sola vez, no por tarjeta.
+        $hasActivePlans = AcaSubscriptionType::where('status', true)->exists();
+
+        $cards = $courses
+            ->map(fn (OnliItem $item) => $this->courseCard($item, $hasActivePlans))
             ->filter()
-            ->unique()
             ->values();
 
         return view('pages.courses', [
-            'courses'    => $courses,
-            'categories' => $categories,
+            'courses'    => $cards,
+            'categories' => $cards->pluck('category')->filter()->unique()->values(),
         ]);
+    }
+
+    /**
+     * Prepara una tarjeta del catalogo de cursos.
+     *
+     *  - imagen: la de la tienda (onli_items) y, si no tiene, la del curso (aca_courses).
+     *  - precio: el del curso (aca_courses.price) y, si es 0, el de la tienda. Si queda
+     *    en 0 se muestra "Gratis".
+     *  - descuento: aca_courses.discount es un porcentaje (0-100) y el precio final es
+     *    price - price*discount/100, igual que en OnliSaleController/MercadopagoController.
+     *      - discount_applies = '01' -> descuento para todos: tachado + precio final.
+     *      - discount_applies = '02' -> solo suscriptores, y solo si hay planes activos:
+     *        por defecto se muestra el precio normal y al pasar el mouse aparece la
+     *        franja "Descuento para suscriptores" con el precio con descuento.
+     */
+    private function courseCard(OnliItem $item, bool $hasActivePlans = false): ?array
+    {
+        $course = $item->course;
+
+        if (!$course) {
+            return null;
+        }
+
+        $landing = $course->landing;
+        $hasLanding = $landing && $landing->is_published && filled($landing->url_slug);
+
+        $price = (float) $course->price;
+        if ($price <= 0) {
+            $price = (float) $item->price;
+        }
+
+        $percent = (float) $course->discount;
+        $percent = ($price > 0 && $percent > 0 && $percent < 100) ? $percent : 0;
+
+        $isFree = $price <= 0;
+        $discounted = $percent > 0 ? round($price - ($price * $percent / 100), 2) : $price;
+
+        $forEveryone = $percent > 0 && $course->discount_applies === '01';
+        $forSubscribers = $percent > 0 && $course->discount_applies === '02' && $hasActivePlans;
+
+        $description = trim(preg_replace('/\s+/', ' ', strip_tags((string) $item->description)) ?? '');
+
+        return [
+            'title'            => filled($item->name) ? $item->name : ($course->description ?: 'Curso'),
+            'description'      => $description !== '' ? Str::limit($description, 160) : (string) $course->description,
+            'image'            => filled($item->getRawOriginal('image'))
+                ? $item->image
+                : CourseLandingPresenter::image($course->image),
+            'category'         => $item->category_description ?: ($course->category?->description ?: 'General'),
+            'modality'         => $course->modality?->description,
+
+            // Precio y descuentos
+            'price_label'      => $isFree ? null : $this->money($price),
+            'final_label'      => $isFree ? 'Gratis' : $this->money($forEveryone ? $discounted : $price),
+            'discount_percent' => $forEveryone ? (int) round($percent) : 0,
+            'subs_percent'     => $forSubscribers ? (int) round($percent) : 0,
+            'subs_label'       => $forSubscribers ? $this->money($discounted) : null,
+
+            'url'              => $hasLanding ? route('course_url_slug', $landing->url_slug) : null,
+            'whatsapp'         => $landing?->whatsapp_link ?: 'https://wa.link/9q9g9v',
+        ];
+    }
+
+    /** S/ 250 cuando el monto es exacto y S/ 112.50 cuando tiene centavos. */
+    private function money(float $value): string
+    {
+        return 'S/ ' . number_format($value, fmod($value, 1.0) === 0.0 ? 0 : 2);
     }
 
     public function coursedescription(string $slug)
@@ -530,4 +606,54 @@ class WebPageController extends Controller
             'unlimited' => true
         ]);
     }
+
+
+    /**
+     * Ruta publica /curso/{slug}: la landing se resuelve por su url_slug.
+     */
+    public function course_url_slug($id)
+    {
+        $landing = AcaCourseLanding::with(['course.category', 'course.modality', 'course.brochure'])
+            ->where('url_slug', $id)
+            ->first();
+
+        return view('pages.course-landing', $this->landingViewData($landing));
+    }
+
+    /**
+     * Ruta interna /landing_preview/{id}: la landing se resuelve por su id.
+     */
+    public function course_landing_preview($id)
+    {
+        $landing = AcaCourseLanding::with(['course.category', 'course.modality', 'course.brochure'])
+            ->where('id', $id)
+            ->first();
+
+        return view('pages.course-landing', $this->landingViewData($landing, 'noindex, nofollow'));
+    }
+
+    /**
+     * Payload unico de la vista de landing de curso.
+     *
+     * Las dos rutas (/curso/{slug} y /landing_preview/{id}) comparten este mismo
+     * set de variables a proposito: asi la pagina publica y el preview interno
+     * no pueden desincronizarse. Toda la logica de apoyo vive en
+     * App\Support\CourseLandingPresenter, que tambien usa
+     * CourseLandingPreviewController.
+     */
+    private function landingViewData(?AcaCourseLanding $landing, string $metaRobots = 'index, follow'): array
+    {
+        $testimonials = CourseLandingPresenter::testimonials($landing?->course);
+
+        return [
+            'landing' => $landing,
+            'teachers_premium' => CourseLandingPresenter::teachersPremium($landing),
+            'colors' => CourseLandingPresenter::colors(),
+            'onli_item_id' => CourseLandingPresenter::onliItemId($landing),
+            'course_testimonials' => $testimonials,
+            'course_schema' => CourseLandingPresenter::schema($landing, $testimonials),
+            'meta_robots' => $metaRobots,
+        ];
+    }
+
 }

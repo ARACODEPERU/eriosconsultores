@@ -145,6 +145,9 @@
         position: absolute;
         right: 14px;
         bottom: 14px;
+        display: inline-flex;
+        align-items: baseline;
+        gap: 8px;
         background: #ffc600;
         color: #07294d;
         font-family: 'Montserrat', sans-serif;
@@ -154,6 +157,77 @@
         border-radius: 50px;
         box-shadow: 0 8px 20px rgba(255, 198, 0, 0.4);
     }
+    .erc-course-card__price b { font-weight: 800; }
+    .erc-course-card__price del {
+        color: rgba(7, 41, 77, 0.55);
+        font-weight: 600;
+        font-size: 12.5px;
+    }
+
+    /* ---- Descuento general (badge) ---- */
+    .erc-course-card__off {
+        position: absolute;
+        right: 14px;
+        top: 14px;
+        z-index: 2;
+        background: #e30613;
+        color: #fff;
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 700;
+        font-size: 12px;
+        padding: 6px 12px;
+        border-radius: 50px;
+        box-shadow: 0 8px 20px rgba(227, 6, 19, 0.3);
+    }
+
+    /* ---- Descuento para suscriptores: franja al pasar el mouse ---- */
+    .erc-course-card__subs {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        z-index: 3;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        background: linear-gradient(90deg, #004aad 0%, #07294d 100%);
+        color: #fff;
+        font-family: 'Montserrat', sans-serif;
+        font-size: 12.5px;
+        font-weight: 700;
+        padding: 9px 12px;
+        opacity: 0;
+        transform: translateY(-100%);
+        transition: all .35s ease;
+        pointer-events: none;
+    }
+    .erc-course-card__subs i,
+    .erc-course-card__subs b { color: #ffc600; }
+    .erc-course-card:hover .erc-course-card__subs,
+    .erc-course-card:focus-within .erc-course-card__subs { opacity: 1; transform: translateY(0); }
+
+    /* El precio pasa a "tachado + con descuento" mientras el mouse esta encima */
+    .erc-course-card__price-subs { display: none; align-items: baseline; gap: 8px; }
+    .erc-course-card:hover .erc-course-card__price-subs,
+    .erc-course-card:focus-within .erc-course-card__price-subs { display: inline-flex; }
+    .erc-course-card:hover .erc-course-card__price-base,
+    .erc-course-card:focus-within .erc-course-card__price-base { display: none; }
+
+    /* ---- Imagen, titulo y descripcion enlazan al curso ---- */
+    .erc-course-card__link { display: block; height: 100%; }
+    .erc-course-card__link img { transition: transform .5s ease; }
+    .erc-course-card:hover .erc-course-card__link img { transform: scale(1.04); }
+    .erc-course-card__title-link,
+    .erc-course-card__text-link { display: block; color: inherit; text-decoration: none; }
+    .erc-course-card__title-link:hover,
+    .erc-course-card__text-link:hover { text-decoration: none; color: inherit; }
+    .erc-course-card__title-link:hover .erc-course-card__title { color: #004aad; }
+
+    /* La pildora de modalidad se corre para no chocar con la franja */
+    .erc-course-card__modality { transition: all .3s ease; }
+    .erc-course-card:hover .erc-course-card__modality,
+    .erc-course-card:focus-within .erc-course-card__modality { opacity: 0; transform: translateY(-8px); }
     .erc-course-card__modality {
         position: absolute;
         left: 14px;
@@ -328,42 +402,89 @@
                 </div>
             @else
                 <div class="erc-courses__grid" id="ercCoursesGrid">
-                    @foreach ($courses as $course)
+                    @foreach ($courses as $card)
                         @php
-                            $aca = $course->course;
-                            $category = ($course->category_description ?: optional(optional($aca)->category)->description) ?: 'General';
-                            $modality = $aca && $aca->modality ? $aca->modality->description : null;
-                            $price = $course->discount > 0 && $course->discount < $course->price ? $course->discount : $course->price;
-                            $price = $price > 0 ? 'S/ ' . number_format($price, 0) : 'Consultar';
-                            $desc = trim(strip_tags($course->description ?? ''));
-                            $courseSlug = optional($aca?->landing)->url_slug ?: \Illuminate\Support\Str::of($course->name)->trim()->replace(['.', ','], '')->slug('-')->lower();
-                            $modalityIcon = match ($modality) {
+                            $modalityIcon = match ($card['modality']) {
                                 'Presencial' => 'fa-university',
                                 'E-learning' => 'fa-laptop',
                                 default => 'fa-video-camera',
                             };
                         @endphp
-                        <article class="erc-course-card" data-category="{{ $category }}" data-reveal
+                        <article class="erc-course-card" data-category="{{ $card['category'] }}" data-reveal
                             data-reveal-delay="{{ ($loop->index % 3) * 110 }}">
                             <div class="erc-course-card__media">
-                                <img src="{{ $course->image }}" alt="{{ $course->name }}" class="erc-course-card__img"
-                                    onerror="this.onerror=null;this.src='{{ asset('themes/webpage/images/logo-2.png') }}';this.classList.add('erc-course-card__img--fallback');">
+                                @if ($card['url'])
+                                    <a href="{{ $card['url'] }}" class="erc-course-card__link"
+                                        aria-label="Ver {{ $card['title'] }}">
+                                        <img src="{{ $card['image'] }}" alt="{{ $card['title'] }}"
+                                            class="erc-course-card__img"
+                                            onerror="this.onerror=null;this.src='{{ asset('themes/webpage/images/logo-2.png') }}';this.classList.add('erc-course-card__img--fallback');">
+                                    </a>
+                                @else
+                                    <img src="{{ $card['image'] }}" alt="{{ $card['title'] }}"
+                                        class="erc-course-card__img"
+                                        onerror="this.onerror=null;this.src='{{ asset('themes/webpage/images/logo-2.png') }}';this.classList.add('erc-course-card__img--fallback');">
+                                @endif
+
                                 <span class="erc-course-card__modality">
-                                    <i class="fa {{ $modalityIcon }}" aria-hidden="true"></i> {{ $modality ?? 'A distancia' }}
+                                    <i class="fa {{ $modalityIcon }}" aria-hidden="true"></i> {{ $card['modality'] ?? 'A distancia' }}
                                 </span>
-                                <span class="erc-course-card__price">{{ $price }}</span>
+
+                                @if ($card['discount_percent'] > 0)
+                                    <span class="erc-course-card__off">-{{ $card['discount_percent'] }}%</span>
+                                @endif
+
+                                @if ($card['subs_percent'] > 0)
+                                    <span class="erc-course-card__subs">
+                                        <i class="fa fa-star" aria-hidden="true"></i>
+                                        Descuento para suscriptores
+                                        <b>-{{ $card['subs_percent'] }}%</b>
+                                    </span>
+                                @endif
+
+                                <span class="erc-course-card__price">
+                                    @if ($card['discount_percent'] > 0 && $card['price_label'])
+                                        <del>{{ $card['price_label'] }}</del>
+                                        <b>{{ $card['final_label'] }}</b>
+                                    @elseif ($card['subs_percent'] > 0)
+                                        <span class="erc-course-card__price-base">{{ $card['final_label'] }}</span>
+                                        <span class="erc-course-card__price-subs">
+                                            <del>{{ $card['price_label'] }}</del>
+                                            <b>{{ $card['subs_label'] }}</b>
+                                        </span>
+                                    @else
+                                        <b>{{ $card['final_label'] }}</b>
+                                    @endif
+                                </span>
                             </div>
                             <div class="erc-course-card__body">
-                                <span class="erc-course-card__category">{{ $category }}</span>
-                                <h3 class="erc-course-card__title">{{ $course->name }}</h3>
-                                @if ($desc)
-                                    <p class="erc-course-card__text">{{ $desc }}</p>
-                                @endif
-                                <div class="erc-course-card__actions">
-                                    <a href="{{ route('web_course_description', ['slug' => $courseSlug]) }}" class="erc-course-btn erc-course-btn--info">
-                                        Ver curso <i class="fa fa-arrow-right erc-anim-arrow" aria-hidden="true"></i>
+                                <span class="erc-course-card__category">{{ $card['category'] }}</span>
+
+                                @if ($card['url'])
+                                    <a href="{{ $card['url'] }}" class="erc-course-card__title-link">
+                                        <h3 class="erc-course-card__title">{{ $card['title'] }}</h3>
                                     </a>
-                                    <a href="https://wa.link/9q9g9v" target="_blank" rel="noopener"
+                                @else
+                                    <h3 class="erc-course-card__title">{{ $card['title'] }}</h3>
+                                @endif
+
+                                @if ($card['description'])
+                                    @if ($card['url'])
+                                        <a href="{{ $card['url'] }}" class="erc-course-card__text-link">
+                                            <p class="erc-course-card__text">{{ $card['description'] }}</p>
+                                        </a>
+                                    @else
+                                        <p class="erc-course-card__text">{{ $card['description'] }}</p>
+                                    @endif
+                                @endif
+
+                                <div class="erc-course-card__actions">
+                                    @if ($card['url'])
+                                        <a href="{{ $card['url'] }}" class="erc-course-btn erc-course-btn--info">
+                                            Ver curso <i class="fa fa-arrow-right erc-anim-arrow" aria-hidden="true"></i>
+                                        </a>
+                                    @endif
+                                    <a href="{{ $card['whatsapp'] }}" target="_blank" rel="noopener"
                                         class="erc-course-btn erc-course-btn--wa">
                                         <i class="fab fa-whatsapp" aria-hidden="true"></i> Consultar
                                     </a>

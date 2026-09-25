@@ -7,7 +7,7 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import Keypad from '@/Components/Keypad.vue';
 import Swal2 from 'sweetalert2';
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import Editor from '@tinymce/tinymce-vue'
 import { faTrashAlt } from "@fortawesome/free-solid-svg-icons";
 
@@ -41,6 +41,23 @@ const props = defineProps({
         default: () => ({}),
     }
 });
+
+// Mismas opciones que el formulario de creacion: se normalizan a un arreglo de
+// textos para que el select funcione igual si llegan como arreglo o como objeto.
+const normalizeOptions = (options) => {
+    const values = Array.isArray(options) ? options : Object.values(options || {});
+
+    return values
+        .filter((option) => option !== null && option !== undefined && option !== '')
+        .map((option) => String(option));
+};
+
+const sectorOptions = computed(() => normalizeOptions(props.sectorsCourses));
+const typeOptions = computed(() => normalizeOptions(props.typesCourses));
+
+// Si lo guardado ya no esta en la lista (por ejemplo cambiaron el enum), se agrega
+// como opcion al final para que el select muestre lo que realmente hay guardado.
+const keepCurrentOption = (options, value) => !!value && !options.includes(String(value));
 
 const titles = ref({
     additional: props.type == 1 ? 'Tipo' : 'Recomendación',
@@ -188,8 +205,11 @@ const removeSpecifications= (key) => {
             <div v-if="form.type == 1" class="col-span-6 sm:col-span-6">
                 <InputLabel for="category_description" value="Sector" />
                 <select id="category_description" v-model="form.category_description" class="form-select text-white-dark">
-                    <option selected value="">Seleccionar Sector</option>
-                    <option v-for="(sector) in sectorsCourses" :value="sector" >{{ sector }}</option>
+                    <option value="">Seleccionar Sector</option>
+                    <option v-for="(sector) in sectorOptions" :key="sector" :value="sector" >{{ sector }}</option>
+                    <option v-if="keepCurrentOption(sectorOptions, form.category_description)" :value="form.category_description">
+                        {{ form.category_description }} (valor actual)
+                    </option>
                     <!-- Agrega más opciones según tus necesidades -->
                 </select>
                 <InputError :message="form.errors.category_description" class="mt-2" />
@@ -228,7 +248,10 @@ const removeSpecifications= (key) => {
                 <InputLabel for="additional" value="Tipo*" />
                 <select id="additional" v-model="form.additional" class="form-select text-white-dark">
                     <option value="">Seleccionar tipo</option>
-                    <option v-for="(type) in typesCourses" :value="type" > {{ type }}</option>
+                    <option v-for="(type) in typeOptions" :key="type" :value="type" > {{ type }}</option>
+                    <option v-if="keepCurrentOption(typeOptions, form.additional)" :value="form.additional">
+                        {{ form.additional }} (valor actual)
+                    </option>
                 </select>
                 <InputError :message="form.errors.additional" class="mt-2" />
             </div>

@@ -101,6 +101,14 @@ class AcaCourseLandingController extends Controller
                 ->where('approval_status', CmsTestimony::STATUS_REJECTED)->count(),
         ];
 
+        // Producto de tienda del curso (Comercio Online -> Productos). El formulario
+        // guarda 'entitie' con guiones y el codigo del modulo usa el FQCN, por eso se
+        // aceptan las dos formas. Se resuelve una sola vez para la pestana Inversion.
+        $product = OnliItem::where('item_id', $courseId)
+            ->whereIn('entitie', ['Modules-Academic-Entities-AcaCourse', AcaCourse::class])
+            ->orderByDesc('status')
+            ->first();
+
         return Inertia::render('Academic::Courses/Landing', [
             'course' => $course,
             'landing' => $landing,
@@ -110,6 +118,12 @@ class AcaCourseLandingController extends Controller
             'utmStats' => $this->getUtmStatsData($courseId),
             'courseTestimonials' => $courseTestimonials,
             'testimonialCounters' => $testimonialCounters,
+            'product' => $product ? [
+                'id' => $product->id,
+                'name' => $product->name,
+                'price' => (float) $product->price,
+                'status' => (bool) $product->status,
+            ] : null,
         ]);
     }
 
