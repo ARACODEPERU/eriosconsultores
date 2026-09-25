@@ -1,6 +1,6 @@
 <script setup>
 
-import { computed, ref } from 'vue';
+import { ref } from 'vue';
 import { useForm, Link } from '@inertiajs/vue3';
 import Swal from 'sweetalert2';
 import IconLoader from '@/Components/vristo/icon/icon-loader.vue';
@@ -18,35 +18,7 @@ const props = defineProps({
         type: Object,
         default: () => ({}),
     },
-    // Producto de tienda del curso (Comercio Online -> Productos). Null si aun no existe.
-    product: {
-        type: Object,
-        default: () => null,
-    },
 });
-
-// Formato de soles determinista (S/ 460, S/ 1,460.90).
-const formatSoles = (value) => {
-    if (value === null || value === undefined || value === '') {
-        return null;
-    }
-
-    const number = Number(value);
-
-    if (!Number.isFinite(number)) {
-        return null;
-    }
-
-    const [integer, decimals] = number.toFixed(2).split('.');
-    const formatted = integer.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-
-    return `S/ ${decimals === '00' ? formatted : `${formatted}.${decimals}`}`;
-};
-
-// Precio base del curso: es el que usan los cards y la pasarela de pagos.
-const basePriceLabel = computed(() => formatSoles(props.course?.price));
-const hasProduct = computed(() => !!props.product);
-const productActive = computed(() => !!props.product && props.product.status !== false);
 
 const getInitialInvestmentData = () => {
     const data = props.landing.investment_section;
@@ -196,46 +168,6 @@ const saveInvestmentSettings = () => {
                     ></textarea>
                     <InputError :message="formInvestment.errors.description" class="mt-2" />
                 </div>
-            </div>
-        </div>
-
-        <!-- Precio original del curso (referencia para quien edita la seccion) -->
-        <div class="rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-500/40 dark:bg-amber-500/10">
-            <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                <span class="text-sm font-semibold uppercase tracking-wider text-amber-800 dark:text-amber-300">
-                    Precio original:
-                </span>
-                <span class="text-2xl font-bold text-amber-900 dark:text-amber-100">
-                    {{ basePriceLabel || 'S/ 0' }}
-                </span>
-                <span v-if="!basePriceLabel" class="text-xs font-medium text-amber-800 dark:text-amber-300">
-                    (sin precio definido)
-                </span>
-            </div>
-
-            <p class="mt-3 text-xs leading-relaxed text-amber-900/90 dark:text-amber-100/80">
-                Este precio se modifica en el módulo de
-                <strong class="font-semibold">Comercio Online</strong> y es el que aparece en los
-                cards de cursos y con el que se paga en la pasarela de pagos.
-            </p>
-
-            <p class="mt-2 text-[11px] leading-relaxed text-amber-800/80 dark:text-amber-200/70">
-                Hoy los cards y la pasarela (MercadoPago) toman
-                <code class="font-mono">aca_courses.price</code>; el campo
-                <em>Precio</em> del producto de tienda es independiente y no sobreescribe este valor.
-            </p>
-
-            <div class="mt-3 border-t border-amber-200 pt-3 dark:border-amber-500/30">
-                <p v-if="!hasProduct" class="text-xs font-medium text-amber-800 dark:text-amber-300">
-                    Este curso aún no tiene producto registrado en Comercio Online.
-                </p>
-                <p v-else-if="!productActive" class="text-xs font-medium text-red-600 dark:text-red-400">
-                    El producto "{{ product.name }}" existe pero está inactivo, así que no aparece
-                    en el catálogo de cursos.
-                </p>
-                <p v-else class="text-xs text-amber-800/80 dark:text-amber-200/70">
-                    Producto en tienda: <strong class="font-semibold">{{ product.name }}</strong> (activo).
-                </p>
             </div>
         </div>
 

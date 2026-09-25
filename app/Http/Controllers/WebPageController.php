@@ -147,42 +147,48 @@ class WebPageController extends Controller
         return 'S/ ' . number_format($value, fmod($value, 1.0) === 0.0 ? 0 : 2);
     }
 
-    public function coursedescription(string $slug)
+    public function cursodescripcion($slug)
     {
-        $item = OnliItem::where('status', true)
-            ->where(function ($q) use ($slug) {
-                $q->where('id', $slug)
-                    ->orWhereRaw('LOWER(REPLACE(REPLACE(REPLACE(TRIM(name), ".", ""), ",", ""), " ", "-")) = ?', [mb_strtolower($slug)])
-                    ->orWhereHas('course.landing', function ($lq) use ($slug) {
-                        $lq->where('url_slug', $slug)->where('is_published', true);
-                    });
-            })
-            ->first();
+        // Ruta amigable: /curso-descripcion/{slug}. El slug es el de aca_courses;
+        // se mantiene compatibilidad: si llega un id numerico antiguo redirige 301
+        // a su slug amigable para no romper enlaces ya indexados.
+        if (is_numeric($slug) && (int) $slug > 0) {
+            $legacyItem = OnliItem::find((int) $slug);
+            $legacyCourse = $legacyItem ? AcaCourse::find($legacyItem->item_id) : null;
 
-        abort_unless($item, 404);
+            if ($legacyCourse && filled($legacyCourse->slug)) {
+                return redirect()->route('web_curso_descripcion', $legacyCourse->slug, 301);
+            }
+
+            abort(404);
+        }
 
         $course = AcaCourse::with('category')
             ->with('modality')
-            ->with('modules.themes')
-            ->with('teachers.teacher.person')
+            ->with('modules')
+            ->with('teachers.teacher.person.resumes')
             ->with('brochure')
-            ->with('landing')
-            ->where('id', $item->item_id)
+            ->with('agreements')
+            ->where('slug', $slug)
+            ->firstOrFail();
+
+        $item = OnliItem::where('item_id', $course->id)
+            ->where('entitie', 'Modules-Academic-Entities-AcaCourse')
             ->first();
 
         $latest_courses = OnliItem::with('course')
             ->orderBy('id', 'desc')
-            ->where('status', true)
-            ->where('id', '!=', $item->id)
-            ->take(6)
+            ->where('id', '!=', $item?->id)
+            ->take(10)
             ->get()
             ->shuffle()
             ->take(3);
 
-        return view('pages.curso-descripcion', [
+        return view('pages.course-description', [
             'course' => $course,
             'item' => $item,
-            'latest_courses' => $latest_courses,
+            'onli_item_id' => $item?->id,
+            'latest_courses' => $latest_courses
         ]);
     }
 
@@ -656,4 +662,45 @@ class WebPageController extends Controller
         ];
     }
 
+	    public function pay($sale = null)
+    {
+        // Ruta web_pagar: retorno tras crear una venta online. La vista
+        // pages/pay no existe; se resuelve con el flujo actual del checkout.
+        $sale = $sale ? OnliSale::find($sale) : null;
+
+        if (! $sale) {
+            return redirect()->route('web_carrito');
+        }
+
+        if ($sale->response_status === 'approved') {
+            return redirect()->route('web_gracias_por_cursos', $sale->id);
+        }
+
+        // Venta pendiente: el carrito permite reintentar el pago con el
+        // checkout de MercadoPago activo.
+        return redirect()->route('web_carrito');
+    }
+
+    /**
+     * Registra/actualiza el carrito abandonado desde el checkout publico.
+     */
+    public function cartAbandonedStore(Request $request)
+    {
+        $data = $request->only([
+            'client_id', 'phone_country', 'phone', 'name', 'email',
+            'cart_items', 'cart_total',
+            'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'utm_id',
+        ]);
+
+        if (blank($data['client_id'] ?? null) || (blank($data['phone'] ?? null) && blank($data['email'] ?? null))) {
+            return response()->json(['ok' => false], 422);
+        }
+
+        $cart = OnliCarritoAbandonado::updateOrCreate(
+            ['client_id' => $data['client_id']],
+            $data + ['paid' => false]
+        );
+
+        return response()->json(['ok' => true, 'id' => $cart->id]);
+    }
 }

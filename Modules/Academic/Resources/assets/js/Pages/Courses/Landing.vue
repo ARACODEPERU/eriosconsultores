@@ -52,11 +52,6 @@ const props = defineProps({
         type: Object,
         default: () => ({ all: 0, pending: 0, approved: 0, rejected: 0 }),
     },
-    // Producto de tienda del curso (Comercio Online -> Productos). Null si aun no existe.
-    product: {
-        type: Object,
-        default: () => null,
-    },
 });
 
 const activeTab = ref('banner');
@@ -413,7 +408,6 @@ const formatIconForVue = (iconName) => {
                         <LandingInvestment
                             :course="course"
                             :landing="landing"
-                            :product="product"
                         />
                     </div>
 

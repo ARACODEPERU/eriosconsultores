@@ -1,526 +1,414 @@
 @extends('layouts.webpage')
 
-@section('meta_title', 'Cursos')
-@section('meta_description', 'Catálogo de cursos y diplomados de ERIOS CONSULTORES: modalidades En Vivo, Presencial y E-learning, horarios flexibles y certificación incluida. ¡Inscríbete ya!')
-
-@section('page_styles')
-<style>
-    /* ============ ERIOS · Catálogo de cursos ============ */
-    .erc-courses { padding: 80px 0 100px; background: #f4f7fb; }
-    .erc-courses__head {
-        text-align: center;
-        max-width: 720px;
-        margin: 0 auto 44px;
-        padding: 0 15px;
-    }
-    .erc-courses__eyebrow {
-        display: inline-block;
-        font-family: 'Montserrat', sans-serif;
-        font-weight: 700;
-        font-size: 14px;
-        letter-spacing: 2.5px;
-        text-transform: uppercase;
-        color: #004aad;
-        position: relative;
-        padding-bottom: 12px;
-        margin-bottom: 12px;
-    }
-    .erc-courses__eyebrow::before,
-    .erc-courses__eyebrow::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        width: 35px;
-        height: 2px;
-        background: #ffc600;
-    }
-    .erc-courses__eyebrow::before { left: 50%; transform: translateX(calc(-100% - 8px)); }
-    .erc-courses__eyebrow::after { left: 50%; transform: translateX(8px); }
-    .erc-courses__head h2 {
-        font-family: 'Montserrat', sans-serif;
-        font-size: 36px;
-        font-weight: 700;
-        color: #1d2025;
-        margin: 0;
-    }
-    .erc-courses__head p {
-        font-size: 16px;
-        line-height: 28px;
-        color: #505050;
-        margin: 14px 0 0;
-    }
-
-    /* ---- Barra de filtros ---- */
-    .erc-courses__bar {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 14px;
-        background: #fff;
-        border: 1px solid #eceff5;
-        border-radius: 14px;
-        padding: 14px 18px;
-        margin-bottom: 34px;
-        box-shadow: 0 6px 24px rgba(14, 23, 38, 0.05);
-    }
-    .erc-courses__tabs { display: flex; flex-wrap: wrap; gap: 8px; }
-    .erc-courses__tab {
-        display: inline-flex;
-        align-items: center;
-        gap: 7px;
-        font-family: 'Montserrat', sans-serif;
-        font-weight: 700;
-        font-size: 13.5px;
-        color: #50607a;
-        background: #f1f5fb;
-        border: 1px solid transparent;
-        border-radius: 50px;
-        padding: 9px 20px;
-        cursor: pointer;
-        transition: all .3s ease;
-        text-decoration: none;
-    }
-    .erc-courses__tab:hover { color: #004aad; border-color: rgba(0, 74, 173, 0.25); text-decoration: none; }
-    .erc-courses__tab.is-active {
-        background: #004aad;
-        color: #fff;
-        box-shadow: 0 6px 16px rgba(0, 74, 173, 0.28);
-    }
-    .erc-courses__tab.is-active:hover { color: #fff; }
-    .erc-courses__count {
-        font-size: 14px;
-        color: #8a95a7;
-        white-space: nowrap;
-    }
-    .erc-courses__count b { color: #004aad; }
-
-    /* ---- Grid de tarjetas ---- */
-    .erc-courses__grid {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 28px;
-    }
-    @media (max-width: 991px) { .erc-courses__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-    @media (max-width: 575px) { .erc-courses__grid { grid-template-columns: 1fr; } }
-
-    .erc-course-card {
-        background: #fff;
-        border: 1px solid #eceff5;
-        border-radius: 16px;
-        overflow: hidden;
-        box-shadow: 0 6px 24px rgba(14, 23, 38, 0.06);
-        transition: transform .35s ease, box-shadow .35s ease;
-        display: flex;
-        flex-direction: column;
-    }
-    .erc-course-card:hover {
-        transform: translateY(-6px);
-        box-shadow: 0 16px 40px rgba(0, 74, 173, 0.14);
-    }
-    .erc-course-card__media {
-        position: relative;
-        height: 180px;
-        background: linear-gradient(135deg, #07294d 0%, #0b3a6b 60%, #0e4a8f 100%);
-        overflow: hidden;
-    }
-    .erc-course-card__img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-        transition: transform .5s ease;
-    }
-    .erc-course-card:hover .erc-course-card__img { transform: scale(1.06); }
-    .erc-course-card__img--fallback {
-        width: auto;
-        height: 92px;
-        margin: 0 auto;
-        object-fit: contain;
-        filter: brightness(0) invert(1);
-        opacity: .92;
-        padding: 0 28px;
-    }
-    .erc-course-card__price {
-        position: absolute;
-        right: 14px;
-        bottom: 14px;
-        display: inline-flex;
-        align-items: baseline;
-        gap: 8px;
-        background: #ffc600;
-        color: #07294d;
-        font-family: 'Montserrat', sans-serif;
-        font-weight: 700;
-        font-size: 14.5px;
-        padding: 7px 16px;
-        border-radius: 50px;
-        box-shadow: 0 8px 20px rgba(255, 198, 0, 0.4);
-    }
-    .erc-course-card__price b { font-weight: 800; }
-    .erc-course-card__price del {
-        color: rgba(7, 41, 77, 0.55);
-        font-weight: 600;
-        font-size: 12.5px;
-    }
-
-    /* ---- Descuento general (badge) ---- */
-    .erc-course-card__off {
-        position: absolute;
-        right: 14px;
-        top: 14px;
-        z-index: 2;
-        background: #e30613;
-        color: #fff;
-        font-family: 'Montserrat', sans-serif;
-        font-weight: 700;
-        font-size: 12px;
-        padding: 6px 12px;
-        border-radius: 50px;
-        box-shadow: 0 8px 20px rgba(227, 6, 19, 0.3);
-    }
-
-    /* ---- Descuento para suscriptores: franja al pasar el mouse ---- */
-    .erc-course-card__subs {
-        position: absolute;
-        left: 0;
-        right: 0;
-        top: 0;
-        z-index: 3;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 7px;
-        background: linear-gradient(90deg, #004aad 0%, #07294d 100%);
-        color: #fff;
-        font-family: 'Montserrat', sans-serif;
-        font-size: 12.5px;
-        font-weight: 700;
-        padding: 9px 12px;
-        opacity: 0;
-        transform: translateY(-100%);
-        transition: all .35s ease;
-        pointer-events: none;
-    }
-    .erc-course-card__subs i,
-    .erc-course-card__subs b { color: #ffc600; }
-    .erc-course-card:hover .erc-course-card__subs,
-    .erc-course-card:focus-within .erc-course-card__subs { opacity: 1; transform: translateY(0); }
-
-    /* El precio pasa a "tachado + con descuento" mientras el mouse esta encima */
-    .erc-course-card__price-subs { display: none; align-items: baseline; gap: 8px; }
-    .erc-course-card:hover .erc-course-card__price-subs,
-    .erc-course-card:focus-within .erc-course-card__price-subs { display: inline-flex; }
-    .erc-course-card:hover .erc-course-card__price-base,
-    .erc-course-card:focus-within .erc-course-card__price-base { display: none; }
-
-    /* ---- Imagen, titulo y descripcion enlazan al curso ---- */
-    .erc-course-card__link { display: block; height: 100%; }
-    .erc-course-card__link img { transition: transform .5s ease; }
-    .erc-course-card:hover .erc-course-card__link img { transform: scale(1.04); }
-    .erc-course-card__title-link,
-    .erc-course-card__text-link { display: block; color: inherit; text-decoration: none; }
-    .erc-course-card__title-link:hover,
-    .erc-course-card__text-link:hover { text-decoration: none; color: inherit; }
-    .erc-course-card__title-link:hover .erc-course-card__title { color: #004aad; }
-
-    /* La pildora de modalidad se corre para no chocar con la franja */
-    .erc-course-card__modality { transition: all .3s ease; }
-    .erc-course-card:hover .erc-course-card__modality,
-    .erc-course-card:focus-within .erc-course-card__modality { opacity: 0; transform: translateY(-8px); }
-    .erc-course-card__modality {
-        position: absolute;
-        left: 14px;
-        top: 14px;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        background: rgba(7, 41, 77, 0.72);
-        backdrop-filter: blur(6px);
-        -webkit-backdrop-filter: blur(6px);
-        color: #fff;
-        font-size: 12px;
-        font-weight: 600;
-        letter-spacing: .4px;
-        padding: 6px 12px;
-        border-radius: 50px;
-        border: 1px solid rgba(255, 255, 255, 0.22);
-    }
-    .erc-course-card__modality i { color: #ffc600; font-size: 11px; }
-    .erc-course-card__body {
-        padding: 22px 24px 24px;
-        display: flex;
-        flex-direction: column;
-        flex: 1;
-    }
-    .erc-course-card__category {
-        font-family: 'Montserrat', sans-serif;
-        font-weight: 700;
-        font-size: 12px;
-        letter-spacing: 1.8px;
-        text-transform: uppercase;
-        color: #004aad;
-        margin-bottom: 8px;
-    }
-    .erc-course-card__title {
-        font-size: 18px;
-        font-weight: 700;
-        color: #1d2025;
-        line-height: 1.4;
-        margin: 0 0 10px;
-    }
-    .erc-course-card__text {
-        font-size: 14px;
-        line-height: 24px;
-        color: #6a7688;
-        margin: 0 0 16px;
-        display: -webkit-box;
-        -webkit-line-clamp: 3;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-    }
-    .erc-course-card__actions {
-        margin-top: auto;
-        padding-top: 6px;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-    }
-    .erc-course-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        font-family: 'Montserrat', sans-serif;
-        font-weight: 700;
-        font-size: 13.5px;
-        padding: 11px 20px;
-        border-radius: 5px;
-        border: 2px solid transparent;
-        cursor: pointer;
-        text-decoration: none;
-        transition: all .35s ease;
-        line-height: 1;
-    }
-    .erc-course-btn:hover { text-decoration: none; transform: translateY(-2px); }
-    .erc-course-btn--info {
-        background: #ffc600;
-        color: #07294d;
-        box-shadow: 0 6px 18px rgba(255, 198, 0, 0.22);
-    }
-    .erc-course-btn--info:hover {
-        background: #004aad;
-        color: #ffc600;
-        box-shadow: 0 10px 24px rgba(0, 74, 173, 0.4);
-    }
-    .erc-course-btn--info:hover .erc-anim-arrow { transform: translateX(6px); }
-    .erc-course-btn--wa {
-        border-color: rgba(37, 211, 102, 0.6);
-        color: #25D366;
-        background: transparent;
-    }
-    .erc-course-btn--wa:hover {
-        background: #25D366;
-        border-color: #25D366;
-        color: #fff;
-        box-shadow: 0 10px 24px rgba(37, 211, 102, 0.35);
-    }
-
-    /* ---- Estado vacío ---- */
-    .erc-courses__empty {
-        text-align: center;
-        background: #fff;
-        border: 1px dashed #cfd9e8;
-        border-radius: 16px;
-        padding: 70px 30px;
-    }
-    .erc-courses__empty i {
-        font-size: 44px;
-        color: #b9c6d8;
-        margin-bottom: 18px;
-    }
-    .erc-courses__empty h3 {
-        font-family: 'Montserrat', sans-serif;
-        font-size: 22px;
-        font-weight: 700;
-        color: #1d2025;
-        margin: 0 0 8px;
-    }
-    .erc-courses__empty p { color: #6a7688; margin: 0 0 22px; }
-
-    @media (max-width: 767px) {
-        .erc-courses { padding: 55px 0 70px; }
-        .erc-courses__head h2 { font-size: 27px; }
-        .erc-courses__bar { flex-direction: column; align-items: stretch; }
-        .erc-courses__count { text-align: center; }
-    }
-</style>
-@endsection
-
 @section('content')
 
-    {{-- ======== Hero de la página ======== --}}
-    <x-page-hero eyebrow="Formación ERIOS" title="Catálogo de Cursos"
-        subtitle="Capacítate con especialistas en materia tributaria, contable y empresarial: modalidades En Vivo, Presencial y E-learning, con certificación incluida."
-        heroComponent="hero_cursos_15" />
+    {{-- Schema markup (JSON-LD): listado de cursos --}}
+    @if (!empty($coursesSchema))
+        <script type="application/ld+json">
+            {!! json_encode($coursesSchema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}
+        </script>
+    @endif
 
-    {{-- ======== Catálogo ======== --}}
-    <section class="erc-courses">
-        <div class="container">
+    <!-- Loader starts-->
+    <!-- Loader ends-->
+    <!-- tap on top starts-->
+    <div class="tap-top"><i data-feather="chevrons-up"></i></div>
+    <!-- tap on tap ends-->
 
-            <div class="erc-courses__head" data-reveal>
-                <span class="erc-courses__eyebrow">Nuestros cursos</span>
-                <h2>Elige tu próximo curso</h2>
-                <p>Programas prácticos dictados por docentes especializados, con horarios flexibles y certificado al
-                    terminar.</p>
-            </div>
 
-            <div class="erc-courses__bar" data-reveal>
-                <div class="erc-courses__tabs" id="ercCourseTabs">
-                    <a href="#" class="erc-courses__tab is-active" data-category="all">
-                        <i class="fa fa-th-large" aria-hidden="true"></i> Todos
-                    </a>
-                    @forelse ($categories as $cat)
-                        <a href="#" class="erc-courses__tab" data-category="{{ $cat }}">
-                            <i class="fa fa-tags" aria-hidden="true"></i> {{ $cat }}
-                        </a>
-                    @empty
-                    @endforelse
+    <!-- page-wrapper Start-->
+    <div class="page-wrapper" id="pageWrapper">
+        <!-- Page Header Start-->
+        <x-header />
+        <!-- Page Header Ends-->
+        <!-- Page Body Start-->
+        <div class="page-body-wrapper">
+            <div class="page-body">
+                <div class="container-fluid"></div>
+                <div class="container-fluid">
+                    <br><br><br>
+                    <img style="
+                    width: 100%;"
+                        src="{{ asset('themes/webpage/images/courses-page.jpg') }}" alt="">
                 </div>
-                <span class="erc-courses__count">Mostrando <b id="ercCoursesVisible">{{ $courses->count() }}</b> de
-                    {{ $courses->count() }} cursos</span>
-            </div>
+                <br>
+                <!-- Container-fluid starts-->
+                <div class="container-fluid dashboard_default">
+                    <div class="row">
+                        <div class="col-xl-12">
+                            <div class="card height-equal" style="min-height: 310.797px; background: none;">
+                                <div class="card-body">
+                                    <ul class="nav nav-pills nav-primary" id="pills-tab" role="tablist">
 
-            @if ($courses->isEmpty())
-                <div class="erc-courses__empty" data-reveal>
-                    <i class="fa fa-book-open" aria-hidden="true"></i>
-                    <h3>Pronto nuevos cursos</h3>
-                    <p>Estamos preparando nuestro catálogo. Mientras tanto, escríbenos y te informamos de las próximas
-                        fechas.</p>
-                    <a href="{{ route('web_contact_us') }}" class="erc-course-btn erc-course-btn--info">
-                        Contáctanos <i class="fa fa-arrow-right erc-anim-arrow" aria-hidden="true"></i>
-                    </a>
-                </div>
-            @else
-                <div class="erc-courses__grid" id="ercCoursesGrid">
-                    @foreach ($courses as $card)
-                        @php
-                            $modalityIcon = match ($card['modality']) {
-                                'Presencial' => 'fa-university',
-                                'E-learning' => 'fa-laptop',
-                                default => 'fa-video-camera',
-                            };
-                        @endphp
-                        <article class="erc-course-card" data-category="{{ $card['category'] }}" data-reveal
-                            data-reveal-delay="{{ ($loop->index % 3) * 110 }}">
-                            <div class="erc-course-card__media">
-                                @if ($card['url'])
-                                    <a href="{{ $card['url'] }}" class="erc-course-card__link"
-                                        aria-label="Ver {{ $card['title'] }}">
-                                        <img src="{{ $card['image'] }}" alt="{{ $card['title'] }}"
-                                            class="erc-course-card__img"
-                                            onerror="this.onerror=null;this.src='{{ asset('themes/webpage/images/logo-2.png') }}';this.classList.add('erc-course-card__img--fallback');">
-                                    </a>
-                                @else
-                                    <img src="{{ $card['image'] }}" alt="{{ $card['title'] }}"
-                                        class="erc-course-card__img"
-                                        onerror="this.onerror=null;this.src='{{ asset('themes/webpage/images/logo-2.png') }}';this.classList.add('erc-course-card__img--fallback');">
-                                @endif
+                                        <li class="nav-item" role="presentation">
+                                            <a class="f-w-600 nav-link active" id="todos-tab" data-bs-toggle="pill"
+                                                onclick="show_paginator()" href="#todos" role="tab"
+                                                aria-controls="todos" aria-selected="false" tabindex="-1">Todos
+                                            </a>
+                                        </li>
+                                        @foreach ($types as $type)
+                                            <li class="nav-item" role="presentation">
+                                                <a class="f-w-600 nav-link "
+                                                    onclick="unhidden('{{ str_replace(' ', '', $type) }}')"
+                                                    id="{{ str_replace(' ', '', $type) }}-tab" data-bs-toggle="pill"
+                                                    href="#{{ str_replace(' ', '', $type) }}" role="tab"
+                                                    aria-controls="{{ str_replace(' ', '', $type) }}" aria-selected="true">
+                                                    {{ $type }}
+                                                </a>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                    <div class="tab-content" id="pills-tabContent">
+                                        <div class="tab-pane fade show active" id="todos" role="tabpanel"
+                                            aria-labelledby="todos-tab">
 
-                                <span class="erc-course-card__modality">
-                                    <i class="fa {{ $modalityIcon }}" aria-hidden="true"></i> {{ $card['modality'] ?? 'A distancia' }}
-                                </span>
+                                            @php
+                                                $xx = count($courses);
+                                                $yy = $xx / $p; //$p paginacion
+                                                $yy = ceil($yy);
+                                            @endphp
 
-                                @if ($card['discount_percent'] > 0)
-                                    <span class="erc-course-card__off">-{{ $card['discount_percent'] }}%</span>
-                                @endif
 
-                                @if ($card['subs_percent'] > 0)
-                                    <span class="erc-course-card__subs">
-                                        <i class="fa fa-star" aria-hidden="true"></i>
-                                        Descuento para suscriptores
-                                        <b>-{{ $card['subs_percent'] }}%</b>
-                                    </span>
-                                @endif
+                                            <br>
+                                            @for ($i = 0; $i < $yy; $i++)
+                                                <div class="row widget-grid page-group page-{{ $i + 1 }}"
+                                                    id="course-list" style="display: {{ $i + 1 == 1 ? '' : 'none' }};">
 
-                                <span class="erc-course-card__price">
-                                    @if ($card['discount_percent'] > 0 && $card['price_label'])
-                                        <del>{{ $card['price_label'] }}</del>
-                                        <b>{{ $card['final_label'] }}</b>
-                                    @elseif ($card['subs_percent'] > 0)
-                                        <span class="erc-course-card__price-base">{{ $card['final_label'] }}</span>
-                                        <span class="erc-course-card__price-subs">
-                                            <del>{{ $card['price_label'] }}</del>
-                                            <b>{{ $card['subs_label'] }}</b>
-                                        </span>
-                                    @else
-                                        <b>{{ $card['final_label'] }}</b>
-                                    @endif
-                                </span>
-                            </div>
-                            <div class="erc-course-card__body">
-                                <span class="erc-course-card__category">{{ $card['category'] }}</span>
+                                                    @foreach ($courses->skip($p * $i)->take($p) as $item)
+                                                        @php
+                                                            $hasPublishedLanding = filled($item->course?->landing?->url_slug) && ($item->course?->landing?->is_published ?? false);
+                                                            $courseUrl = $hasPublishedLanding ? route('course_url_slug', $item->course?->landing?->url_slug) : route('web_curso_descripcion', $item->course?->slug ?? $item->id);
+                                                        @endphp
+                                                        <div class="col-xl-4 col-md-6 col-sm-12 box-col-4">
+                                                            <div class="card weekend-card">
+                                                                <div class="card-body">
+                                                                    <a href="{{ $courseUrl }}">
+                                                                        @if($item->course?->image)
+                                                                        <img class="w-100 mb-3"
+                                                                            src="{{ asset('storage/' . $item->course->image) }}"
+                                                                            alt="{{ $item->course->name ?? 'Imagen' }}">
+                                                                    @endif
+                                                                    </a>
+                                                                    <br>
+                                                                    <span
+                                                                        style="color: #e30613;">{{ $item->additional }}</span>
+                                                                    <br>
+                                                                    <a href="{{ $courseUrl }}"
+                                                                        style="text-decoration: none;">
+                                                                        <h4 style=" height: 30px;">
+                                                                            {{ $item->name }}</h4>
+                                                                    </a>
+                                                                    <br>
+                                                                    <div class="card">
+                                                                        <div class="">
+                                                                            <div class="btn-showcase">
+                                                                                <a href="{{ $courseUrl }}">
+                                                                                    <button
+                                                                                        class="btn btn-pill btn-light btn-air-light btn-sm"
+                                                                                        type="button"
+                                                                                        data-bs-original-title="btn btn-pill btn-light btn-air-light btn-sm">
+                                                                                        Leer Más
+                                                                                    </button>
+                                                                                </a>
+                                                                                <a
+                                                                                    onclick="agregarAlCarrito({ id: {{ $item->id }}, nombre: '{{ $item->name }}', precio: {{ $item->price }} })">
+                                                                                    <button
+                                                                                        class="btn btn-pill btn-primary btn-air-primary btn-sm"
+                                                                                        type="button"
+                                                                                        data-bs-original-title="btn btn-pill btn-primary btn-air-primary btn-sm">
+                                                                                        <i class="fa fa-cart-plus"
+                                                                                            aria-hidden="true"
+                                                                                            style="font-size: 18px;"></i>
+                                                                                        &nbsp; {{ (float) $item->price <= 0 ? 'Gratis' : 'S/ ' . $item->price }}
+                                                                                    </button>
+                                                                                </a>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            @endfor
 
-                                @if ($card['url'])
-                                    <a href="{{ $card['url'] }}" class="erc-course-card__title-link">
-                                        <h3 class="erc-course-card__title">{{ $card['title'] }}</h3>
-                                    </a>
-                                @else
-                                    <h3 class="erc-course-card__title">{{ $card['title'] }}</h3>
-                                @endif
 
-                                @if ($card['description'])
-                                    @if ($card['url'])
-                                        <a href="{{ $card['url'] }}" class="erc-course-card__text-link">
-                                            <p class="erc-course-card__text">{{ $card['description'] }}</p>
-                                        </a>
-                                    @else
-                                        <p class="erc-course-card__text">{{ $card['description'] }}</p>
-                                    @endif
-                                @endif
 
-                                <div class="erc-course-card__actions">
-                                    @if ($card['url'])
-                                        <a href="{{ $card['url'] }}" class="erc-course-btn erc-course-btn--info">
-                                            Ver curso <i class="fa fa-arrow-right erc-anim-arrow" aria-hidden="true"></i>
-                                        </a>
-                                    @endif
-                                    <a href="{{ $card['whatsapp'] }}" target="_blank" rel="noopener"
-                                        class="erc-course-btn erc-course-btn--wa">
-                                        <i class="fab fa-whatsapp" aria-hidden="true"></i> Consultar
-                                    </a>
+
+                                        </div>
+
+
+                                        @foreach ($types as $type)
+                                            <div hidden class="tab-pane fade show active"
+                                                id="{{ str_replace(' ', '', $type) }}" role="tabpanel"
+                                                aria-labelledby="{{ str_replace(' ', '', $type) }}-tab">
+                                                <br>
+                                                <div class="row widget-grid">
+                                                    @foreach ($courses as $item)
+                                                        @if (strtolower($item->additional) == strtolower($type))
+                                                            @php
+                                                                $hasPublishedLanding = filled($item->course?->landing?->url_slug) && ($item->course?->landing?->is_published ?? false);
+                                                                $courseUrl = $hasPublishedLanding ? route('course_url_slug', $item->course?->landing?->url_slug) : route('web_curso_descripcion', $item->course?->slug ?? $item->id);
+                                                            @endphp
+                                                            <div class="col-xl-4 col-md-6 col-sm-12 box-col-4">
+                                                                <div class="card weekend-card">
+                                                                    <div class="card-body">
+                                                                        <a href="{{ $courseUrl }}">
+                                                                            @if($item->course?->image)
+                                                                            {{-- Si hay imagen, la mostramos --}}
+                                                                            <img class="w-100 mb-3"
+                                                                                 src="{{ asset('storage/' . $item->course->image) }}"
+                                                                                 alt="{{ $item->course->name }}">
+                                                                        @else
+                                                                            {{-- Si NO hay imagen (o no hay curso), mandamos el log para investigar --}}
+                                                                            <script>
+                                                                                console.warn("⚠️ Item sin imagen detectado (ID: {{ $item->id ?? 'N/A' }}):", @json($item));
+                                                                            </script>
+                                                                        @endif
+                                                                        </a>
+                                                                        <br>
+                                                                        <span
+                                                                            style="color: #6a4c93;">{{ $item->additional }}</span>
+                                                                        <br>
+                                                                        <a href="{{ $courseUrl }}"
+                                                                            style="text-decoration: none;">
+                                                                            <h4 style=" height: 30px; color: #000;">
+                                                                                {{ $item->name }}</h4>
+                                                                        </a>
+                                                                        <br>
+                                                                        <div class="card">
+                                                                            <div class="">
+                                                                                <div class="btn-showcase">
+                                                                                    <a href="{{ $courseUrl }}">
+                                                                                        <button
+                                                                                            class="btn btn-pill btn-light btn-air-light btn-sm"
+                                                                                            type="button"
+                                                                                            data-bs-original-title="btn btn-pill btn-light btn-air-light btn-sm">
+                                                                                            Leer Más
+                                                                                        </button>
+                                                                                    </a>
+                                                                                    <a
+                                                                                        onclick="agregarAlCarrito({ id: {{ $item->id }}, nombre: '{{ $item->name }}', precio: {{ $item->price }} })">
+                                                                                        <button
+                                                                                            class="btn btn-pill btn-primary btn-air-primary btn-sm"
+                                                                                            type="button"
+                                                                                            data-bs-original-title="btn btn-pill btn-primary btn-air-primary btn-sm">
+                                                                                            <i class="fa fa-cart-plus"
+                                                                                                aria-hidden="true"
+                                                                                                style="font-size: 18px;"></i>
+                                                                                            &nbsp; {{ (float) $item->price <= 0 ? 'Gratis' : 'S/ ' . $item->price }}
+                                                                                        </button>
+                                                                                    </a>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        @endif
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+
+                                </div>
+
+
+
+
+                                <div class="row" id="paginator">
+                                    <div class="col-md-12">
+                                        <div class="card-body pagination-container">
+                                            <nav aria-label="...">
+                                                <ul class="pagination pagination-success pagin-border-success">
+                                                    <li class="page-item disabled" id="prev-page">
+                                                        <a class="page-link" href="javascript:void(0)"
+                                                            tabindex="-1">Previo</a>
+                                                    </li>
+                                                    @for ($i = 0; $i < $yy; $i++)
+                                                        <li class="page-item">
+                                                            <a class="pagination-link page-link"
+                                                                data-page="{{ $i + 1 }}">{{ $i + 1 }}</a>
+                                                        </li>
+                                                    @endfor
+                                                    <li class="page-item" id="next-page">
+                                                        <a class="page-link" href="javascript:void(0)">Siguiente</a>
+                                                    </li>
+                                                </ul>
+                                            </nav>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        </article>
-                    @endforeach
+                        </div>
+                    </div>
                 </div>
-            @endif
+            </div>
+        </div>
+        <!-- footer start-->
+        <x-footer />
+    </div>
 
-        </div> <!-- container -->
-    </section>
+
+
+
 
     <script>
-        (function () {
-            var tabs = document.querySelectorAll('#ercCourseTabs .erc-courses__tab');
-            var cards = document.querySelectorAll('#ercCoursesGrid .erc-course-card');
-            var counter = document.getElementById('ercCoursesVisible');
-            if (!tabs.length || !cards.length) return;
+        let currentIndex = 0;
+        const slides = document.querySelector('.slides');
+        const totalSlides = document.querySelectorAll('.slide').length;
 
-            tabs.forEach(function (tab) {
-                tab.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    tabs.forEach(function (t) { t.classList.remove('is-active'); });
-                    tab.classList.add('is-active');
-                    var cat = tab.getAttribute('data-category');
-                    var visible = 0;
-                    cards.forEach(function (card) {
-                        var match = cat === 'all' || card.getAttribute('data-category') === cat;
-                        card.style.display = match ? '' : 'none';
-                        if (match) visible++;
-                    });
-                    if (counter) counter.textContent = visible;
-                });
-            });
-        })();
+        function showNextSlide() {
+            currentIndex = (currentIndex + 1) % totalSlides;
+            const offset = -currentIndex * 100;
+            slides.style.transform = `translateX(${offset}%)`;
+        }
+
+        setInterval(showNextSlide, 3000); // Cambia cada 3 segundos
     </script>
 
-@endsection
+
+    <script>
+        const headers = document.querySelectorAll('.accordion-header-aracode');
+        headers.forEach(header => {
+            header.addEventListener('click', function() {
+                const content = this.nextElementSibling;
+                const isVisible = content.style.maxHeight;
+
+                // Ocultar todos los contenidos y resetear iconos
+                document.querySelectorAll('.accordion-content-aracode').forEach(item => {
+                    item.style.maxHeight = null;
+                    item.style.padding = '0';
+                    item.setAttribute('aria-hidden', 'true');
+                });
+                headers.forEach(h => {
+                    h.classList.remove('active');
+                    h.querySelector('.accordion-icon-aracode').textContent =
+                        '►'; // Restablecer icono
+                    h.setAttribute('aria-expanded', 'false');
+                });
+
+                // Mostrar el contenido del header clicado
+                if (!isVisible) {
+                    content.style.maxHeight = content.scrollHeight + "px";
+                    content.style.padding = '15px';
+                    this.classList.add('active'); // Añadir clase activa al encabezado clicado
+                    this.querySelector('.accordion-icon-aracode').textContent =
+                        '▼'; // Cambiar icono al expandido
+                    this.setAttribute('aria-expanded', 'true');
+                    content.setAttribute('aria-hidden', 'false');
+                }
+            });
+        });
+    </script>
+    <script>
+        // window.onload = function() {
+        //     // Espera 1 segundo para mejorar la experiencia de usuario
+        //     setTimeout(function() {
+        //         // Redirecciona a la misma URL con el fragmento #todos al final
+        //         window.location.href = window.location.href.split('#')[0] + '#todos';
+        //     }, 500);
+        // };
+
+        function unhidden(id) {
+            // 1. Obtener el elemento por su ID
+            const miElemento = document.getElementById(id);
+
+            // 2. Eliminar el atributo 'hidden'
+            miElemento.removeAttribute('hidden');
+            document.getElementById('paginator').hidden = true;
+        }
+
+        function show_paginator() {
+            document.getElementById('paginator').removeAttribute('hidden');
+        }
+    </script>
+
+    <script>
+        //codigo del paginador
+        document.addEventListener('DOMContentLoaded', function() {
+            // Selectores para todos los elementos necesarios
+            const paginationLinks = document.querySelectorAll('.pagination-link');
+            const prevPageBtn = document.getElementById('prev-page');
+            const nextPageBtn = document.getElementById('next-page');
+            const totalPages = paginationLinks.length;
+            let currentPage = 1;
+
+            // Función para mostrar la página correcta y actualizar los botones
+            function updatePagination(newPage) {
+                // Asegurarse de que la página no exceda los límites
+                if (newPage < 1) {
+                    newPage = 1;
+                } else if (newPage > totalPages) {
+                    newPage = totalPages;
+                }
+                currentPage = newPage;
+
+                // Ocultar todas las páginas de contenido
+                const allPages = document.querySelectorAll('.page-group');
+                allPages.forEach(page => {
+                    page.style.display = 'none';
+                });
+
+                // Mostrar la página seleccionada
+                const selectedPage = document.querySelector(`.page-${currentPage}`);
+                if (selectedPage) {
+                    selectedPage.style.display = '';
+                }
+
+                // Actualizar el estado de los botones de números de página
+                paginationLinks.forEach(pLink => {
+                    pLink.parentElement.classList.remove('active');
+                    if (parseInt(pLink.getAttribute('data-page')) === currentPage) {
+                        pLink.parentElement.classList.add('active');
+                    }
+                });
+
+                // Actualizar el estado de los botones "Previous" y "Next"
+                if (currentPage === 1) {
+                    prevPageBtn.classList.add('disabled');
+                } else {
+                    prevPageBtn.classList.remove('disabled');
+                }
+
+                if (currentPage === totalPages) {
+                    nextPageBtn.classList.add('disabled');
+                } else {
+                    nextPageBtn.classList.remove('disabled');
+                }
+            }
+
+            // Event Listeners para los botones de números de página
+            paginationLinks.forEach(link => {
+                link.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    const pageNumber = parseInt(this.getAttribute('data-page'));
+                    updatePagination(pageNumber);
+                });
+            });
+
+            // Event Listener para el botón "Previous"
+            prevPageBtn.addEventListener('click', function(event) {
+                event.preventDefault();
+                // Solo si el botón no está deshabilitado
+                if (!this.classList.contains('disabled')) {
+                    updatePagination(currentPage - 1);
+                }
+            });
+
+            // Event Listener para el botón "Next"
+            nextPageBtn.addEventListener('click', function(event) {
+                event.preventDefault();
+                // Solo si el botón no está deshabilitado
+                if (!this.classList.contains('disabled')) {
+                    updatePagination(currentPage + 1);
+                }
+            });
+
+            // Inicializar la paginación al cargar la página (mostrar la primera página)
+            updatePagination(1);
+        });
+    </script>
+
+@stop
