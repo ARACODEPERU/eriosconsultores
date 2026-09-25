@@ -3,6 +3,7 @@
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ComplaintsBookController;
+use App\Http\Controllers\CourseLandingPreviewController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\KardexController;
@@ -35,7 +36,18 @@ Route::get('/', [WebPageController::class, 'index'])->name('index_main');
 Route::get('/nosotros', [WebPageController::class, 'about'])->name('web_about');
 Route::get('/servicios', [WebPageController::class, 'services'])->name('web_services');
 Route::get('/cursos', [WebPageController::class, 'courses'])->name('web_courses');
-Route::get('/curso/{slug}', [WebPageController::class, 'coursedescription'])->name('web_course_description');
+//Route::get('/curso-r/{slug}', [WebPageController::class, 'coursedescription'])->name('web_course_description');
+
+
+//este es el original de global y base
+Route::get('/curso/{id}', [WebPageController::class, 'course_url_slug'])->name('course_url_slug'); // ruta de cursos landing
+
+// Vista aislada para revisar las secciones de landing de curso
+// (resources/views/components/courselanding). Es noindex y no reemplaza a
+// /curso/{slug}: existe solo para montar los componentes antes de integrarlos
+// en la pagina publica.  Ej: /curso-landing-preview/mi-curso?solo=hero,faq
+Route::get('/curso-landing-preview/{slug}', [CourseLandingPreviewController::class, 'show'])
+    ->name('courselanding_preview');
 Route::get('/carrito', [WebPageController::class, 'shopcart'])->name('web_carrito');
 Route::get('/pagar', [WebPageController::class, 'pay'])->name('web_pay');
 Route::get('/gracias', [WebPageController::class, 'thanks'])->name('web_thanks');
