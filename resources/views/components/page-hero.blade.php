@@ -14,6 +14,9 @@
                 <nav class="erc-hero__crumbs" aria-label="breadcrumb">
                     <ol>
                         <li><a href="{{ route('index_main') }}"><i class="fa fa-home" aria-hidden="true"></i> Inicio</a></li>
+                        @if ($crumbLabel && $crumbUrl)
+                            <li><a href="{{ $crumbUrl }}">{{ $crumbLabel }}</a></li>
+                        @endif
                         <li class="erc-hero__crumb-current" aria-current="page">{{ $title }}</li>
                     </ol>
                 </nav>

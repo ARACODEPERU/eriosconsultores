@@ -122,6 +122,8 @@ class WebPageController extends Controller
 
         $description = trim(preg_replace('/\s+/', ' ', strip_tags((string) $item->description)) ?? '');
 
+        $title = filled($item->name) ? $item->name : ($course->description ?: 'Curso');
+
         return [
             // Datos que necesita el carrito publico: guarda el id del item de tienda
             // (onli_items.id) y consulta titulo/precio al servidor.
@@ -130,7 +132,7 @@ class WebPageController extends Controller
             'slug'             => $course->slug,
             'item_price'       => (float) $item->price,
 
-            'title'            => filled($item->name) ? $item->name : ($course->description ?: 'Curso'),
+            'title'            => $title,
             'description'      => $description !== '' ? Str::limit($description, 160) : (string) $course->description,
             'image'            => filled($item->getRawOriginal('image'))
                 ? $item->image
@@ -147,6 +149,12 @@ class WebPageController extends Controller
 
             'url'              => $hasLanding ? route('course_url_slug', $landing->url_slug) : null,
             'whatsapp'         => $landing?->whatsapp_link ?: 'https://wa.link/9q9g9v',
+
+            // WhatsApp de compra: mensaje prellenado con la peticion del curso.
+            // wa.link ignora el parametro ?text=, por eso se usa wa.me con el numero.
+            // Si la landing apunta a wa.me se reutiliza ese numero; si no, el del wa.link flotante.
+            'whatsapp_buy'     => 'https://wa.me/' . (preg_match('/wa\.me\/(\d+)/', (string) $landing?->whatsapp_link, $m) ? $m[1] : '51933435823')
+                . '?text=' . rawurlencode('¡Hola! Deseo comprar el curso: ' . $title),
         ];
     }
 

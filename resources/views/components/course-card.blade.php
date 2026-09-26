@@ -50,6 +50,8 @@
                 <a href="{{ $url }}" class="curso-btn curso-btn--info">Leer Más</a>
             @endif
 
+            {{-- Botón del carrito desactivado por ahora — reactivar cuando se use el flujo de compra (agrega al carrito y lleva a /carrito) --}}
+            {{--
             <button type="button" class="curso-btn curso-btn--primary"
                 data-erc-cl-inscribe
                 data-cart-id="{{ $card['id'] }}"
@@ -63,6 +65,17 @@
                     {{ $card['final_label'] }}
                 @endif
             </button>
+            --}}
+
+            {{-- CTA de compra: WhatsApp con mensaje prellenado de compra del curso --}}
+            <a href="{{ $card['whatsapp_buy'] }}" target="_blank" rel="noopener" class="curso-btn curso-btn--primary" aria-label="Inscribirse por WhatsApp en {{ $card['title'] }}">
+                <i class="fa fa-cart-plus" aria-hidden="true"></i>
+                @if ($hasDiscount && filled($card['price_label']))
+                    <del>{{ $card['price_label'] }}</del> {{ $card['final_label'] }} — ¡Inscríbete!
+                @else
+                    {{ $card['final_label'] }} — ¡Inscríbete!
+                @endif
+            </a>
         </div>
 
         @if ($hasSubs && filled($card['subs_label']))

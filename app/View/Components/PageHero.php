@@ -14,19 +14,25 @@ class PageHero extends Component
     protected $subtitle;
     protected $heroComponent;
     protected $fallbackImage;
+    protected $crumbLabel;
+    protected $crumbUrl;
 
     public function __construct(
         $eyebrow = 'ERIOS Consultores',
         $title = null,
         $subtitle = null,
         $heroComponent = 'hero_nosotros_11',
-        $fallbackImage = 'bg-2.jpg'
+        $fallbackImage = 'bg-2.jpg',
+        $crumbLabel = null,
+        $crumbUrl = null
     ) {
         $this->eyebrow = $eyebrow;
         $this->title = $title;
         $this->subtitle = $subtitle;
         $this->heroComponent = $heroComponent;
         $this->fallbackImage = $fallbackImage;
+        $this->crumbLabel = $crumbLabel;
+        $this->crumbUrl = $crumbUrl;
     }
 
     public function render(): View|Closure|string
@@ -55,6 +61,8 @@ class PageHero extends Component
             'subtitle' => $this->subtitle,
             'imageUrl' => $imageUrl,
             'fallbackUrl' => asset('themes/webpage/images/' . $this->fallbackImage),
+            'crumbLabel' => $this->crumbLabel,
+            'crumbUrl' => $this->crumbUrl,
         ]);
     }
 }
