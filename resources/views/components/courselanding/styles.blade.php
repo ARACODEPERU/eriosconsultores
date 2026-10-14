@@ -134,15 +134,47 @@
         font-weight: 700;
         font-size: 14.5px;
         padding: 13px 28px;
-        border-radius: 5px;
+        border-radius: 14px;
         border: 2px solid transparent;
         text-decoration: none;
         cursor: pointer;
         transition: all .35s ease;
     }
     .erc-btn:hover { text-decoration: none; transform: translateY(-2px); }
-    .erc-btn--yellow { background: var(--erc-yellow); color: var(--erc-navy); box-shadow: 0 10px 26px rgba(255, 198, 0, 0.35); }
-    .erc-btn--yellow:hover { background: var(--erc-blue); color: var(--erc-yellow); }
+    /* Botón principal con el degradado del botón Aula Virtual */
+    .erc-btn--yellow {
+        background:
+            linear-gradient(100deg, rgba(8, 48, 88, 0.85) 0%, rgba(8, 48, 88, 0.45) 55%, rgba(8, 48, 88, 0) 85%),
+            linear-gradient(100deg, rgba(0, 72, 176, 0.95) 0%, rgba(0, 72, 176, 0.80) 100%);
+        color: #ffc600;
+        box-shadow: 0 10px 26px rgba(8, 48, 88, 0.35);
+    }
+    .erc-btn--yellow:hover {
+        background:
+            linear-gradient(100deg, rgba(8, 48, 88, 0.55) 0%, rgba(8, 48, 88, 0.30) 55%, rgba(8, 48, 88, 0) 85%),
+            linear-gradient(100deg, rgba(0, 160, 240, 0.95) 0%, rgba(0, 160, 240, 0.75) 60%, rgba(0, 160, 240, 0.55) 100%);
+        color: #fff;
+    }
+    /* Variante degradada para fondos OSCUROS (banda navy del hero/FAQ de la landing) */
+    .erc-btn--on-dark {
+        background:
+            linear-gradient(100deg, rgba(8, 48, 88, 0.25) 0%, rgba(8, 48, 88, 0.10) 55%, rgba(8, 48, 88, 0) 85%),
+            linear-gradient(100deg, rgba(0, 72, 176, 0.95) 0%, rgba(0, 72, 176, 0.80) 100%);
+        color: #ffc600;
+        box-shadow: 0 10px 26px rgba(8, 48, 88, 0.35);
+    }
+    .erc-btn--on-dark:hover {
+        background:
+            linear-gradient(100deg, rgba(8, 48, 88, 0.55) 0%, rgba(8, 48, 88, 0.25) 55%, rgba(8, 48, 88, 0) 85%),
+            linear-gradient(100deg, rgba(0, 160, 240, 0.95) 0%, rgba(0, 160, 240, 0.75) 60%, rgba(0, 160, 240, 0.55) 100%);
+        color: #fff;
+    }
+    .erc-btn--yellow:hover {
+        background:
+            linear-gradient(100deg, rgba(8, 48, 88, 0.55) 0%, rgba(8, 48, 88, 0.30) 55%, rgba(8, 48, 88, 0) 85%),
+            linear-gradient(100deg, rgba(0, 160, 240, 0.95) 0%, rgba(0, 160, 240, 0.75) 60%, rgba(0, 160, 240, 0.55) 100%);
+        color: #fff;
+    }
     .erc-btn--blue { background: var(--erc-blue); color: #fff; }
     .erc-btn--blue:hover { background: var(--erc-navy); color: #fff; }
     .erc-btn--ghost { border-color: rgba(255, 255, 255, 0.55); color: #fff; }

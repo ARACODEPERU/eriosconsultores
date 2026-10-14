@@ -30,15 +30,28 @@
     .erc-sec-head h2 { font-size: 36px; font-weight: 700; color: #1d2025; line-height: 1.3; margin-bottom: 14px; }
     .erc-sec-head p { font-size: 16px; line-height: 28px; color: #505050; margin: 0; }
 
-    /* ---- Botones ---- */
+    /* ---- Botones ----
+       Formato homologado con el botón del menú (Aula Virtual):
+       degradado de la paleta del logo + esquinas 14px como los cards. */
     .erc-btn {
-        display: inline-flex; align-items: center; gap: 8px;
         font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 14.5px;
-        padding: 13px 28px; border-radius: 5px; text-decoration: none; transition: all .35s ease;
+        padding: 13px 28px; border-radius: 14px; text-decoration: none; transition: all .35s ease;
     }
     .erc-btn:hover { text-decoration: none; transform: translateY(-2px); }
-    .erc-btn--yellow { background: #ffc600; color: #07294d; }
-    .erc-btn--yellow:hover { background: #004aad; color: #ffc600; }
+    /* Amarillo sólido: contraste garantizado sobre fondos claros (secciones blancas) */
+    /* Degradado del botón Aula Virtual aplicado a todos los botones amarillos */
+    .erc-btn--yellow {
+        background:
+            linear-gradient(100deg, rgba(8, 48, 88, 0.85) 0%, rgba(8, 48, 88, 0.45) 55%, rgba(8, 48, 88, 0) 85%),
+            linear-gradient(100deg, rgba(0, 72, 176, 0.95) 0%, rgba(0, 72, 176, 0.80) 100%);
+        color: #ffc600;
+    }
+    .erc-btn--yellow:hover {
+        background:
+            linear-gradient(100deg, rgba(8, 48, 88, 0.55) 0%, rgba(8, 48, 88, 0.30) 55%, rgba(8, 48, 88, 0) 85%),
+            linear-gradient(100deg, rgba(0, 160, 240, 0.95) 0%, rgba(0, 160, 240, 0.75) 60%, rgba(0, 160, 240, 0.55) 100%);
+        color: #fff;
+    }
     .erc-btn--ghost { border: 2px solid #fff; color: #fff; }
     .erc-btn--ghost:hover { background: #ffc600; border-color: #ffc600; color: #07294d; }
     .erc-btn--outline { border: 2px solid #004aad; color: #004aad; }

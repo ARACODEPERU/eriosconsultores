@@ -43,7 +43,8 @@
                     </span>
                     <h3>Inscríbete gratis</h3>
                     <p>Este curso es gratuito. Agrégalo a tu carrito y completa tu inscripción sin costo.</p>
-                    <button type="button" class="erc-btn erc-btn--yellow erc-btn--lg"
+                    {{-- Fondo navy: usa variante degradada del logo --}}
+                    <button type="button" class="erc-btn erc-btn--yellow erc-btn--on-dark erc-btn--lg"
                         data-erc-cl-inscribe data-cart-id="{{ $cartItemId }}" data-course-name="{{ $courseName }}"
                         data-price="0" data-cart-url="{{ route('web_carrito') }}">
                         <i class="fa fa-check-circle" aria-hidden="true"></i> Inscribirme gratis

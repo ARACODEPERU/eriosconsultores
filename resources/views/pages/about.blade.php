@@ -159,19 +159,25 @@
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        background: #ffc600;
-        color: #07294d;
+        /* Degradado del botón Aula Virtual */
+        background:
+            linear-gradient(100deg, rgba(8, 48, 88, 0.85) 0%, rgba(8, 48, 88, 0.45) 55%, rgba(8, 48, 88, 0) 85%),
+            linear-gradient(100deg, rgba(0, 72, 176, 0.95) 0%, rgba(0, 72, 176, 0.80) 100%);
+        color: #ffc600;
         font-family: 'Montserrat', sans-serif;
         font-weight: 700;
         font-size: 14.5px;
         padding: 13px 28px;
-        border-radius: 5px;
+        /* Esquinas ligeramente redondeadas, como los cards */
+        border-radius: 14px;
         text-decoration: none;
         transition: all .35s ease;
     }
     .erc-btn-main:hover {
-        background: #004aad;
-        color: #ffc600;
+        background:
+            linear-gradient(100deg, rgba(8, 48, 88, 0.55) 0%, rgba(8, 48, 88, 0.30) 55%, rgba(8, 48, 88, 0) 85%),
+            linear-gradient(100deg, rgba(0, 160, 240, 0.95) 0%, rgba(0, 160, 240, 0.75) 60%, rgba(0, 160, 240, 0.55) 100%);
+        color: #fff;
         text-decoration: none;
     }
     .erc-btn-ghost {
@@ -181,7 +187,7 @@
         font-weight: 700;
         font-size: 14.5px;
         padding: 12px 28px;
-        border-radius: 5px;
+        border-radius: 14px;
         border: 2px solid #004aad;
         color: #004aad;
         text-decoration: none;

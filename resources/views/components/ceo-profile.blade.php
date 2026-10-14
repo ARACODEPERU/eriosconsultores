@@ -174,20 +174,26 @@
         .erc-ceo__actions { margin-top: 28px; }
         .erc-ceo__btn {
             display: inline-flex; align-items: center; gap: 10px;
-            background: #ffc600; color: #07294d;
+            /* Degradado del botón Aula Virtual */
+            background:
+                linear-gradient(100deg, rgba(8, 48, 88, 0.85) 0%, rgba(8, 48, 88, 0.45) 55%, rgba(8, 48, 88, 0) 85%),
+                linear-gradient(100deg, rgba(0, 72, 176, 0.95) 0%, rgba(0, 72, 176, 0.80) 100%);
+            color: #ffc600;
             font-family: 'Montserrat', sans-serif;
             font-size: 14px; font-weight: 700;
-            padding: 13px 26px; border-radius: 50px;
+            padding: 13px 26px; border-radius: 14px;
             text-decoration: none;
-            box-shadow: 0 8px 22px rgba(255, 198, 0, 0.35);
+            box-shadow: 0 8px 22px rgba(8, 48, 88, 0.35);
             transition: all .35s ease;
         }
         .erc-ceo__btn:hover {
-            background: #004aad; color: #ffc600;
+        background:
+            linear-gradient(100deg, rgba(8, 48, 88, 0.55) 0%, rgba(8, 48, 88, 0.30) 55%, rgba(8, 48, 88, 0) 85%),
+            linear-gradient(100deg, rgba(0, 160, 240, 0.95) 0%, rgba(0, 160, 240, 0.75) 60%, rgba(0, 160, 240, 0.55) 100%);
+        color: #fff;
             transform: translateY(-3px);
             box-shadow: 0 14px 30px rgba(0, 74, 173, 0.3);
             text-decoration: none;
-        }
 
         /* ---- Responsivo ---- */
         @media (max-width: 991px) {

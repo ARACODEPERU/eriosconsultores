@@ -109,13 +109,27 @@
     .erc-tax-band::before { content: ''; position: absolute; width: 320px; height: 320px; border-radius: 50%; border: 2px solid rgba(255, 198, 0, .12); top: -120px; right: -80px; }
     .erc-tax-band::after { content: ''; position: absolute; width: 420px; height: 420px; border-radius: 50%; border: 2px solid rgba(255, 198, 0, .12); bottom: -180px; left: -120px; }
     .erc-tax-band .container { position: relative; z-index: 2; }
-    .erc-tax-band .erc-sec-eyebrow { color: #ffc600; }
+    .erc-tax-band .erc-sec-eyebrow { color: #fff; }
     .erc-tax-band h2 { font-family: 'Montserrat', sans-serif; font-size: 32px; font-weight: 800; color: #fff; margin: 14px 0 12px; }
     .erc-tax-band p { color: rgba(255, 255, 255, .78); font-size: 15.5px; line-height: 27px; max-width: 620px; margin: 0 auto 30px; }
 
-    .erc-btn { display: inline-flex; align-items: center; gap: 9px; font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 14.5px; border-radius: 50px; padding: 13px 30px; text-decoration: none; transition: all .3s ease; }
-    .erc-btn--yellow { background: #ffc600; color: #07294d; box-shadow: 0 10px 26px rgba(255, 198, 0, .35); }
-    .erc-btn--yellow:hover { background: #004aad; color: #ffc600; transform: translateY(-2px); text-decoration: none; }
+    /* Formato homologado: degradado del logo + esquinas 14px (como el botón del menú) */
+    .erc-btn { display: inline-flex; align-items: center; gap: 9px; font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 14.5px; border-radius: 14px; padding: 13px 30px; text-decoration: none; transition: all .3s ease; }
+    .erc-btn--yellow {
+        background:
+            linear-gradient(100deg, rgba(8, 48, 88, 0.85) 0%, rgba(8, 48, 88, 0.45) 55%, rgba(8, 48, 88, 0) 85%),
+            linear-gradient(100deg, rgba(0, 72, 176, 0.95) 0%, rgba(0, 72, 176, 0.80) 100%);
+        color: #ffc600;
+        box-shadow: 0 10px 26px rgba(8, 48, 88, .35);
+    }
+    .erc-btn--yellow:hover {
+        background:
+            linear-gradient(100deg, rgba(8, 48, 88, 0.55) 0%, rgba(8, 48, 88, 0.30) 55%, rgba(8, 48, 88, 0) 85%),
+            linear-gradient(100deg, rgba(0, 160, 240, 0.95) 0%, rgba(0, 160, 240, 0.75) 60%, rgba(0, 160, 240, 0.55) 100%);
+        color: #fff;
+        transform: translateY(-2px);
+        text-decoration: none;
+    }
     .erc-btn--outline { border: 2px solid #fff; color: #fff; }
     .erc-btn--outline:hover { background: #ffc600; color: #07294d; border-color: #ffc600; text-decoration: none; }
     .erc-tax-actions { display: flex; gap: 14px; flex-wrap: wrap; }

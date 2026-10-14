@@ -193,7 +193,8 @@
             font-weight: 700;
             font-size: 13.5px;
             padding: 11px 20px;
-            border-radius: 5px;
+            /* Esquinas ligeramente redondeadas, formato homologado */
+            border-radius: 14px;
             text-decoration: none;
             transition: all .35s ease;
         }

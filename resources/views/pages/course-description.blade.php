@@ -122,17 +122,25 @@
     .erc-wa-cta {
         display: flex; align-items: center; justify-content: center; gap: 10px;
         width: 100%; height: 50px;
-        background: #ffc600; color: #07294d;
-        border-radius: 50px;
+        /* Degradado del botón Aula Virtual */
+            background:
+                linear-gradient(100deg, rgba(8, 48, 88, 0.85) 0%, rgba(8, 48, 88, 0.45) 55%, rgba(8, 48, 88, 0) 85%),
+                linear-gradient(100deg, rgba(0, 72, 176, 0.95) 0%, rgba(0, 72, 176, 0.80) 100%);
+            color: #ffc600;
+        /* Esquinas ligeramente redondeadas, como los cards */
+        border-radius: 14px;
         font-family: 'Montserrat', sans-serif;
         font-size: 14.5px; font-weight: 700;
         text-decoration: none;
-        box-shadow: 0 8px 22px rgba(255, 198, 0, 0.35);
+        box-shadow: 0 8px 22px rgba(8, 48, 88, 0.35);
         transition: all .3s ease;
     }
     .erc-wa-cta .fab.fa-whatsapp { font-size: 18px; }
     .erc-wa-cta:hover {
-        background: #004aad; color: #ffc600;
+            background:
+                linear-gradient(100deg, rgba(8, 48, 88, 0.55) 0%, rgba(8, 48, 88, 0.30) 55%, rgba(8, 48, 88, 0) 85%),
+                linear-gradient(100deg, rgba(0, 160, 240, 0.95) 0%, rgba(0, 160, 240, 0.75) 60%, rgba(0, 160, 240, 0.55) 100%);
+            color: #fff;
         transform: translateY(-2px);
         box-shadow: 0 12px 26px rgba(0, 74, 173, 0.3);
         text-decoration: none;

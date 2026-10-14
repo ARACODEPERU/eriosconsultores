@@ -94,12 +94,22 @@
     .erc-claims__submit {
         display: inline-flex; align-items: center; justify-content: center; gap: 10px;
         width: 100%; height: 52px; margin-top: 26px;
-        background: #ffc600; color: #07294d; border: none; border-radius: 50px;
+        /* Degradado del botón Aula Virtual */
+            background:
+                linear-gradient(100deg, rgba(8, 48, 88, 0.85) 0%, rgba(8, 48, 88, 0.45) 55%, rgba(8, 48, 88, 0) 85%),
+                linear-gradient(100deg, rgba(0, 72, 176, 0.95) 0%, rgba(0, 72, 176, 0.80) 100%);
+            color: #ffc600; border: none; border-radius: 14px;
         font-family: 'Montserrat', sans-serif; font-size: 15px; font-weight: 700;
         cursor: pointer; box-shadow: 0 10px 24px rgba(255, 198, 0, 0.35);
         transition: all .3s ease;
     }
-    .erc-claims__submit:hover { background: #004aad; color: #ffc600; transform: translateY(-2px); box-shadow: 0 14px 28px rgba(0, 74, 173, 0.3); }
+    .erc-claims__submit:hover {
+        /* Hover del degradado Aula Virtual */
+        background:
+            linear-gradient(100deg, rgba(8, 48, 88, 0.55) 0%, rgba(8, 48, 88, 0.30) 55%, rgba(8, 48, 88, 0) 85%),
+            linear-gradient(100deg, rgba(0, 160, 240, 0.95) 0%, rgba(0, 160, 240, 0.75) 60%, rgba(0, 160, 240, 0.55) 100%);
+        color: #fff;
+
     .erc-claims__submit[disabled] { opacity: .5; cursor: not-allowed; transform: none; }
 
     /* Columna informativa */

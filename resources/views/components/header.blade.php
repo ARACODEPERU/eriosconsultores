@@ -290,24 +290,42 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            background: #ffc600;
-            color: #07294d;
+            /* Degradado oficial invertido: navy denso sobre azul fuerte #0048B0 */
+            background:
+                linear-gradient(100deg,
+                        rgba(8, 48, 88, 0.85) 0%,
+                        rgba(8, 48, 88, 0.45) 55%,
+                        rgba(8, 48, 88, 0) 85%),
+                linear-gradient(100deg,
+                        rgba(0, 72, 176, 0.95) 0%,
+                        rgba(0, 72, 176, 0.80) 100%);
+            color: #ffc600;
             font-family: 'Montserrat', sans-serif;
             font-size: 13px;
             font-weight: 700;
             letter-spacing: 0.4px;
             text-transform: uppercase;
             padding: 10px 20px;
-            border-radius: 50px;
+            /* Esquinas ligeramente redondeadas, como los cards del sitio */
+            border-radius: 14px;
             text-decoration: none;
             transition: all .35s ease;
             white-space: nowrap;
         }
         .erc-nav__cta:hover {
-            background: #004aad;
-            color: #ffc600;
+            /* Hover: versión clara del degradado (celeste del logo) */
+            background:
+                linear-gradient(100deg,
+                        rgba(8, 48, 88, 0.55) 0%,
+                        rgba(8, 48, 88, 0.30) 55%,
+                        rgba(8, 48, 88, 0) 85%),
+                linear-gradient(100deg,
+                        rgba(0, 160, 240, 0.95) 0%,
+                        rgba(0, 160, 240, 0.75) 60%,
+                        rgba(0, 160, 240, 0.55) 100%);
+            color: #fff;
             text-decoration: none;
-            box-shadow: 0 8px 20px rgba(0, 74, 173, 0.3);
+            box-shadow: 0 8px 20px rgba(8, 48, 88, 0.35);
         }
 
         /* ---- Toggler móvil ---- */

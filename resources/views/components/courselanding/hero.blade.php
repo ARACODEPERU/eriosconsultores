@@ -93,7 +93,7 @@
                     @endif
 
                     <div class="erc-cl-hero__actions">
-                        <a href="#{{ $investmentAnchor }}" class="erc-btn erc-btn--yellow erc-btn--lg">
+                        <a href="#{{ $investmentAnchor }}" class="erc-btn erc-btn--yellow erc-btn--on-dark erc-btn--lg">
                             <i class="fa fa-pencil-square-o" aria-hidden="true"></i>
                             Inscribirme ahora
                         </a>

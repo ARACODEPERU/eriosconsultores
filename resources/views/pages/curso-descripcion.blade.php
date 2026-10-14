@@ -196,8 +196,20 @@
         font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 700;
         text-decoration: none; transition: all .3s ease; border: none; cursor: pointer;
     }
-    .erc-cd__btn--cart { background: #ffc600; color: #07294d; box-shadow: 0 8px 22px rgba(255, 198, 0, 0.35); margin-bottom: 12px; }
-    .erc-cd__btn--cart:hover { background: #004aad; color: #ffc600; transform: translateY(-2px); box-shadow: 0 12px 26px rgba(0, 74, 173, 0.3); text-decoration: none; }
+    .erc-cd__btn--cart {
+        background:
+            linear-gradient(100deg, rgba(8, 48, 88, 0.85) 0%, rgba(8, 48, 88, 0.45) 55%, rgba(8, 48, 88, 0) 85%),
+            linear-gradient(100deg, rgba(0, 72, 176, 0.95) 0%, rgba(0, 72, 176, 0.80) 100%);
+        color: #ffc600;
+        box-shadow: 0 8px 22px rgba(8, 48, 88, 0.35); margin-bottom: 12px;
+    }
+    .erc-cd__btn--cart:hover {
+        background:
+            linear-gradient(100deg, rgba(8, 48, 88, 0.55) 0%, rgba(8, 48, 88, 0.30) 55%, rgba(8, 48, 88, 0) 85%),
+            linear-gradient(100deg, rgba(0, 160, 240, 0.95) 0%, rgba(0, 160, 240, 0.75) 60%, rgba(0, 160, 240, 0.55) 100%);
+        color: #fff;
+        transform: translateY(-2px); box-shadow: 0 12px 26px rgba(8, 48, 88, 0.3); text-decoration: none;
+    }
     .erc-cd__btn--cart[disabled] { opacity: .55; cursor: not-allowed; transform: none; }
     .erc-cd__btn--wa { background: #fff; color: #25D366; border: 2px solid #25D366; }
     .erc-cd__btn--wa:hover { background: #25D366; color: #fff; text-decoration: none; transform: translateY(-2px); }
