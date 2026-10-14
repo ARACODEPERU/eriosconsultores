@@ -9,6 +9,7 @@ use Illuminate\View\View;
 use Inertia\Inertia;
 use Modules\Integrationhub\Entities\Integration;
 use Illuminate\Foundation\Validation\ValidatesRequests;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Modules\Integrationhub\Entities\IntegrationAuth;
 use Modules\Integrationhub\Entities\IntegrationEndpoint;
@@ -101,7 +102,26 @@ class IntegrationhubController extends Controller
         return Inertia::render('Integrationhub::Integration/Edit', [
             'integration' => $integration,
             'apiRoutes' => $this->integrationhubApiRoutes(),
+            'scheduler' => $this->schedulerState(),
         ]);
+    }
+
+    /**
+     * Estado del scheduler de programaciones para la pantalla de Programaciones:
+     * la última señal de vida del comando `integrationhub:run-scheduled` y si
+     * está fresca (se ejecuta cada minuto). Sin esta señal las programaciones no
+     * corren, aunque estén bien configuradas.
+     */
+    private function schedulerState(): array
+    {
+        $lastTick = Cache::get(\App\Console\Commands\RunScheduledIntegrations::HEARTBEAT_CACHE_KEY);
+        $lastTickAt = $lastTick ? Carbon::parse($lastTick) : null;
+
+        return [
+            'last_tick_at' => $lastTickAt?->toIso8601String(),
+            // Dos minutos de tolerancia: el scheduler corre cada minuto.
+            'running' => $lastTickAt ? $lastTickAt->gt(now()->subMinutes(2)) : false,
+        ];
     }
 
     private function integrationhubApiRoutes(): array
@@ -293,6 +313,22 @@ class IntegrationhubController extends Controller
 
         foreach ($extraPathParams as $key => $value) {
             $url = str_replace('{' . $key . '}', rawurlencode((string) $value), $url);
+        }
+
+        // Placeholders que no tienen un campo de "Ruta URL" configurado pero si
+        // llegan en field_values (ej: contact_id y flow_id del flujo de
+        // Chatlevel). Sin esto la peticion viaja con las llaves literales, la
+        // API responde 404 y el flujo nunca arranca.
+        foreach ($fieldValueOverrides as $key => $value) {
+            if (!is_string($key) || $key === '' || !is_scalar($value)) {
+                continue;
+            }
+
+            $placeholder = '{' . $key . '}';
+
+            if (str_contains($url, $placeholder)) {
+                $url = str_replace($placeholder, rawurlencode((string) $value), $url);
+            }
         }
 
         // Query parameters
@@ -588,10 +624,14 @@ class IntegrationhubController extends Controller
                 'headers' => $e->getResponse()->getHeaders(),
                 'body' => $responseBody,
             ];
+            // Algunas APIs devuelven "message" o "error" como objeto o arreglo
+            // (ej: Chatlevel: {"error":{"code":404,"message":"..."}}). La
+            // columna error_message es de texto, asi que un arreglo lanzaba
+            // "Array to string conversion" y escondia el error real.
             $externalMessage = is_array($responseBody)
                 ? ($responseBody['message'] ?? $responseBody['error'] ?? null)
                 : trim(preg_replace('/\s+/', ' ', strip_tags((string) $responseBody)));
-            $externalMessage = $externalMessage ?: $e->getMessage();
+            $externalMessage = $this->stringifyExternalMessage($externalMessage) ?: $e->getMessage();
 
             // Save failed log
             $logData['status'] = 'failed';
@@ -610,7 +650,7 @@ class IntegrationhubController extends Controller
                 'status_code' => $statusCode,
                 'request' => $requestData ?? [
                     'method' => $endpoint->http_method,
-                    'url' => $url,
+                    'url' => $maskedUrl,
                     'headers' => $headers,
                     'query' => $queryParams,
                     'body_type' => $endpoint->body_type,
@@ -640,7 +680,7 @@ class IntegrationhubController extends Controller
                 'status_code' => 500,
                 'request' => $requestData ?? [
                     'method' => $endpoint->http_method,
-                    'url' => $url,
+                    'url' => $maskedUrl,
                     'headers' => $headers,
                     'query' => $queryParams,
                     'body_type' => $endpoint->body_type,
@@ -800,6 +840,17 @@ class IntegrationhubController extends Controller
             [
                 'flow_id' => '1780844285916',
                 'label' => 'Saludo de cumpleaños para Docentes',
+            ]
+        );
+
+        // Auto-crear el registro para las notificaciones de cursos del modulo
+        // Academico si no existe. Se crea con el ID vacio a proposito: mientras
+        // no se defina, la opcion de WhatsApp no se ofrece en esa pantalla.
+        IntegrationFlowId::firstOrCreate(
+            ['key' => 'aca_course_notification'],
+            [
+                'flow_id' => '',
+                'label' => 'Notificación de curso (Académico)',
             ]
         );
 
@@ -1341,8 +1392,18 @@ class IntegrationhubController extends Controller
             }
         }
 
-        // Calcular próxima ejecución
-        $nextExecution = app(IntegrationhubCronExpression::class)->nextRunDate($request->cron_expression);
+        // Calcular próxima ejecución. Una expresión inválida se rechaza aquí:
+        // si se guardara, la programación quedaría muda para siempre (el
+        // scheduler nunca la tomaría) sin decir por qué.
+        $cron = app(IntegrationhubCronExpression::class);
+
+        if (!$cron->isValid($request->cron_expression)) {
+            throw ValidationException::withMessages([
+                'cron_expression' => 'La expresión cron no es válida. Usa el formato minuto hora día mes día_semana.',
+            ]);
+        }
+
+        $nextExecution = $cron->nextRunDate($request->cron_expression);
 
         if ($request->input('schedule_id')) {
             $schedule = IntegrationSchedule::where('id', $request->schedule_id)->firstOrFail();
@@ -1563,6 +1624,11 @@ class IntegrationhubController extends Controller
      */
     private function maskUrlSensitiveParams(string $url, array $sensitiveKeys = []): string
     {
+        // El token de un bot de Telegram viaja en la ruta (api.telegram.org/bot<id>:<secreto>),
+        // donde parse_url no lo reconoce como parametro: se enmascara siempre
+        // para que el Historial no guarde la credencial del bot.
+        $url = preg_replace('#(/bot)\d+:[A-Za-z0-9_\-]+#', '$1***', $url) ?? $url;
+
         $parts = parse_url($url);
         if (empty($parts['query'])) {
             return $url;
@@ -1608,6 +1674,28 @@ class IntegrationhubController extends Controller
             || str_contains($keyLower, 'api_key')
             || str_contains($keyLower, 'apikey')
             || str_contains($keyLower, 'authorization');
+    }
+
+    /**
+     * Convierte a texto el mensaje devuelto por una API externa.
+     *
+     * Algunas APIs responden "message" o "error" como objeto o arreglo; guardar
+     * ese valor directo en error_message lanzaba "Array to string conversion" y
+     * el error original de la API nunca llegaba a verse.
+     */
+    private function stringifyExternalMessage(mixed $value): string
+    {
+        if (is_null($value)) {
+            return '';
+        }
+
+        if (is_scalar($value)) {
+            return trim(preg_replace('/\s+/', ' ', strip_tags((string) $value)) ?? '');
+        }
+
+        $encoded = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        return $encoded === false ? '' : $encoded;
     }
 
     /**

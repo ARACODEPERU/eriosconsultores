@@ -16,17 +16,57 @@ import { faCheckCircle, faFileImage, faMagnifyingGlass, faUpload, faXmark, faXma
 import SummaryModal from "./Partials/SummaryModal.vue";
 import { useEmailAccountCheck } from "./composables/useEmailAccountCheck.js";
 import { useDniReniecCheck } from "./composables/useDniReniecCheck.js";
+import { useRucSunatCheck } from "./composables/useRucSunatCheck.js";
 
 const props = defineProps({
     negotiation: { type: Object, default: () => ({}) },
     identityDocumentTypes: { type: Array, default: () => [] },
     industries: { type: Array, default: () => [] },
     occupations: { type: Array, default: () => [] },
+    professions: { type: Array, default: () => [] },
     countries: { type: Array, default: () => [] },
     ubigeo: { type: Array, default: () => [] },
     paymentMethodCatalog: { type: Array, default: () => [] },
     bankAccounts: { type: Array, default: () => [] },
+    // TC vigente para mostrar el equivalente en soles cuando la negociacion es USD.
+    multiCurrencyEnabled: { type: Boolean, default: false },
+    exchangeRate: { type: Number, default: null },
+    // Enlaces legales configurables en Comercial > Configuracion: los documentos que el
+    // cliente debe aceptar antes de enviar sus datos.
+    legalLinks: { type: Object, default: () => ({}) },
 });
+
+// Documentos legales que el cliente debe leer y aceptar antes de enviar sus datos. El
+// texto de cada check es el enlace al documento (se abre en otra pestana).
+const legalChecks = [
+    { field: "accepted_terminos", linkKey: "terminos", label: "He leído los términos y condiciones" },
+    { field: "accepted_devoluciones", linkKey: "devoluciones", label: "He leído Política de devoluciones y Reembolsos - CPA Academy" },
+    { field: "accepted_privacidad", linkKey: "privacidad", label: "He leído la Política de Privacidad" },
+];
+
+const legalLink = (key) => props.legalLinks?.[key] ?? "#";
+
+// Sin las tres aceptaciones no se envia ni se guarda nada: se le dice al cliente que
+// documentos le faltan revisar.
+const validateLegalChecks = () => {
+    const faltantes = legalChecks.filter((check) => !form[check.field]);
+
+    if (faltantes.length === 0) {
+        return true;
+    }
+
+    Swal2.fire({
+        title: "Debes aceptar los documentos",
+        html: `<p style="text-align:left;">Para continuar, marca las siguientes casillas:</p><ul style="text-align:left;margin-top:8px;">${faltantes
+            .map((check) => `<li>${check.label}</li>`)
+            .join("")}</ul>`,
+        icon: "warning",
+        padding: "2em",
+        customClass: "sweet-alerts",
+    });
+
+    return false;
+};
 
 const company = usePage().props.company;
 const baseUrl = assetUrl;
@@ -39,6 +79,10 @@ const ubigeoSelected = ref(null);
 
 const form = useForm({
     accepted: false,
+    // Aceptaciones obligatorias de los documentos legales.
+    accepted_terminos: false,
+    accepted_devoluciones: false,
+    accepted_privacidad: false,
     invoice_type: "boleta",
     document_type_id: "1",
     number: null,
@@ -50,6 +94,7 @@ const form = useForm({
     email: null,
     telephone: null,
     ocupacion: null,
+    profesion: null,
     company: null,
     industry_id: null,
     birthdate: null,
@@ -89,6 +134,10 @@ const boletaDniNotice = ref("");
 
 const isRuc = computed(() => String(form.document_type_id) === "6");
 const isDni = computed(() => String(form.document_type_id) === "1");
+// Los nombres/apellidos (o razon social) quedan bloqueados hasta validar la identidad
+// con RENIEC (L.E/DNI) o SUNAT (RUC); despues se habilitan para editar.
+const clientIdentityValidated = computed(() => (isRuc.value ? rucClientValidated.value : dniValidated.value));
+const namesLocked = computed(() => (isDni.value || isRuc.value) && !clientIdentityValidated.value);
 const isBoleta = computed(() => form.invoice_type === "boleta");
 const isFactura = computed(() => form.invoice_type === "factura");
 const rucLengthOk = computed(() => Boolean(form.ruc) && String(form.ruc).length === 11);
@@ -180,6 +229,21 @@ const mercadoAmount = computed(() => {
 
 const mercadoAmountLabel = computed(() => `${props.negotiation.currency} ${mercadoAmount.value.toFixed(2)}`);
 
+// Equivalente en soles: cuando la negociacion esta en dolares el cliente debe
+// ver a cuanto equivale lo que va a pagar (total y primera cuota en cuotas).
+const isUsdNegotiation = computed(() => String(props.negotiation.currency || '').toUpperCase() === 'USD');
+const hasValidRate = computed(() => Number(props.exchangeRate) > 0);
+const totalInSoles = computed(() => {
+    if (!isUsdNegotiation.value || !hasValidRate.value) return null;
+    return (Number(props.negotiation.total_price || 0) * Number(props.exchangeRate)).toFixed(2);
+});
+const firstInstallmentInSoles = computed(() => {
+    if (!isUsdNegotiation.value || !hasValidRate.value) return null;
+    if (props.negotiation.payment_type !== 'installments') return null;
+    const first = Number(props.negotiation.schedule?.[0]?.amount || 0);
+    return first > 0 ? (first * Number(props.exchangeRate)).toFixed(2) : null;
+});
+
 const onlyNumbers = () => {
     form.number = form.number ? String(form.number).replace(/\D/g, "") : null;
 };
@@ -212,6 +276,12 @@ const loadVerifiedPerson = (person) => {
             (item) => Number(item.id) === Number(person.occupation_id)
         ) ?? null;
     }
+    // La profesion se precarga igual que el cargo: por id contra el catalogo.
+    if ("profession_id" in person) {
+        form.profesion = props.professions.find(
+            (item) => Number(item.id) === Number(person.profession_id)
+        ) ?? null;
+    }
     form.company = person.company ?? form.company;
     form.industry_id = person.industry_id ? { id: person.industry_id, description: person.industry } : form.industry_id;
     form.birthdate = person.birthdate ? String(person.birthdate).slice(0, 10) : form.birthdate;
@@ -228,6 +298,9 @@ const loadVerifiedPerson = (person) => {
     }
 
     markPersonVerified();
+    // La ficha cargada viene de una fuente confiable (busqueda interna o cuenta
+    // existente): con RUC no hace falta volver a consultar SUNAT para desbloquear.
+    markClientVerified();
 };
 
 // Verificaciones de identidad del cliente: cada una vive en su propio composable.
@@ -245,6 +318,21 @@ const {
     token: props.negotiation.token,
     isDni,
     normalizeNumber: onlyNumbers,
+    // La longitud del numero la define el catalogo (8 en L.E/DNI) para autodisparar la consulta.
+    numberLength: () => selectedDocumentType.value?.number_characters,
+});
+
+const {
+    rucClientLoading,
+    rucClientValidated,
+    rucClientNotice,
+    validateClientRuc,
+    onRucClientInput,
+    resetClientRucCheck,
+    markClientVerified,
+} = useRucSunatCheck({
+    form,
+    token: props.negotiation.token,
 });
 
 const {
@@ -389,6 +477,7 @@ watch(() => form.document_type_id, (current, previous) => {
     if (String(current) === String(previous)) return;
 
     resetDniCheck();
+    resetClientRucCheck();
 
     if (isForeignLocation.value) {
         form.ubigeo = null;
@@ -462,8 +551,10 @@ const setMpPaymentMode = (mode) => {
 const summaryModal = ref(null);
 
 const submit = () => {
+    if (!validateLegalChecks()) return;
     if (!validateRucBeforeSubmit()) return;
     if (!validateDniBeforeSubmit()) return;
+    if (!validateClientRucBeforeSubmit()) return;
     if (!validateBoletaTerceroBeforeSubmit()) return;
 
     // Enviar silencia el aviso del correo (el resumen toma el foco; con el boton pulsado
@@ -502,7 +593,7 @@ const validateBoletaDni = () => {
         }
 
         const person = res.data.person || {};
-        form.boleta_nombre = person.full_name || [person.father_lastname, person.mother_lastname, person.names].filter(Boolean).join(" ") || form.boleta_nombre;
+        form.boleta_nombre = person.full_name || [person.names, person.father_lastname, person.mother_lastname].filter(Boolean).join(" ") || form.boleta_nombre;
         boletaDniValidated.value = true;
         boletaDniNotice.value = "";
     }).catch(() => {
@@ -524,12 +615,15 @@ const toggleBoletaTercero = (checked) => {
 
     if (checked) {
         // Precarga con los datos del cliente, editables (o reemplazables por otro DNI).
+        // El nombre completo se arma concatenando nombres + apellido paterno + apellido
+        // materno de los datos ya validados del cliente.
         form.boleta_documento_tipo = "1";
         form.boleta_numero = form.number;
-        form.boleta_nombre = [form.father_lastname, form.mother_lastname, form.names].filter(Boolean).join(" ")
+        form.boleta_nombre = [form.names, form.father_lastname, form.mother_lastname].filter(Boolean).join(" ")
             || form.full_name
             || null;
-        boletaDniValidated.value = dniValidated.value && String(form.number) === String(form.boleta_numero);
+        // Si el cliente ya validó su identidad y es la misma persona, el nombre ya viene verificado.
+        boletaDniValidated.value = clientIdentityValidated.value && String(form.number) === String(form.boleta_numero);
     } else {
         form.boleta_documento_tipo = "1";
         form.boleta_numero = null;
@@ -540,6 +634,11 @@ const toggleBoletaTercero = (checked) => {
 };
 
 const confirmNegotiation = () => {
+    // El pago con tarjeta llega aqui directo (el ladrillo de Mercado Pago llama a esta
+    // funcion al aprobarse el cobro): se revisan igual las aceptaciones legales para
+    // que nunca se guarde sin los tres documentos.
+    if (!validateLegalChecks()) return;
+
     form.accepted = true;
     onlyNumbers();
 
@@ -580,6 +679,21 @@ const validateDniBeforeSubmit = () => {
         Swal2.fire({
             title: "DNI no validado",
             text: dniNotice.value || "Debes validar tu DNI con la API para continuar (el boton RENIEC junto al numero de documento).",
+            icon: "warning",
+            padding: "2em",
+            customClass: "sweet-alerts",
+        });
+        return false;
+    }
+    return true;
+};
+
+// El RUC del cliente (cuando ese es su tipo de documento) debe estar validado por SUNAT.
+const validateClientRucBeforeSubmit = () => {
+    if (isRuc.value && !rucClientValidated.value) {
+        Swal2.fire({
+            title: "RUC no validado",
+            text: rucClientNotice.value || "Debes validar tu RUC con la API para continuar (el boton Buscar en SUNAT junto al numero de documento).",
             icon: "warning",
             padding: "2em",
             customClass: "sweet-alerts",
@@ -796,6 +910,12 @@ watch(brickFormVisible, async (visible) => {
                             <div class="text-right">
                                 <p class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Total</p>
                                 <p class="text-2xl font-bold text-primary">{{ totalAmount }}</p>
+                                <p v-if="totalInSoles" class="text-xs text-gray-500 dark:text-gray-400">
+                                    ≈ S/ {{ totalInSoles }} <span class="whitespace-nowrap">(TC: {{ Number(props.exchangeRate).toFixed(4) }})</span>
+                                </p>
+                                <p v-if="firstInstallmentInSoles" class="text-xs text-gray-500 dark:text-gray-400">
+                                    1ra cuota ≈ S/ {{ firstInstallmentInSoles }}
+                                </p>
                             </div>
                         </div>
 
@@ -884,21 +1004,26 @@ watch(brickFormVisible, async (visible) => {
 
                             <div class="col-span-6 sm:col-span-2">
                                 <InputLabel for="number" value="Numero de documento *" />
-                                <div v-if="isDni" class="flex">
-                                    <TextInput id="number" v-model="form.number" type="text" inputmode="numeric" pattern="[0-9]*" class="ltr:rounded-r-none rtl:rounded-l-none" @input="onNumberInput" />
-                                    <button type="button" class="btn btn-secondary ltr:rounded-l-none rtl:rounded-r-none" :class="{ 'opacity-50': dniLoading }" :disabled="dniLoading" @click="validateDni">
+                                <div v-if="isDni || isRuc" class="flex">
+                                    <TextInput id="number" v-model="form.number" type="text" inputmode="numeric" pattern="[0-9]*" class="ltr:rounded-r-none rtl:rounded-l-none" @input="isRuc ? onRucClientInput() : onNumberInput()" />
+                                    <button v-if="isDni" type="button" class="btn btn-secondary ltr:rounded-l-none rtl:rounded-r-none" :class="{ 'opacity-50': dniLoading }" :disabled="dniLoading" @click="validateDni">
                                         <IconLoader v-if="dniLoading" class="w-4 h-4 mr-2 animate-spin" />
                                         <FontAwesomeIcon v-else :icon="faMagnifyingGlass" class="mr-2 h-4 w-4" />
                                         RENIEC
+                                    </button>
+                                    <button v-else type="button" class="btn btn-secondary ltr:rounded-l-none rtl:rounded-r-none" :class="{ 'opacity-50': rucClientLoading }" :disabled="rucClientLoading" @click="validateClientRuc">
+                                        <IconLoader v-if="rucClientLoading" class="w-4 h-4 mr-2 animate-spin" />
+                                        <FontAwesomeIcon v-else :icon="faMagnifyingGlass" class="mr-2 h-4 w-4" />
+                                        Buscar en SUNAT
                                     </button>
                                 </div>
                                 <TextInput v-else id="number" v-model="form.number" type="text" inputmode="numeric" pattern="[0-9]*" @input="onlyNumbers" />
                                 <InputError :message="form.errors.number" class="mt-1" />
                                 <p v-if="isDni && dniHint" class="mt-1 text-xs font-medium text-amber-600 dark:text-amber-400">
                                     {{ dniHint }}
-                                    <button type="button" class="underline" @click="validateDni">Rellenar con RENIEC</button>
                                 </p>
                                 <p v-if="isDni && dniNotice" class="mt-1 text-xs text-danger">{{ dniNotice }}</p>
+                                <p v-if="isRuc && rucClientNotice" class="mt-1 text-xs text-danger">{{ rucClientNotice }}</p>
                             </div>
 
                             <div class="col-span-6 sm:col-span-2">
@@ -914,26 +1039,30 @@ watch(brickFormVisible, async (visible) => {
                             <template v-if="isRuc">
                                 <div class="col-span-6">
                                     <InputLabel for="full_name" value="Razon social *" />
-                                    <TextInput id="full_name" v-model="form.full_name" type="text" />
+                                    <TextInput id="full_name" v-model="form.full_name" type="text" :disabled="namesLocked" />
+                                    <p v-if="namesLocked" class="mt-1 text-xs text-gray-500">Se completara al buscar tu RUC en SUNAT.</p>
                                     <InputError :message="form.errors.full_name" class="mt-1" />
                                 </div>
                             </template>
                             <template v-else>
                                 <div class="col-span-6 sm:col-span-2">
                                     <InputLabel for="names" value="Nombres *" />
-                                    <TextInput id="names" v-model="form.names" type="text" />
+                                    <TextInput id="names" v-model="form.names" type="text" :disabled="namesLocked" />
                                     <InputError :message="form.errors.names" class="mt-1" />
                                 </div>
                                 <div class="col-span-6 sm:col-span-2">
                                     <InputLabel for="father_lastname" value="Apellido paterno *" />
-                                    <TextInput id="father_lastname" v-model="form.father_lastname" type="text" />
+                                    <TextInput id="father_lastname" v-model="form.father_lastname" type="text" :disabled="namesLocked" />
                                     <InputError :message="form.errors.father_lastname" class="mt-1" />
                                 </div>
                                 <div class="col-span-6 sm:col-span-2">
                                     <InputLabel for="mother_lastname" value="Apellido materno *" />
-                                    <TextInput id="mother_lastname" v-model="form.mother_lastname" type="text" />
+                                    <TextInput id="mother_lastname" v-model="form.mother_lastname" type="text" :disabled="namesLocked" />
                                     <InputError :message="form.errors.mother_lastname" class="mt-1" />
                                 </div>
+                                <p v-if="namesLocked" class="col-span-6 -mt-2 text-xs text-gray-500">
+                                    Tus nombres y apellidos se completaran al validar tu DNI con RENIEC.
+                                </p>
                             </template>
 
                             <div class="col-span-6 sm:col-span-2">
@@ -980,6 +1109,24 @@ watch(brickFormVisible, async (visible) => {
                                     track-by="id"
                                 ></multiselect>
                                 <InputError :message="form.errors.ocupacion || form.errors['ocupacion.id']" class="mt-1" />
+                            </div>
+
+                            <div class="col-span-6 sm:col-span-3">
+                                <InputLabel for="profesion" value="Profesión" />
+                                <multiselect
+                                    id="profesion"
+                                    v-model="form.profesion"
+                                    :options="professions"
+                                    class="custom-multiselect"
+                                    :searchable="true"
+                                    placeholder="Buscar profesión"
+                                    selected-label="seleccionada"
+                                    select-label="Elegir"
+                                    deselect-label="Quitar"
+                                    label="description"
+                                    track-by="id"
+                                ></multiselect>
+                                <InputError :message="form.errors.profesion || form.errors['profesion.id']" class="mt-1" />
                             </div>
 
                             <div class="col-span-6 sm:col-span-3">
@@ -1116,7 +1263,9 @@ watch(brickFormVisible, async (visible) => {
 
                                                 <div class="col-span-6 sm:col-span-3">
                                                     <InputLabel for="boleta_nombre" value="Nombre completo *" />
-                                                    <TextInput id="boleta_nombre" v-model="form.boleta_nombre" type="text" />
+                                                    <TextInput id="boleta_nombre" v-model="form.boleta_nombre" type="text" :disabled="!boletaDniValidated" />
+                                                    <p v-if="!boletaDniValidated" class="mt-1 text-xs text-gray-500">Se completara al buscar el DNI en RENIEC.</p>
+                                                    <p v-else class="mt-1 text-xs text-gray-500">La consulta autollena el nombre; puedes editarlo despues.</p>
                                                     <InputError :message="form.errors.boleta_nombre" class="mt-1" />
                                                 </div>
                                             </div>
@@ -1302,6 +1451,40 @@ watch(brickFormVisible, async (visible) => {
                             <InputError :message="form.errors.voucher" class="mt-2" />
                         </div>
 
+                        <!-- Documentos legales obligatorios: el texto de cada check es el enlace -->
+                        <div class="mt-6 border-t border-gray-200 pt-5 dark:border-gray-700">
+                            <p class="mb-1 text-sm font-semibold text-gray-800 dark:text-white">
+                                Documentos legales
+                            </p>
+                            <p class="mb-3 text-xs text-gray-500 dark:text-gray-400">
+                                Debes leer y aceptar los tres documentos para enviar tus datos.
+                            </p>
+
+                            <div class="space-y-3">
+                                <div v-for="check in legalChecks" :key="check.field" class="flex items-start gap-3">
+                                    <input
+                                        :id="check.field"
+                                        v-model="form[check.field]"
+                                        type="checkbox"
+                                        class="form-checkbox mt-0.5 shrink-0 text-primary"
+                                    />
+                                    <a
+                                        :href="legalLink(check.linkKey)"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="text-sm text-gray-600 hover:underline dark:text-gray-300"
+                                    >
+                                        {{ check.label }}
+                                    </a>
+                                </div>
+                            </div>
+
+                            <InputError
+                                :message="form.errors.accepted_terminos || form.errors.accepted_devoluciones || form.errors.accepted_privacidad"
+                                class="mt-2"
+                            />
+                        </div>
+
                         <div v-if="showVoucherUpload" class="mt-6 flex justify-end">
                             <button type="submit" class="btn btn-primary" :class="{ 'opacity-50': form.processing }" :disabled="form.processing" @mousedown="markSubmitting">
                                 <IconLoader v-if="form.processing" class="w-4 h-4 mr-2 animate-spin" />
@@ -1313,6 +1496,8 @@ watch(brickFormVisible, async (visible) => {
             </div>
         </div>
         <SummaryModal
+            :total-soles-label="totalInSoles ? `≈ S/ ${totalInSoles}` : null"
+            :first-installment-soles-label="firstInstallmentInSoles ? `≈ S/ ${firstInstallmentInSoles}` : null"
             ref="summaryModal"
             :form="form"
             :negotiation="negotiation"

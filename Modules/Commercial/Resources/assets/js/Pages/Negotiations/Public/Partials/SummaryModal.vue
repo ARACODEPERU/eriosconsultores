@@ -29,6 +29,9 @@ const props = defineProps({
     // Mercado Pago declarando un pago ya hecho (evidencia) en lugar de pagar con tarjeta.
     paymentEvidence: { type: Boolean, default: false },
     totalLabel: { type: String, default: null },
+    // Equivalentes en soles cuando la negociacion esta en dolares (PTM0004).
+    totalSolesLabel: { type: String, default: null },
+    firstInstallmentSolesLabel: { type: String, default: null },
 });
 
 const emit = defineEmits(["confirm", "cancel"]);
@@ -52,6 +55,7 @@ const clientFullName = computed(() => {
 });
 
 const occupationLabel = computed(() => props.form.ocupacion?.description ?? props.form.ocupacion ?? null);
+const professionLabel = computed(() => props.form.profesion?.description ?? props.form.profesion ?? null);
 const industryLabel = computed(() => props.form.industry_id?.description ?? null);
 
 const countryLabel = computed(() =>
@@ -69,6 +73,18 @@ const locationLabel = computed(() => {
 const genderLabel = computed(() => (props.form.gender === "F" ? "Femenino" : (props.form.gender === "M" ? "Masculino" : null)));
 
 const scheduleRows = computed(() => props.negotiation.schedule || []);
+
+// Documentos legales que el cliente acepto en el formulario: se listan para que los vea
+// otra vez antes de confirmar.
+const legalAccepted = computed(() => {
+    const documentos = [];
+
+    if (props.form.accepted_terminos) documentos.push("Terminos y condiciones");
+    if (props.form.accepted_devoluciones) documentos.push("Politica de devoluciones y Reembolsos - CPA Academy");
+    if (props.form.accepted_privacidad) documentos.push("Politica de Privacidad");
+
+    return documentos;
+});
 
 // Los datos del cliente son texto libre: se escapan antes de inyectarlos en el HTML.
 const escapeHtml = (value) => String(value ?? "")
@@ -106,6 +122,7 @@ const summaryHtml = () => {
     rows.push(summaryRow("Direccion", form.address));
     rows.push(summaryRow(props.foreignLocation ? "Pais / Estado / Ciudad" : "Ubicacion", locationLabel.value));
     rows.push(summaryRow("Cargo u ocupacion", occupationLabel.value));
+    rows.push(summaryRow("Profesion", professionLabel.value));
     rows.push(summaryRow("Empresa", form.company));
     rows.push(summaryRow("Industria", industryLabel.value));
 
@@ -127,14 +144,23 @@ const summaryHtml = () => {
     rows.push(summarySection("Acuerdo y pago"));
     rows.push(summaryRow("Modalidad", props.negotiation.payment_type === "installments" ? `${scheduleRows.value.length} cuotas` : "Pago unico"));
     rows.push(summaryRow("Monto total", props.totalLabel));
+    if (props.totalSolesLabel) {
+        rows.push(summaryRow("Equivale a soles", props.totalSolesLabel));
+    }
 
     if (props.negotiation.payment_type === "installments" && scheduleRows.value.length) {
-        rows.push(summaryRow("Primera cuota", `${props.negotiation.currency} ${Number(scheduleRows.value[0]?.amount || 0).toFixed(2)}`));
+        const primeraCuota = `${props.negotiation.currency} ${Number(scheduleRows.value[0]?.amount || 0).toFixed(2)}${props.firstInstallmentSolesLabel ? ` (${props.firstInstallmentSolesLabel})` : ""}`;
+        rows.push(summaryRow("Primera cuota", primeraCuota));
         rows.push(summaryRow("Vencimiento 1ra cuota", scheduleRows.value[0]?.due_date ?? null));
     }
 
     if (isMercadoPago.value) {
         rows.push(summaryRow("Forma de pago", props.paymentEvidence ? "Declaro que ya pague (adjunto voucher)" : "Pago ahora con tarjeta"));
+    }
+
+    if (legalAccepted.value.length) {
+        rows.push(summarySection("Documentos aceptados"));
+        rows.push(summaryRow("Aceptados", legalAccepted.value.join(" / ")));
     }
 
     if (form.voucher?.name) {
@@ -147,15 +173,17 @@ const summaryHtml = () => {
 /** Muestra el resumen y avisa si el cliente acepta o vuelve al formulario. */
 const show = () => {
     Swal2.fire({
-        title: "Revisa tus datos",
-        html: summaryHtml(),
+        // Ultima pregunta antes de guardar: el cliente confirma que esta seguro y de
+        // acuerdo con los datos que reviso, incluidos los documentos legales aceptados.
+        title: "¿Estas seguro y de acuerdo?",
+        html: `<p style="text-align:left;margin-bottom:10px;">Revisa tus datos. Al confirmar declaras que estas seguro y de acuerdo, y que aceptas los documentos legales marcados.</p>${summaryHtml()}`,
         icon: "question",
         width: 640,
         showCancelButton: true,
         confirmButtonColor: "#3085d6",
         cancelButtonColor: "#d33",
-        confirmButtonText: "Si, mis datos son correctos",
-        cancelButtonText: "No, corregir datos",
+        confirmButtonText: "Si, estoy seguro y de acuerdo",
+        cancelButtonText: "No, revisar mis datos",
         reverseButtons: true,
         padding: "2em",
         customClass: "sweet-alerts",

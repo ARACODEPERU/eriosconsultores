@@ -22,6 +22,7 @@ use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Modules\Commercial\Entities\CommercialNegotiation;
 use Modules\Commercial\Entities\CommercialNegotiationInvoice;
+use Modules\Commercial\Support\CommercialLegalLinks;
 use Modules\Commercial\Support\NegotiationConfirmedRecipients;
 
 class CommercialNegotiationPublicController extends Controller
@@ -44,21 +45,38 @@ class CommercialNegotiationPublicController extends Controller
 
         return Inertia::render('Commercial::Negotiations/Public/Show', [
             'negotiation' => $this->negotiationPayload($negotiation),
+            // Equivalente en soles para el cliente cuando la negociacion esta en USD.
+            'multiCurrencyEnabled' => app(\Modules\Sales\Services\ExchangeRateService::class)->isMultiCurrencyEnabled(),
+            'exchangeRate' => (function () {
+                try {
+                    $rate = app(\Modules\Sales\Services\ExchangeRateService::class)->getCurrentRate('USD');
+
+                    return $rate ? (float) $rate['rate'] : null;
+                } catch (\Throwable $e) {
+                    return null;
+                }
+            })(),
             'identityDocumentTypes' => IdentityDocumentType::orderBy('id')->get()
                 ->map(fn ($type) => [
                     'id' => $type->id,
                     'description' => $type->description,
                     'sunat_code' => $type->sunat_code,
+                    'number_characters' => $type->number_characters,
                     'requires_foreign_location' => $type->requiresForeignLocation(),
                 ])
                 ->values(),
             'industries' => Industry::select('id', 'description')->orderBy('description')->get(),
             // Cargos en orden alfabetico: el cliente los busca escribiendo.
             'occupations' => DB::table('occupations')->select('id', 'description')->orderBy('description')->get(),
+            // Profesiones en orden alfabetico: el cliente las busca escribiendo.
+            'professions' => DB::table('professions')->select('id', 'description')->orderBy('description')->get(),
             'countries' => Country::where('status', true)->orderBy('description')->get(['id', 'description']),
             'ubigeo' => $this->ubigeo(),
             'paymentMethodCatalog' => PaymentMethod::with('bankAccount.bank')->get(),
             'bankAccounts' => BankAccount::with('bank')->where('status', 1)->get(),
+            // Enlaces legales que el cliente debe aceptar: se configuran en
+            // Comercial > Configuracion y aqui llegan ya como URL utilizable.
+            'legalLinks' => CommercialLegalLinks::all(),
         ]);
     }
 
@@ -82,6 +100,10 @@ class CommercialNegotiationPublicController extends Controller
 
         $data = $request->validate([
             'accepted' => ['required', 'accepted'],
+            // Los tres documentos legales que el cliente acepta antes de enviar sus datos.
+            'accepted_terminos' => ['required', 'accepted'],
+            'accepted_devoluciones' => ['required', 'accepted'],
+            'accepted_privacidad' => ['required', 'accepted'],
             // Mercado Pago: 'card' (pago con tarjeta) o 'evidence' (el cliente ya pago
             // por fuera y adjunta la captura). En los otros medios no se envia.
             'payment_option' => ['nullable', Rule::in(['card', 'evidence'])],
@@ -100,6 +122,11 @@ class CommercialNegotiationPublicController extends Controller
             'ocupacion' => ['nullable'],
             'ocupacion.id' => ['nullable', 'integer', 'exists:occupations,id'],
             'ocupacion.description' => ['nullable', 'string', 'max:255'],
+            // Profesion: mismo formato que el cargo (objeto {id, description} del
+            // multiselect o texto suelto de una pagina en cache).
+            'profesion' => ['nullable'],
+            'profesion.id' => ['nullable', 'integer', 'exists:professions,id'],
+            'profesion.description' => ['nullable', 'string', 'max:255'],
             'company' => ['nullable', 'string', 'max:200'],
             'industry_id' => ['nullable'],
             // El multiselect envia el objeto {id, description}: se valida el id por separado.
@@ -147,7 +174,10 @@ class CommercialNegotiationPublicController extends Controller
         $industry = ! empty($industryId) ? Industry::find($industryId) : null;
 
         // Cargo u ocupacion: se guarda el texto del catalogo junto a su id.
-        [$occupationId, $occupation] = $this->resolveOccupation($data['ocupacion'] ?? null);
+        [$occupationId, $occupation] = $this->resolveCatalog($data['ocupacion'] ?? null, 'occupations');
+
+        // Profesion: mismo tratamiento que el cargo (texto oficial del catalogo + id).
+        [$professionId, $profession] = $this->resolveCatalog($data['profesion'] ?? null, 'professions');
 
         // El cliente extranjero guarda su ubicacion como "Pais - Estado - Ciudad".
         $foreignCountry = ($isForeignLocation && ! empty($data['foreign_country_id']))
@@ -189,6 +219,10 @@ class CommercialNegotiationPublicController extends Controller
             'telephone' => $data['telephone'] ?? null,
             'ocupacion' => $occupation,
             'occupation_id' => $occupationId,
+            // people.profession es la columna real del texto (profesion solo vive en
+            // client_data, que es un json y no pasa por mass-assignment).
+            'profession' => $profession,
+            'profession_id' => $professionId,
             'company' => $data['company'] ?? null,
             'industry_id' => $industry?->id,
             'industry' => $industry?->description,
@@ -231,11 +265,19 @@ class CommercialNegotiationPublicController extends Controller
                 'client_id' => $clientId,
                 'client_data' => array_merge($personPayload, [
                     'full_name' => $fullName ?: ($data['full_name'] ?? null),
+                    // La profesion declarada viaja tambien como 'profesion' en el json del
+                    // cliente: es la clave que lee el payload del webhook a n8n.
+                    'profesion' => $profession,
                     // Mercado Pago liquidado por fuera: el cliente declara el pago y
                     // adjunta su evidencia, no hay transaccion procesada en el sistema.
                     'payment_declared' => $this->paymentDeclared($negotiation, $data['payment_option'] ?? null),
+                    // Constancia de los tres documentos legales aceptados.
+                    'legal_accepted' => $this->legalAcceptance(),
                 ]),
                 'voucher_path' => $voucherPath ?: $negotiation->voucher_path,
+                // La fecha de emision del comprobante por defecto es la fecha en que el
+                // cliente registro sus datos y su evidencia (el admin puede ajustarla luego).
+                'document_emission_date' => now()->toDateString(),
                 'rejected_reason' => null,
                 'verified_by' => null,
                 'verified_at' => null,
@@ -527,7 +569,31 @@ class CommercialNegotiationPublicController extends Controller
     }
 
     /**
-     * Cargo u ocupacion elegido en el formulario publico.
+     * Constancia de las aceptaciones legales: que documento acepto el cliente, en que
+     * enlace lo leyo y cuando lo hizo. Queda en el client_data de la negociacion como
+     * respaldo; no agrega claves al payload que viaja a n8n.
+     *
+     * @return array<string, mixed>
+     */
+    private function legalAcceptance(): array
+    {
+        $aceptaciones = [];
+
+        foreach (CommercialLegalLinks::all() as $key => $url) {
+            $aceptaciones[$key] = [
+                'aceptado' => true,
+                'url' => $url,
+            ];
+        }
+
+        $aceptaciones['aceptado_en'] = now()->toIso8601String();
+
+        return $aceptaciones;
+    }
+
+    /**
+     * Valor de catalogo elegido en el formulario publico (cargo u ocupacion,
+     * profesion).
      *
      * El multiselect envia {id, description}; el texto guardado sale del
      * catalogo (no de lo que venga en la peticion) para que la tabla people
@@ -536,14 +602,14 @@ class CommercialNegotiationPublicController extends Controller
      *
      * @return array{0: ?int, 1: ?string}
      */
-    private function resolveOccupation($input): array
+    private function resolveCatalog($input, string $table): array
     {
         $id = is_array($input) ? ($input['id'] ?? null) : null;
         $texto = is_array($input) ? ($input['description'] ?? null) : $input;
         $description = is_string($texto) ? trim($texto) : null;
 
         if (! empty($id)) {
-            $oficial = DB::table('occupations')->where('id', $id)->value('description');
+            $oficial = DB::table($table)->where('id', $id)->value('description');
 
             if ($oficial !== null) {
                 return [(int) $id, $oficial];

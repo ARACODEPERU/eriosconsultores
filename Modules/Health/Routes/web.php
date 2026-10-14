@@ -19,6 +19,10 @@ use Modules\Health\Http\Controllers\HealActivityController;
 use Modules\Health\Http\Controllers\HealSettingController;
 use Modules\Health\Http\Controllers\HealTestDataController;
 use Modules\Health\Http\Controllers\HealAttentionPdfController;
+use Modules\Health\Http\Controllers\HealAppointmentNoticeController;
+use Modules\Health\Http\Controllers\HealGoogleCalendarController;
+use Modules\Health\Http\Controllers\HealDoctorGoogleCalendarController;
+use Modules\Health\Http\Controllers\HealParametersController;
 use Modules\Health\Http\Controllers\Odontology\HealOdoAppointmentController;
 
 Route::middleware(['auth', 'verified'])->prefix('health')->group(function () {
@@ -46,6 +50,46 @@ Route::middleware(['auth', 'verified'])->prefix('health')->group(function () {
     Route::get('agendas/availability', [HealAgendaController::class, 'availability'])->name('heal_agendas_availability');
     Route::post('agendas/appointments/store', [HealAgendaController::class, 'storeAppointment'])->name('heal_agendas_appointments_store');
     Route::post('agendas/appointments/move', [HealAgendaController::class, 'moveAppointment'])->name('heal_agendas_appointments_move');
+
+    // Parámetros de Salud: enlace de Google Calendar por doctor (cada doctor ve el suyo; el admin, todos).
+    Route::get('parametros', [HealParametersController::class, 'index'])->name('heal_parameters');
+
+    // Avisos de citas (recordatorios a pacientes por SMS).
+    Route::middleware(['permission:heal_avisos'])->group(function () {
+        Route::get('avisos', [HealAppointmentNoticeController::class, 'index'])->name('heal_appointment_notices');
+        Route::post('avisos/update', [HealAppointmentNoticeController::class, 'update'])->name('heal_appointment_notices_update');
+        Route::post('avisos/preview', [HealAppointmentNoticeController::class, 'preview'])->name('heal_appointment_notices_preview');
+        Route::post('avisos/test', [HealAppointmentNoticeController::class, 'test'])->name('heal_appointment_notices_test');
+        Route::post('avisos/deliveries/{delivery}/retry', [HealAppointmentNoticeController::class, 'retry'])->name('heal_appointment_notices_retry');
+    });
+
+    // Google Calendar (sincronizacion bidireccional de la Agenda).
+    Route::middleware(['permission:heal_google_calendar'])->prefix('google-calendar')->group(function () {
+        Route::get('/', [HealGoogleCalendarController::class, 'index'])->name('heal_google_calendar');
+        Route::get('connect', [HealGoogleCalendarController::class, 'connect'])->name('heal_google_calendar_connect');
+        Route::post('disconnect', [HealGoogleCalendarController::class, 'disconnect'])->name('heal_google_calendar_disconnect');
+        Route::post('sync', [HealGoogleCalendarController::class, 'syncNow'])->name('heal_google_calendar_sync');
+        Route::post('test', [HealGoogleCalendarController::class, 'test'])->name('heal_google_calendar_test');
+        Route::post('templates', [HealGoogleCalendarController::class, 'saveTemplates'])->name('heal_google_calendar_templates');
+        Route::post('templates/preview', [HealGoogleCalendarController::class, 'previewTemplates'])->name('heal_google_calendar_templates_preview');
+        Route::post('channel', [HealGoogleCalendarController::class, 'refreshChannel'])->name('heal_google_calendar_channel');
+        Route::post('review/{mapping}', [HealGoogleCalendarController::class, 'review'])->name('heal_google_calendar_review');
+        Route::post('review/{mapping}/discard', [HealGoogleCalendarController::class, 'discard'])->name('heal_google_calendar_review_discard');
+    });
+
+    // Callback de Google compartido por la agenda principal y por la de cada doctor.
+    // Sin permiso de modulo: el doctor lo necesita para volver de su consentimiento.
+    // HealGoogleCalendarController::callback valida la sesion y el permiso del flujo.
+    Route::get('google-calendar/callback', [HealGoogleCalendarController::class, 'callback'])->name('heal_google_calendar_callback');
+
+    // Enlace de la agenda de Google de cada doctor (confirmación con contraseña + conectar/desconectar).
+    Route::prefix('agendas/google')->group(function () {
+        Route::post('confirm', [HealDoctorGoogleCalendarController::class, 'confirm'])
+            ->middleware('throttle:6,1')
+            ->name('heal_doctor_google_confirm');
+        Route::get('connect/{doctor}', [HealDoctorGoogleCalendarController::class, 'connect'])->name('heal_doctor_google_connect');
+        Route::post('disconnect/{doctor}', [HealDoctorGoogleCalendarController::class, 'disconnect'])->name('heal_doctor_google_disconnect');
+    });
 
     Route::post('patients/search', 'HealPatientController@searchPatient')->name('heal_patients_search');
 
@@ -83,6 +127,7 @@ Route::middleware(['auth', 'verified'])->prefix('health')->group(function () {
         Route::post('settings/update', [HealSettingController::class, 'update'])->name('heal_settings_update');
         Route::post('settings/upload-logo', [HealSettingController::class, 'uploadLogo'])->name('heal_settings_upload_logo');
         Route::post('settings/delete-logo', [HealSettingController::class, 'deleteLogo'])->name('heal_settings_delete_logo');
+        Route::post('parametros/google-calendar', [HealParametersController::class, 'updateGoogleOptions'])->name('heal_parameters_google_options');
         Route::get('test-data/status', [HealTestDataController::class, 'status'])->name('heal_test_data_status');
         Route::post('test-data/generate', [HealTestDataController::class, 'store'])->name('heal_test_data_generate');
         Route::delete('test-data/destroy', [HealTestDataController::class, 'destroy'])->name('heal_test_data_destroy');

@@ -108,6 +108,7 @@ Route::middleware(['auth', 'verified'])->prefix('socialevents')->group(function 
     Route::middleware(['middleware' => 'permission:even_ediciones_fixtures'])->put('editions/fixtures/{fId}/update', [EventEditionMatchController::class, 'editionFixturesUpdate'])->name('even_ediciones_fixtures_update');
     Route::middleware(['middleware' => 'permission:even_ediciones_fixtures_nuevo'])->get('editions/{id}/fixtures/create', [EventEditionMatchController::class, 'editionFixturesCreate'])->name('even_ediciones_fixtures_create');
     Route::middleware(['middleware' => 'permission:even_ediciones_fixtures_nuevo'])->post('editions/fixtures/store', [EventEditionMatchController::class, 'editionFixturesStore'])->name('even_ediciones_fixtures_store');
+    Route::middleware(['middleware' => 'permission:even_ediciones_partido_resultado'])->get('editions/{id}/fixtures/match/{matchId}/resultado', [EventEditionMatchController::class, 'editionMatchScore'])->name('even_ediciones_partido_resultado');
     Route::middleware(['middleware' => 'permission:even_ediciones_partido_resultado'])->post('editions/fixtures/match/score', [EventEditionMatchController::class, 'editionMatchScoreStore'])->name('even_edition_match_score_update');
     Route::middleware(['middleware' => 'permission:even_ediciones_partido_eliminar'])->delete('editions/fixtures/match/{id}/destroy', [EventEditionMatchController::class, 'destroy'])->name('even_edition_match_score_destroy');
     Route::middleware(['middleware' => 'permission:even_ediciones_sanciones'])->get('editions/{id}/collection/penalties', [EventEditionMatchSanctionController::class, 'collectionPenalties'])->name('even_ediciones_pago_sanciones');
@@ -145,3 +146,10 @@ Route::get('torneos/{slug}', [TournamentLandingController::class, 'show'])
 Route::get('torneos/{slug}/download-app', [TournamentLandingController::class, 'downloadApp'])
     ->where('slug', '[a-z0-9]+(?:-[a-z0-9]+)*|\d+')
     ->name('socialevents_torneos_download_app');
+
+// Ruta pública con el detalle partido a partido de un jugador (modal de la landing)
+Route::get('torneos/{slug}/jugador/{playerId}', [TournamentLandingController::class, 'playerDetail'])
+    ->where('slug', '[a-z0-9]+(?:-[a-z0-9]+)*|\d+')
+    ->whereNumber('playerId')
+    ->middleware('throttle:60,1')
+    ->name('socialevents_torneos_player_detail');

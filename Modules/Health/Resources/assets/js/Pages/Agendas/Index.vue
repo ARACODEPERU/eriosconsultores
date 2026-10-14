@@ -13,6 +13,7 @@ import IconPlus from '@/Components/vristo/icon/icon-plus.vue';
 import IconX from '@/Components/vristo/icon/icon-x.vue';
 import PendingSignatureReminder from '../../Components/PendingSignatureReminder.vue';
 import EstablishmentBadge from '../../Components/EstablishmentBadge.vue';
+import DoctorGoogleLinkModal from '../../Components/DoctorGoogleLinkModal.vue';
 
 const props = defineProps({
     doctors: {
@@ -61,6 +62,11 @@ const props = defineProps({
         type: Number,
         default: 15,
     },
+    // Duraciones permitidas, enviadas por Modules/Health/Support/AppointmentDuration.
+    appointmentDurationOptions: {
+        type: Array,
+        default: () => [],
+    },
     attentionBlockMinutes: {
         type: Number,
         default: 60,
@@ -68,6 +74,19 @@ const props = defineProps({
     pendingSignatures: {
         type: Array,
         default: () => [],
+    },
+    // Enlace de Google Calendar del doctor que usa la pantalla (null si no es doctor).
+    doctorGoogle: {
+        type: Object,
+        default: null,
+    },
+    doctorGoogleCanEnlace: {
+        type: Boolean,
+        default: false,
+    },
+    doctorGoogleConfirmMinutes: {
+        type: Number,
+        default: 5,
     },
 });
 
@@ -149,19 +168,29 @@ const formatDayHeader = (dateStr) => {
 const appointmentModal = ref(false);
 const availabilityLoading = ref(false);
 const modalFreeSlots = ref([]);
-const durationMode = ref('15');
-const durationOptions = [
-    { value: '15', label: '15 min' },
-    { value: '30', label: '30 min' },
-    { value: '45', label: '45 min' },
-    { value: '60', label: '1 hora' },
-    { value: '90', label: '1:30 h' },
-    { value: '120', label: '2 horas' },
-    { value: '150', label: '2:30 h' },
-    { value: '180', label: '3 horas' },
-    { value: '240', label: '4 horas' },
-    { value: 'custom', label: 'Más tiempo' },
-];
+// Duraciones permitidas: 15 a 60 min en pasos de 15, y 90 a 360 min en pasos de 30.
+// La lista la envia el servidor para que el selector y la validacion no diverjan.
+const durationOptions = computed(() => props.appointmentDurationOptions);
+const durationMinutes = computed(() => durationOptions.value.map((option) => Number(option.value)));
+const durationMode = ref(String(props.slotMinutes));
+
+/** Etiqueta legible de una duracion: 15 min, 2 horas, 2 horas y media... */
+const durationLabel = (minutes) => {
+    const option = durationOptions.value.find((item) => Number(item.value) === Number(minutes));
+
+    return option ? option.label : `${minutes} min`;
+};
+
+/** Ajusta una duracion a la permitida inmediata inferior (nunca bajo el minimo). */
+const snapDuration = (minutes) => {
+    const values = durationMinutes.value;
+
+    if (!values.length) {
+        return Number(minutes) || props.slotMinutes;
+    }
+
+    return values.filter((value) => value <= Number(minutes)).pop() ?? values[0];
+};
 
 const sidebarDuration = ref(props.slotMinutes);
 const sidebarFreeSlots = ref([]);
@@ -182,6 +211,12 @@ const form = useForm({
 });
 
 const selectedDoctorName = computed(() => selectedDoctor.value?.name || 'Sin doctor');
+
+// true cuando la agenda en pantalla es la del propio doctor (no la de otro doctor).
+const isOwnAgenda = computed(() => !!props.currentDoctor && selectedDoctor.value?.code === props.currentDoctor.code);
+// El botón solo aparece en la agenda propia, mientras no esté enlazada y el admin lo permita.
+const showGoogleLinkButton = computed(() => isOwnAgenda.value && props.doctorGoogleCanEnlace && !props.doctorGoogle?.connected);
+const googleLinkOpen = ref(false);
 
 const getDayLayoutedEvents = (dayData) => {
     if (!dayData?.events?.length) return [];
@@ -398,7 +433,7 @@ const loadSidebarAvailability = () => {
 };
 
 const openAppointmentModal = (time = null, duration = null) => {
-    const dur = duration ?? props.slotMinutes;
+    const dur = snapDuration(duration ?? props.slotMinutes);
     form.clearErrors();
     form.patient_id = preselectedPatient.value || form.patient_id;
     form.doctor_id = appointmentDoctor.value;
@@ -697,7 +732,10 @@ const onDrop = (dateStr, time) => {
     const dayData = daysData.value[dateStr];
     const targetMinutes = minutesFromTime(time);
     const maxAvail = maxAvailableDuration(dateStr, time);
-    const finalDuration = maxAvail !== null ? Math.min(originalDuration, maxAvail) : originalDuration;
+    // El hueco libre no tiene por que coincidir con una duracion permitida:
+    // se ajusta a la inmediata inferior para que el servidor la acepte.
+    const availableDuration = maxAvail !== null ? Math.min(originalDuration, maxAvail) : originalDuration;
+    const finalDuration = snapDuration(availableDuration);
     const durationWillReduce = finalDuration < originalDuration;
 
     const hasOccupiedSlot = dayData?.events?.some((event) => {
@@ -713,8 +751,8 @@ const onDrop = (dateStr, time) => {
         swalIcon = 'warning';
         swalTitle = 'Atención';
         swalHtml = `
-            El horario <strong>${formatTimeLabel(time)}</strong> del <strong>${dateStr}</strong> ya tiene un evento y solo hay espacio para <strong>${finalDuration} min</strong> (la cita original dura ${originalDuration} min).
-            <br><br><small class="text-white-dark">La cita se reubicará con ${finalDuration} min de duración, reemplazando la existente.</small>
+            El horario <strong>${formatTimeLabel(time)}</strong> del <strong>${dateStr}</strong> ya tiene un evento y solo hay espacio para <strong>${durationLabel(finalDuration)}</strong> (la cita original dura ${durationLabel(originalDuration)}).
+            <br><br><small class="text-white-dark">La cita se reubicará con ${durationLabel(finalDuration)} de duración, reemplazando la existente.</small>
         `;
     } else if (hasOccupiedSlot) {
         swalIcon = 'warning';
@@ -723,7 +761,7 @@ const onDrop = (dateStr, time) => {
     } else if (durationWillReduce) {
         swalIcon = 'info';
         swalTitle = 'Duración reducida';
-        swalHtml = `La cita original dura <strong>${originalDuration} min</strong>, pero en ese horario solo hay espacio para <strong>${finalDuration} min</strong>. La duración se reducirá automáticamente.`;
+        swalHtml = `La cita original dura <strong>${durationLabel(originalDuration)}</strong>, pero en ese horario solo hay espacio para <strong>${durationLabel(finalDuration)}</strong>. La duración se reducirá automáticamente.`;
     }
 
     if (swalTitle) {
@@ -924,11 +962,6 @@ watch(() => form.doctor_id, loadAvailability);
 watch(() => form.date_appointmen, loadAvailability);
 watch(() => form.duration_minutes, loadAvailability);
 watch(durationMode, (value) => {
-    if (value === 'custom') {
-        form.duration_minutes = Math.max(Number(form.duration_minutes || 60), 75);
-        return;
-    }
-
     form.duration_minutes = Number(value);
 });
 
@@ -1001,6 +1034,23 @@ onBeforeUnmount(() => {
                         </button>
                     </div>
                 </div>
+
+                <!-- Enlace de la agenda del doctor con su propio Google Calendar (no es la agenda principal). -->
+                <div
+                    v-if="showGoogleLinkButton"
+                    class="mt-4 flex flex-col gap-3 rounded border border-dashed border-primary/50 bg-primary/5 p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+                >
+                    <p>
+                        <strong>Tu agenda no está enlazada con tu Google Calendar.</strong>
+                        Enlázala para que tus citas se escriban en tu propio calendario.
+                    </p>
+                    <button type="button" class="btn btn-outline-primary btn-sm shrink-0" @click="googleLinkOpen = true">
+                        Conectar mi Google Calendar
+                    </button>
+                </div>
+                <p v-else-if="isOwnAgenda && doctorGoogle?.connected" class="mt-3 text-xs text-success">
+                    Tu agenda está enlazada con Google Calendar ({{ doctorGoogle.email || 'cuenta conectada' }}). Puedes desenlazarla en Salud › Parámetros.
+                </p>
             </div>
 
             <div class="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_320px]">
@@ -1181,11 +1231,11 @@ onBeforeUnmount(() => {
                                 <span class="text-white-dark">Duración de cita</span>
                                 <select v-model.number="sidebarDuration" class="form-select form-select-sm w-[110px] text-xs">
                                     <option
-                                        v-for="opt in [15, 30, 45, 60, 90, 120, 150, 180, 240]"
-                                        :key="opt"
-                                        :value="opt"
+                                        v-for="minutes in durationMinutes"
+                                        :key="minutes"
+                                        :value="minutes"
                                     >
-                                        {{ opt === 60 ? '1 hora' : opt === 90 ? '1:30 h' : opt === 120 ? '2 horas' : opt === 150 ? '2:30 h' : opt === 180 ? '3 horas' : opt === 240 ? '4 horas' : opt + ' min' }}
+                                        {{ durationLabel(minutes) }}
                                     </option>
                                 </select>
                             </div>
@@ -1195,7 +1245,7 @@ onBeforeUnmount(() => {
                                 Consultando agenda...
                             </div>
                             <div v-else-if="sidebarFreeSlots.length === 0" class="text-sm text-center py-2 text-white-dark">
-                                No hay espacios libres de {{ sidebarDuration }} min dentro del horario normal.
+                                No hay espacios libres de {{ durationLabel(sidebarDuration) }} dentro del horario normal.
                             </div>
                             <div v-else class="flex max-h-[440px] flex-col gap-1 overflow-y-auto pr-1">
                                 <button
@@ -1342,20 +1392,6 @@ onBeforeUnmount(() => {
                                                 </select>
                                             </div>
                                         </div>
-                                        <div v-if="durationMode === 'custom'" class="grid grid-cols-1 gap-4 md:grid-cols-3">
-                                            <div>
-                                                <label class="mb-1 block font-semibold">Minutos</label>
-                                                <input
-                                                    v-model.number="form.duration_minutes"
-                                                    type="number"
-                                                    min="75"
-                                                    max="240"
-                                                    step="15"
-                                                    class="form-input"
-                                                />
-                                                <p class="mt-1 text-xs text-white-dark">Usa múltiplos de 15 minutos. Máximo 240 minutos.</p>
-                                            </div>
-                                        </div>
 
                                         <div>
                                             <label class="mb-1 block font-semibold">Motivo</label>
@@ -1404,6 +1440,14 @@ onBeforeUnmount(() => {
                 </div>
             </Dialog>
         </TransitionRoot>
+
+        <DoctorGoogleLinkModal
+            :open="googleLinkOpen"
+            :doctor-id="currentDoctor?.code ?? null"
+            :doctor-name="currentDoctor?.name || ''"
+            :confirm-minutes="doctorGoogleConfirmMinutes"
+            @close="googleLinkOpen = false"
+        />
     </AppLayout>
 </template>
 
