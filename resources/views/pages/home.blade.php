@@ -75,20 +75,21 @@
         /* DEGRADADO ANTERIOR (solo azul claro): impersonizado y comentado por si se reutiliza más adelante */
         /* background: linear-gradient(100deg, rgba(59, 181, 254, 0.93) 0%, rgba(59, 181, 254, 0.78) 34%, rgba(59, 181, 254, 0.30) 62%, rgba(59, 181, 254, 0.04) 100%); */
 
-        /* Mismo degradado que el hero de las páginas internas (page-hero):
-           capa 1 (arriba) velo navy para contraste + capa 2 (abajo) azul claro de marca.
+        /* Mismo degradado que el hero de las páginas internas (page-hero),
+           con los colores del logotipo ERIOS: celeste #00A0F0 y navy #083058.
+           Capa 1 (arriba) velo navy para contraste + capa 2 (abajo) celeste de marca.
            En CSS la primera capa listada es la que se pinta encima. */
         background:
             linear-gradient(100deg,
-                    rgba(5, 29, 56, 0.72) 0%,
-                    rgba(5, 29, 56, 0.65) 45%,
-                    rgba(5, 29, 56, 0.15) 64%,
-                    rgba(5, 29, 56, 0) 78%),
+                    rgba(8, 48, 88, 0.72) 0%,
+                    rgba(8, 48, 88, 0.65) 45%,
+                    rgba(8, 48, 88, 0.15) 64%,
+                    rgba(8, 48, 88, 0) 78%),
             linear-gradient(100deg,
-                    rgba(59, 181, 254, 0.93) 0%,
-                    rgba(59, 181, 254, 0.78) 34%,
-                    rgba(59, 181, 254, 0.30) 62%,
-                    rgba(59, 181, 254, 0.04) 100%);
+                    rgba(0, 160, 240, 0.93) 0%,
+                    rgba(0, 160, 240, 0.78) 34%,
+                    rgba(0, 160, 240, 0.30) 62%,
+                    rgba(0, 160, 240, 0.04) 100%);
     }
     /* Altura contenida: siempre se nota que hay más secciones debajo */
     #slider-part { height: clamp(430px, 62vh, 560px); overflow: hidden; }

@@ -37,15 +37,15 @@
 
         /* Overlay degradado navy: sólido a la izquierda (donde está el texto),
            transparente a la derecha para que se vea la imagen */
+        /* Mismos colores del logotipo ERIOS: azul fuerte #0048B0, celeste #00A0F0 y navy #083058 */
         .erc-hero__overlay {
             position: absolute;
             inset: 0;
-            /* Mismo degradado que el slider del home (color y paradas idénticas) */
             background: linear-gradient(100deg,
-                    rgba(59, 181, 254, 0.93) 0%,
-                    rgba(59, 181, 254, 0.78) 34%,
-                    rgba(59, 181, 254, 0.30) 62%,
-                    rgba(59, 181, 254, 0.04) 100%);
+                    rgba(0, 160, 240, 0.93) 0%,
+                    rgba(0, 160, 240, 0.78) 34%,
+                    rgba(0, 160, 240, 0.30) 62%,
+                    rgba(0, 160, 240, 0.04) 100%);
         }
         /* Velo navy localizado bajo la zona de texto (izquierda): garantiza
            contraste AA del texto blanco/amarillo sin alterar el degradado azul,
@@ -54,11 +54,12 @@
             content: '';
             position: absolute;
             inset: 0;
+            /* Velo navy del logo (#083058) para contraste del texto */
             background: linear-gradient(100deg,
-                    rgba(5, 29, 56, 0.72) 0%,
-                    rgba(5, 29, 56, 0.65) 45%,
-                    rgba(5, 29, 56, 0.15) 64%,
-                    rgba(5, 29, 56, 0) 78%);
+                    rgba(8, 48, 88, 0.72) 0%,
+                    rgba(8, 48, 88, 0.65) 45%,
+                    rgba(8, 48, 88, 0.15) 64%,
+                    rgba(8, 48, 88, 0) 78%);
         }
         .erc-hero__overlay::after {
             content: '';
@@ -163,8 +164,8 @@
             /* En móvil el texto está centrado: velo uniforme vertical para mantener el contraste */
             .erc-hero__overlay::before {
                 background: linear-gradient(180deg,
-                        rgba(5, 29, 56, 0.66) 0%,
-                        rgba(5, 29, 56, 0.58) 100%);
+                        rgba(8, 48, 88, 0.66) 0%,
+                        rgba(8, 48, 88, 0.58) 100%);
             }
         }
     </style>

@@ -6,7 +6,7 @@
 @section('page_styles')
 <style>
     /* ============ Catálogo de cursos: pestañas + paginación ============ */
-    .cursos-catalogo { padding: 24px 0 80px; }
+    .cursos-catalogo { padding: 0px 0 80px; }
 
     .cursos-catalogo__banner { width: 100%; border-radius: 14px; }
 
