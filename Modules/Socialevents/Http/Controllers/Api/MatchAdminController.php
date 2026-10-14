@@ -10,11 +10,15 @@ use Modules\Socialevents\Entities\EvenLocal;
 use Modules\Socialevents\Entities\EventEditionMatch;
 use Modules\Socialevents\Entities\EventEditionMatchParticipation;
 use Modules\Socialevents\Entities\EventEditionMatchPlayerStat;
+use Modules\Socialevents\Entities\EventEditionMatchSave;
 use Modules\Socialevents\Entities\EventEditionMatchSanction;
 use Modules\Socialevents\Entities\EventEditionMatchReport;
 use Modules\Socialevents\Entities\EventEditionTeam;
 use Modules\Socialevents\Entities\EventEditionTeamPlayer;
+use Modules\Socialevents\Services\MatchPerformanceService;
+use Modules\Socialevents\Services\PlayerSuspensionService;
 use Modules\Socialevents\Services\PositionTableService;
+use Modules\Socialevents\Support\TournamentLandingCache;
 
 class MatchAdminController extends Controller
 {
@@ -44,6 +48,7 @@ class MatchAdminController extends Controller
             WHEN status = 'closed' THEN 4
             WHEN status = 'walk_over' THEN 5
             WHEN status = 'cancelled' THEN 6
+            WHEN status = 'no_points' THEN 7
             END")
             ->orderBy('match_date', 'asc')
             ->get();
@@ -62,7 +67,7 @@ class MatchAdminController extends Controller
     public function store(Request $request, int $editionId): JsonResponse
     {
         $validated = $request->validate([
-            'status' => 'required|in:pending,live,finished,closed,walk_over,cancelled',
+            'status' => 'required|in:pending,live,finished,closed,walk_over,cancelled,no_points',
             'match_date' => 'nullable|date',
             'location' => 'nullable|string|max:255',
             'team_h_id' => 'nullable|integer',
@@ -107,7 +112,7 @@ class MatchAdminController extends Controller
         $match = EventEditionMatch::with(['equipolocal', 'equipovisitante'])->findOrFail($match);
 
         $validated = $request->validate([
-            'status' => 'sometimes|in:pending,live,finished,closed,walk_over,cancelled',
+            'status' => 'sometimes|in:pending,live,finished,closed,walk_over,cancelled,no_points',
             'match_date' => 'nullable|date',
             'location' => 'nullable|string|max:255',
             'team_h_id' => 'nullable|integer',
@@ -226,6 +231,17 @@ class MatchAdminController extends Controller
             'group_name' => $match->group_name,
             'round_number' => $match->round_number,
             'is_editable' => in_array($match->status, ['pending']),
+            'edition_id' => $match->edition_id,
+            'penalty_rounds' => $match->penalty_rounds,
+            'penalties' => $match->penalties ?? [],
+            // Prórroga y tiempos del partido
+            'extra_time_played' => (bool) $match->extra_time_played,
+            'score_regular_h' => $match->score_regular_h,
+            'score_regular_a' => $match->score_regular_a,
+            'half_minutes_override' => $match->half_minutes_override,
+            'halves_override' => $match->halves_override,
+            'extra_half_minutes_override' => $match->extra_half_minutes_override,
+            'timing' => app(MatchPerformanceService::class)->resolvedTiming($match),
         ];
     }
 
@@ -247,17 +263,33 @@ class MatchAdminController extends Controller
                     ->orderBy('jersey_number', 'asc')
                     ->get();
 
-                $players[$teamType === 'equipolocal' ? 'home' : 'away'] = $teamPlayers->map(function ($player) use ($match) {
+                // Suspensiones vigentes para este partido (mismo criterio que la web)
+                $suspendedMap = app(PlayerSuspensionService::class)
+                    ->getActiveSuspensionsMap((int) $match->edition_id, $match);
+
+                $players[$teamType === 'equipolocal' ? 'home' : 'away'] = $teamPlayers->map(function ($player) use ($match, $suspendedMap) {
+                    $suspension = $suspendedMap[$player->person_id] ?? null;
+
                     $p = [
                         'id' => $player->id,
                         'person_id' => $player->person_id,
                         'team_id' => $player->team_id,
                         'jersey_number' => $player->jersey_number,
                         'position' => $player->position,
+                        'role_in_team' => $player->role_in_team,
                         'name' => $player->person ? $player->person->full_name : 'Jugador',
                         'stats' => [],
                         'sanctions' => [],
                         'participation' => null,
+                        'is_suspended' => $suspension !== null,
+                        'suspension' => $suspension ? [
+                            'type' => $suspension->type,
+                            'type_label' => $suspension->type_label,
+                            'reason' => $suspension->reason,
+                            'matches_count' => $suspension->matches_count,
+                            'starts_at' => optional($suspension->starts_at)->format('Y-m-d'),
+                            'ends_at' => optional($suspension->ends_at)->format('Y-m-d'),
+                        ] : null,
                     ];
 
                     $stats = EventEditionMatchPlayerStat::where('match_id', $match->id)
@@ -297,6 +329,11 @@ class MatchAdminController extends Controller
                 'match' => $this->formatMatch($match),
                 'home_players' => $players['home'],
                 'away_players' => $players['away'],
+                'substitutions' => app(MatchPerformanceService::class)->substitutionsForMatch($match->id),
+                // Goles con su tiempo y minuto (uno por fila).
+                'goals' => app(MatchPerformanceService::class)->goalsForMatch($match->id),
+                // Atajadas con su tipo, pateador y tiempo (una por fila).
+                'saves' => app(MatchPerformanceService::class)->savesForMatch($match->id),
             ]
         ]);
     }
@@ -311,6 +348,56 @@ class MatchAdminController extends Controller
             'edition_id' => 'required|integer',
             'players_h' => 'nullable|array',
             'players_a' => 'nullable|array',
+            'penalty_rounds' => 'nullable|integer|min:1|max:10',
+            'penalties' => 'nullable|array',
+            'penalties.*.team' => 'nullable|in:local,visitor',
+            'penalties.*.result' => 'nullable|in:goal,miss,saved',
+            // Quién pateó y qué arquero atajó: sin estas reglas el valor se
+            // perdía al validar y la tanda quedaba sin autores.
+            'penalties.*.kicker' => 'nullable|integer',
+            'penalties.*.goalkeeper' => 'nullable|integer',
+            'price_red' => 'nullable|numeric',
+            'double_yellow' => 'nullable|numeric',
+            'yellow' => 'nullable|numeric',
+            // Desempeño individual: cambios, minutos y prórroga
+            'substitutions_h' => 'nullable|array',
+            'substitutions_a' => 'nullable|array',
+            // Goles con su tiempo (mismo formato que la web)
+            'goals_h' => 'nullable|array',
+            'goals_h.*.player_id' => 'nullable|integer',
+            'goals_h.*.period' => 'nullable|string|max:20',
+            'goals_h.*.minute_in_period' => 'nullable|integer|min:0',
+            'goals_h.*.goal_type' => 'nullable|string|max:20',
+            'goals_h.*.assist_player_id' => 'nullable|integer',
+            'goals_h.*.is_own_goal' => 'nullable|boolean',
+            'goals_a' => 'nullable|array',
+            'goals_a.*.player_id' => 'nullable|integer',
+            'goals_a.*.period' => 'nullable|string|max:20',
+            'goals_a.*.minute_in_period' => 'nullable|integer|min:0',
+            'goals_a.*.goal_type' => 'nullable|string|max:20',
+            'goals_a.*.assist_player_id' => 'nullable|integer',
+            'goals_a.*.is_own_goal' => 'nullable|boolean',
+            // Atajadas con su detalle (tipo, pateador y tiempo)
+            'saves_h' => 'nullable|array',
+            'saves_h.*.player_id' => 'nullable|integer',
+            'saves_h.*.period' => 'nullable|string|max:20',
+            'saves_h.*.minute_in_period' => 'nullable|integer|min:0',
+            'saves_h.*.save_type' => 'nullable|string|max:20',
+            'saves_h.*.is_penalty' => 'nullable|boolean',
+            'saves_h.*.shooter_player_id' => 'nullable|integer',
+            'saves_a' => 'nullable|array',
+            'saves_a.*.player_id' => 'nullable|integer',
+            'saves_a.*.period' => 'nullable|string|max:20',
+            'saves_a.*.minute_in_period' => 'nullable|integer|min:0',
+            'saves_a.*.save_type' => 'nullable|string|max:20',
+            'saves_a.*.is_penalty' => 'nullable|boolean',
+            'saves_a.*.shooter_player_id' => 'nullable|integer',
+            'extra_time_played' => 'nullable|boolean',
+            'score_regular_h' => 'nullable|integer|min:0',
+            'score_regular_a' => 'nullable|integer|min:0',
+            'half_minutes_override' => 'nullable|integer|min:1|max:200',
+            'halves_override' => 'nullable|integer|min:1|max:4',
+            'extra_half_minutes_override' => 'nullable|integer|min:1|max:60',
         ]);
 
         // Bloqueo: jugadores suspendidos no pueden participar en el acta
@@ -326,32 +413,165 @@ class MatchAdminController extends Controller
             ], 422);
         }
 
-        DB::transaction(function () use ($match, $validated) {
+        $hasPenalties = ! empty($validated['penalties']);
+        $priceRed = $validated['price_red'] ?? 0;
+        $priceDoubleYellow = $validated['double_yellow'] ?? 0;
+        $priceYellow = $validated['yellow'] ?? 0;
+
+        $performance = app(MatchPerformanceService::class);
+
+        // Los tiempos del partido se aplican en memoria para validar los cambios
+        // antes de escribir: web y móvil comparten el mismo criterio.
+        $match->fill([
+            'extra_time_played' => filter_var($validated['extra_time_played'] ?? false, FILTER_VALIDATE_BOOLEAN),
+            'half_minutes_override' => $validated['half_minutes_override'] ?? null,
+            'halves_override' => $validated['halves_override'] ?? null,
+            'extra_half_minutes_override' => $validated['extra_half_minutes_override'] ?? null,
+        ]);
+
+        $timing = $performance->resolvedTiming($match);
+
+        $playersH = $validated['players_h'] ?? [];
+        $playersA = $validated['players_a'] ?? [];
+        $teamHId = (int) $match->team_h_id;
+        $teamAId = (int) $match->team_a_id;
+        $editionId = (int) $match->edition_id;
+
+        $subsH = $performance->prepareSubstitutions($validated['substitutions_h'] ?? [], [
+            'team_id' => $teamHId,
+            'edition_id' => $editionId,
+            'roster' => $performance->roster($editionId, $teamHId),
+            'roles' => $performance->rolesFrom($playersH),
+            'timing' => $timing,
+            'field' => 'substitutions_h',
+        ]);
+
+        $subsA = $performance->prepareSubstitutions($validated['substitutions_a'] ?? [], [
+            'team_id' => $teamAId,
+            'edition_id' => $editionId,
+            'roster' => $performance->roster($editionId, $teamAId),
+            'roles' => $performance->rolesFrom($playersA),
+            'timing' => $timing,
+            'field' => 'substitutions_a',
+        ]);
+
+        // Los minutos se recalculan desde la alineación y los cambios solo cuando
+        // el acta envía ese bloque (mismo criterio que los goles y las atajadas):
+        // la app que todavía no lo manda conserva los minutos de su formulario.
+        $hasSubstitutions = array_key_exists('substitutions_h', $validated)
+            || array_key_exists('substitutions_a', $validated);
+
+        $minutesH = $hasSubstitutions ? $performance->computeMinutes($timing, $performance->rolesFrom($playersH), $subsH) : [];
+        $minutesA = $hasSubstitutions ? $performance->computeMinutes($timing, $performance->rolesFrom($playersA), $subsA) : [];
+
+        // Goles con su tiempo: solo se reemplazan cuando el acta los envía.
+        $hasGoals = array_key_exists('goals_h', $validated) || array_key_exists('goals_a', $validated);
+
+        $goalsH = $performance->prepareGoals($validated['goals_h'] ?? [], [
+            'team_id' => $teamHId,
+            'edition_id' => $editionId,
+            'roster' => $performance->roster($editionId, $teamHId),
+            'roles' => $performance->rolesFrom($playersH),
+            'timing' => $timing,
+            'field' => 'goals_h',
+        ]);
+
+        $goalsA = $performance->prepareGoals($validated['goals_a'] ?? [], [
+            'team_id' => $teamAId,
+            'edition_id' => $editionId,
+            'roster' => $performance->roster($editionId, $teamAId),
+            'roles' => $performance->rolesFrom($playersA),
+            'timing' => $timing,
+            'field' => 'goals_a',
+        ]);
+
+        // Atajadas con su detalle: solo se reemplazan cuando el acta las envía.
+        $hasSaves = array_key_exists('saves_h', $validated) || array_key_exists('saves_a', $validated);
+
+        $savesH = $performance->prepareSaves($validated['saves_h'] ?? [], [
+            'team_id' => $teamHId,
+            'edition_id' => $editionId,
+            'roster' => $performance->roster($editionId, $teamHId),
+            'roles' => $performance->rolesFrom($playersH),
+            'rival_roster' => $performance->roster($editionId, $teamAId),
+            'rival_roles' => $performance->rolesFrom($playersA),
+            'timing' => $timing,
+            'has_penalties' => $hasPenalties,
+            'field' => 'saves_h',
+        ]);
+
+        $savesA = $performance->prepareSaves($validated['saves_a'] ?? [], [
+            'team_id' => $teamAId,
+            'edition_id' => $editionId,
+            'roster' => $performance->roster($editionId, $teamAId),
+            'roles' => $performance->rolesFrom($playersA),
+            'rival_roster' => $performance->roster($editionId, $teamHId),
+            'rival_roles' => $performance->rolesFrom($playersH),
+            'timing' => $timing,
+            'has_penalties' => $hasPenalties,
+            'field' => 'saves_a',
+        ]);
+
+        // Con el detalle presente, el total por jugador sale de él.
+        $goalsMapH = $hasGoals ? $performance->goalsMapForRoster($playersH, $goalsH) : [];
+        $goalsMapA = $hasGoals ? $performance->goalsMapForRoster($playersA, $goalsA) : [];
+
+        // La asistencia se registra dentro del gol: con el detalle presente, el
+        // asistente del gol es la única fuente y el acta ya no la manda aparte.
+        $assistsMapH = $hasGoals ? $performance->assistsMapForRoster($playersH, $goalsH) : [];
+        $assistsMapA = $hasGoals ? $performance->assistsMapForRoster($playersA, $goalsA) : [];
+
+        $savesMapH = $hasSaves ? $performance->savesMapForRoster($playersH, $savesH) : [];
+        $savesMapA = $hasSaves ? $performance->savesMapForRoster($playersA, $savesA) : [];
+
+        DB::transaction(function () use ($match, $validated, $hasPenalties, $priceRed, $priceDoubleYellow, $priceYellow, $performance, $subsH, $subsA, $minutesH, $minutesA, $playersH, $playersA, $teamHId, $teamAId, $hasGoals, $goalsH, $goalsA, $goalsMapH, $goalsMapA, $assistsMapH, $assistsMapA, $hasSaves, $savesH, $savesA, $savesMapH, $savesMapA) {
             $match->update([
                 'score_h' => $validated['score_h'],
                 'score_a' => $validated['score_a'],
                 'status' => 'finished',
                 'original_score' => $validated['score_h'] . '-' . $validated['score_a'],
+                'penalty_rounds' => $hasPenalties ? ($validated['penalty_rounds'] ?? null) : null,
+                'penalties' => $hasPenalties ? $validated['penalties'] : null,
+                'extra_time_played' => filter_var($validated['extra_time_played'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                'score_regular_h' => $validated['score_regular_h'] ?? null,
+                'score_regular_a' => $validated['score_regular_a'] ?? null,
+                'half_minutes_override' => $validated['half_minutes_override'] ?? null,
+                'halves_override' => $validated['halves_override'] ?? null,
+                'extra_half_minutes_override' => $validated['extra_half_minutes_override'] ?? null,
             ]);
 
-            $teamHId = $match->team_h_id;
-            $teamAId = $match->team_a_id;
+            $performance->syncSubstitutions($match, $subsH, $subsA);
+
+            // Goles con su tiempo y minuto (el detalle manda sobre el contador)
+            if ($hasGoals) {
+                $performance->syncGoals($match, $goalsH, $goalsA);
+            }
+
+            // Atajadas con su detalle (el detalle manda sobre el contador)
+            if ($hasSaves) {
+                $performance->syncSaves($match, $savesH, $savesA);
+            }
 
             if (isset($validated['players_h'])) {
-                $this->savePlayerCards($match->id, $validated['players_h']);
-                $this->savePlayerStats($match->id, $validated['players_h'], $teamHId, $validated['score_a'] == 0);
-                $this->saveMatchPlayerParticipated($validated['players_h'], $match->id);
+                $this->savePlayerCards($match->id, $playersH, $priceRed, $priceDoubleYellow, $priceYellow);
+                $this->savePlayerStats($match->id, $playersH, $teamHId, $validated['score_a'] == 0, $minutesH, $goalsMapH, $assistsMapH, $savesMapH);
+                $this->saveMatchPlayerParticipated($playersH, $match->id);
             }
 
             if (isset($validated['players_a'])) {
-                $this->savePlayerCards($match->id, $validated['players_a']);
-                $this->savePlayerStats($match->id, $validated['players_a'], $teamAId, $validated['score_h'] == 0);
-                $this->saveMatchPlayerParticipated($validated['players_a'], $match->id);
+                $this->savePlayerCards($match->id, $playersA, $priceRed, $priceDoubleYellow, $priceYellow);
+                $this->savePlayerStats($match->id, $playersA, $teamAId, $validated['score_h'] == 0, $minutesA, $goalsMapA, $assistsMapA, $savesMapA);
+                $this->saveMatchPlayerParticipated($playersA, $match->id);
             }
 
             // Recalcular tabla de posiciones
             $this->positionService->updateTablePositions($validated['edition_id']);
         });
+
+        // La landing cachea el torneo (tabla y rankings): al guardar desde la app
+        // hay que soltarlo para que la web muestre las estadísticas corregidas y
+        // no el ranking viejo durante los próximos minutos.
+        TournamentLandingCache::forget((int) $match->edition_id);
 
         return response()->json([
             'success' => true,
@@ -360,7 +580,7 @@ class MatchAdminController extends Controller
         ]);
     }
 
-    private function savePlayerCards($matchId, $players)
+    private function savePlayerCards($matchId, $players, $priceRed = 0, $priceDoubleYellow = 0, $priceYellow = 0)
     {
         foreach ($players as $p) {
             if (!isset($p['person_id'])) continue;
@@ -378,6 +598,7 @@ class MatchAdminController extends Controller
                     'player_id' => $p['person_id'],
                     'type' => 'red',
                     'minute' => $p['red_card_minute'] ?? null,
+                    'amount_fine' => $priceRed,
                 ]);
             }
 
@@ -386,12 +607,14 @@ class MatchAdminController extends Controller
                     'match_id' => $matchId,
                     'player_id' => $p['person_id'],
                     'type' => 'double_yellow',
+                    'amount_fine' => $priceDoubleYellow,
                 ]);
                 for ($i = 1; $i <= 2; $i++) {
                     EventEditionMatchSanction::create([
                         'match_id' => $matchId,
                         'player_id' => $p['person_id'],
                         'type' => 'yellow',
+                        'amount_fine' => $priceYellow,
                     ]);
                 }
             } elseif ($yellowCount === 1) {
@@ -399,27 +622,65 @@ class MatchAdminController extends Controller
                     'match_id' => $matchId,
                     'player_id' => $p['person_id'],
                     'type' => 'yellow',
+                    'amount_fine' => $priceYellow,
                 ]);
             }
         }
     }
 
-    private function savePlayerStats($matchId, $players, $teamId, $isCleanSheet)
+    /**
+     * Minuto que se guarda: el manual si el operador lo marcó así y, si no, el
+     * calculado desde la alineación y los cambios.
+     */
+    private function resolveMinutes(array $player, array $minutesMap): int
+    {
+        $personId = (int) ($player['person_id'] ?? 0);
+
+        if (($player['minutes_manual'] ?? false) && $personId) {
+            return max(0, (int) ($player['minutes_played'] ?? 0));
+        }
+
+        if (array_key_exists($personId, $minutesMap)) {
+            return max(0, (int) $minutesMap[$personId]);
+        }
+
+        return max(0, (int) ($player['minutes_played'] ?? 0));
+    }
+
+    private function savePlayerStats($matchId, $players, $teamId, $isCleanSheet, array $minutesMap = [], array $goalsMap = [], array $assistsMap = [], array $savesMap = [])
     {
         if (!$players) return;
 
         foreach ($players as $p) {
-            if (!isset($p['person_id']) || !isset($p['match_role'])) continue;
+            if (!isset($p['person_id'])) continue;
+
+            // Corrección de acta: si un jugador se quita de la alineación, su
+            // estadística de este partido se elimina para que no queden goles,
+            // asistencias o MVP fantasma en los rankings.
+            if (!isset($p['match_role']) || $p['match_role'] === null || $p['match_role'] === '') {
+                EventEditionMatchPlayerStat::where('match_id', $matchId)
+                    ->where('player_id', $p['person_id'])
+                    ->delete();
+                continue;
+            }
 
             EventEditionMatchPlayerStat::updateOrCreate(
                 ['match_id' => $matchId, 'player_id' => $p['person_id']],
                 [
                     'team_id' => $teamId,
-                    'goals' => $p['goals'] ?? 0,
-                    'assists' => $p['assists'] ?? 0,
-                    'saves' => $p['saves'] ?? 0,
+                    // El detalle de goles manda cuando el acta lo envió.
+                    'goals' => array_key_exists((int) $p['person_id'], $goalsMap)
+                        ? (int) $goalsMap[(int) $p['person_id']]
+                        : ($p['goals'] ?? 0),
+                    'assists' => array_key_exists((int) $p['person_id'], $assistsMap)
+                        ? (int) $assistsMap[(int) $p['person_id']]
+                        : ($p['assists'] ?? 0),
+                    // El detalle de atajadas manda cuando el acta lo envió.
+                    'saves' => array_key_exists((int) $p['person_id'], $savesMap)
+                        ? (int) $savesMap[(int) $p['person_id']]
+                        : ($p['saves'] ?? 0),
                     'clean_sheet' => $isCleanSheet ? 1 : 0,
-                    'minutes_played' => $p['minutes_played'] ?? 0,
+                    'minutes_played' => $this->resolveMinutes($p, $minutesMap),
                     'is_mvp' => $p['is_mvp'] ?? false,
                 ]
             );
@@ -429,7 +690,16 @@ class MatchAdminController extends Controller
     private function saveMatchPlayerParticipated($players, $matchId)
     {
         foreach ($players as $p) {
-            if (!isset($p['person_id']) || !isset($p['match_role'])) continue;
+            if (!isset($p['person_id'])) continue;
+
+            // Corrección de acta: un jugador retirado de la alineación también
+            // sale del acta, para que no cuente como partido jugado.
+            if (!isset($p['match_role']) || $p['match_role'] === null || $p['match_role'] === '') {
+                EventEditionMatchParticipation::where('match_id', $matchId)
+                    ->where('player_id', $p['person_id'])
+                    ->delete();
+                continue;
+            }
 
             EventEditionMatchParticipation::updateOrCreate(
                 ['match_id' => $matchId, 'player_id' => $p['person_id']],

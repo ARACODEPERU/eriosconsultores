@@ -1,5 +1,5 @@
 <script setup lang="ts">
-    import { ref, onMounted } from 'vue';
+    import { ref, computed, onMounted, onUnmounted, watchEffect } from 'vue';
     //import Sidebar from '@/Components/vristo/layout/Sidebar.vue';
     import Header from '@/Components/vristo/layout/Header.vue';
     import Footer from '@/Components/vristo/layout/Footer.vue';
@@ -11,15 +11,74 @@
     //import Sidebar from '@/Components/vristo/layout/Sidebar-Old.vue';
     import SidebarStudent from '@/Components/vristo/layout/Sidebar-Student.vue';
     import ChatBox from 'Modules/CRM/Resources/assets/js/Components/ChatBox.vue';
-    // Modo Super Editor: el engrane y el panel son unicos para toda la app; el
-    // modal de contrasena se monta aqui para que exista en cualquier pantalla.
+    import ForcePinChange from 'Modules/Health/Resources/assets/js/Components/ForcePinChange.vue';
+    // Modo Super Editor: el engrane y el panel son únicos para toda la app; el
+    // modal de contraseña se monta aquí para que exista en cualquier pantalla.
     import SuperEditorGear from 'Modules/Security/Resources/assets/js/Components/SuperEditor/Gear.vue';
     import SuperEditorPanel from 'Modules/Security/Resources/assets/js/Components/SuperEditor/Panel.vue';
     import SuperEditorPasswordModal from 'Modules/Security/Resources/assets/js/Components/SuperEditor/PasswordModal.vue';
+    import { variablesDeMarca } from '@/utils/colorMarca';
 
     const store = useAppStore();
     const userData = usePage().props.auth.user;
     const showTopButton = ref(false);
+
+    // Colores de marca de la instalación (Configuraciones → Branding). Sin
+    // colores guardados el estilo va vacío y el sistema usa la paleta de
+    // fábrica; con ellos, todo el ERP se pinta con la identidad del cliente.
+    const companyData = usePage().props.company;
+    const marcaEstilo = computed(() =>
+        variablesDeMarca({
+            primary: companyData?.brand_primary,
+            secondary: companyData?.brand_secondary,
+        })
+    );
+
+    /** Variables de marca que publica el layout (las mismas de resources/css/app.css). */
+    const VARIABLES_DE_MARCA = [
+        '--brand-primary',
+        '--brand-primary-light',
+        '--brand-secondary',
+        '--brand-secondary-light',
+    ];
+
+    /*
+     * Las variables se inyectan en el contenedor de la página (`marcaEstilo`) y,
+     * además, en el documento. ant-design-vue monta sus portales —tooltips,
+     * modales, desplegables— fuera de este contenedor, así que sin publicarlas en
+     * `:root` esos elementos no verían la marca y quedarían con colores fijos.
+     *
+     * Sin color guardado no se escribe nada: siguen valiendo los valores de
+     * fábrica que declara resources/css/app.css sobre `:root`.
+     */
+    watchEffect(() => {
+        if (typeof document === 'undefined') {
+            return;
+        }
+
+        const variables = marcaEstilo.value;
+        const raiz = document.documentElement;
+
+        for (const nombre of VARIABLES_DE_MARCA) {
+            if (variables[nombre]) {
+                raiz.style.setProperty(nombre, variables[nombre]);
+            } else {
+                raiz.style.removeProperty(nombre);
+            }
+        }
+    });
+
+    // Al salir del layout (cerrar sesión, por ejemplo) no se deja la marca pegada
+    // en el documento: otro layout pintaría con los colores de la empresa anterior.
+    onUnmounted(() => {
+        if (typeof document === 'undefined') {
+            return;
+        }
+
+        for (const nombre of VARIABLES_DE_MARCA) {
+            document.documentElement.style.removeProperty(nombre);
+        }
+    });
 
 
     onMounted(() => {
@@ -60,6 +119,7 @@
     <div
         class="main-section antialiased relative font-nunito text-sm font-normal"
         :class="[store.sidebar ? 'toggle-sidebar' : '', store.menu, store.layout, store.rtlClass]"
+        :style="marcaEstilo"
     >
         <!--  BEGIN MAIN CONTAINER  -->
         <div class="relative">
@@ -143,6 +203,7 @@
             </div>
         </div>
         <ChatBox />
+        <ForcePinChange />
 
         <!-- Modo Super Editor -->
         <SuperEditorGear />

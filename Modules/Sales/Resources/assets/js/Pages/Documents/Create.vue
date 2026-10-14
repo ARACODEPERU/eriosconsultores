@@ -670,7 +670,6 @@
             showCancelButton: true,
             confirmButtonText: 'Enviar',
             showLoaderOnConfirm: true,
-            clickOutside: false,
             padding: '2em',
             customClass: 'sweet-alerts',
             preConfirm: () => {
@@ -692,7 +691,8 @@
                     Swal2.showValidationMessage(msg);
                 });
             },
-            allowOutsideClick: () => !Swal2.isLoading()
+            allowOutsideClick: () => !Swal2.isLoading(),
+            backdrop: true
         }).then((result) => {
             if (result.isConfirmed && result.value && result.value.data && result.value.data.success) {
                 var cadena = "";
@@ -829,7 +829,7 @@
                                 <img v-if="company.logo == '/img/logo176x32.png'" style="width: 242px;height: 53.2333px;" class="inline-block h-auto ltr:mr-2 rtl:ml-2" :src="company.logo">
                                 <img v-else style="width: 242px;height: 53.2333px;" class="inline-block h-auto ltr:mr-2 rtl:ml-2" :src="asetUrl+'storage/'+company.logo">
                             </div>
-                            <p class="text-sm">Ancash, Chimbote<br>{{ company.fiscal_address }}</p>
+                            <p class="text-sm"><template v-if="company.city">{{ company.city }}<br></template>{{ company.fiscal_address }}</p>
                         </div>
                         <div class="text-4xl uppercase font-bold">
                             <select @change="getSeriesByDocumentType" v-model="formDocument.sale_documenttype_id" class="w-full appearance-none text-3xl rounded-xl text-center font-extrabold text-blue-800 border-4  py-6 px-4 bg-green-100">

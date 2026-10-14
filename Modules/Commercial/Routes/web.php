@@ -10,10 +10,21 @@ use Modules\Commercial\Http\Controllers\CommercialNegotiationController;
 use Modules\Commercial\Http\Controllers\CommercialNegotiationProcessController;
 use Modules\Commercial\Http\Controllers\CommercialNegotiationPublicController;
 use Modules\Commercial\Http\Controllers\CommercialNegotiationPaymentController;
+use Modules\Commercial\Http\Controllers\CommercialSettingController;
 
 Route::middleware(['auth', 'verified'])->prefix('commercial')->group(function () {
     Route::get('dashboard', [CommercialController::class, 'index'])
         ->name('comm_dashboard');
+
+    // Configuracion del modulo. La pestana de enlaces legales alimenta los checks
+    // obligatorios del formulario publico de una negociacion.
+    Route::middleware(['middleware' => 'permission:comm_configuracion_ver'])
+        ->get('settings', [CommercialSettingController::class, 'index'])
+        ->name('comm_settings');
+
+    Route::middleware(['middleware' => 'permission:comm_configuracion_editar'])
+        ->post('settings/legal', [CommercialSettingController::class, 'updateLegal'])
+        ->name('comm_settings_legal_update');
 
     Route::middleware(['middleware' => 'permission:comm_clientes_listado'])
         ->get('clients', [CommercialClientController::class, 'index'])
@@ -183,6 +194,10 @@ Route::middleware(['auth', 'verified'])->prefix('commercial')->group(function ()
     Route::middleware(['middleware' => 'permission:comm_negociaciones_verificar'])
         ->post('negotiations/process/{id}/complete', [CommercialNegotiationProcessController::class, 'complete'])
         ->name('comm_negotiations_process_complete');
+
+    Route::middleware(['middleware' => 'permission:comm_negociaciones_verificar'])
+        ->post('negotiations/process/{id}/emission-date', [CommercialNegotiationProcessController::class, 'saveEmissionDate'])
+        ->name('comm_negotiations_process_emission_date');
 
     Route::middleware(['middleware' => 'permission:comm_negociaciones_verificar'])
         ->post('negotiations/process/{id}/skip/{key}', [CommercialNegotiationProcessController::class, 'skipStep'])

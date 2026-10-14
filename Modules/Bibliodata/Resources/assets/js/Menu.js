@@ -9,9 +9,6 @@ import {
     faIdCard,
     faGauge,
 } from "@fortawesome/free-solid-svg-icons";
-// menuRoute() no lanza cuando la ruta no esta en el listado de Ziggy (modulo
-// deshabilitado o nombre desincronizado).
-import { menuRoute } from "@/utils/menuRoute";
 
 const menuBibliodata = {
     status: false,
@@ -21,7 +18,7 @@ const menuBibliodata = {
     permissions: "bib_dashboard",
     items: [
         {
-            route: menuRoute("bib_dashboard"),
+            route: route("bib_dashboard"),
             status: false,
             text: "Dashboard",
             icom: faGauge,
@@ -29,49 +26,49 @@ const menuBibliodata = {
             dashboard: true,
         },
         {
-            route: menuRoute("bib_authors"),
+            route: route("bib_authors"),
             status: false,
             text: "Autores",
             icom: faUserPen,
             permissions: "bib_autores_listar",
         },
         {
-            route: menuRoute("bib_categories"),
+            route: route("bib_categories"),
             status: false,
             text: "Categorías",
             icom: faGripVertical,
             permissions: "bib_categorias_listar",
         },
         {
-            route: menuRoute("bib_tags"),
+            route: route("bib_tags"),
             status: false,
             text: "Tags",
             icom: faTags,
             permissions: "bib_tags_listar",
         },
         {
-            route: menuRoute("bib_books"),
+            route: route("bib_books"),
             status: false,
             text: "Libros",
             icom: faBook,
             permissions: "bib_libros_listado",
         },
         {
-            route: menuRoute("bib_subscription_plans"),
+            route: route("bib_subscription_plans"),
             status: false,
             text: "Planes",
             icom: faLayerGroup,
             permissions: "bib_planes_listar",
         },
         {
-            route: menuRoute("bib_organizations"),
+            route: route("bib_organizations"),
             status: false,
             text: "Organizaciones",
             icom: faBuilding,
             permissions: "bib_organizaciones_listar",
         },
         {
-            route: menuRoute("bib_subscriptions"),
+            route: route("bib_subscriptions"),
             status: false,
             text: "Suscripciones",
             icom: faIdCard,

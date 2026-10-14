@@ -18,8 +18,10 @@
     import IconSettings from '@/Components/vristo/icon/icon-settings.vue';
 
     import IconCaretDown from '@/Components/vristo/icon/icon-caret-down.vue';
+    import IconDollarSignCircle from '@/Components/vristo/icon/icon-dollar-sign-circle.vue';
+    import ExchangeRateButton from '@/Components/vristo/layout/ExchangeRateButton.vue';
 
-    import { faCartPlus, faUserGroup, faChartPie, faDna } from  '@fortawesome/free-solid-svg-icons';
+    import { faCartPlus, faUserGroup, faChartPie } from  '@fortawesome/free-solid-svg-icons';
     import SuperEditorToggle from 'Modules/Security/Resources/assets/js/Components/SuperEditor/Toggle.vue';
     import ChatNotifications from 'Modules/CRM/Resources/assets/js/Components/ChatNotifications.vue';
     import ShoppingCartMenu from 'Modules/Onlineshop/Resources/assets/js/Components/ShoppingCartMenu.vue';
@@ -27,7 +29,12 @@
 
 
     const userData = usePage().props.auth.user;
+    const pageProps = usePage().props;
     const store = useAppStore();
+
+    // Interruptor multi-moneda (PTM0004): sin dólares no se muestra el botón
+    // "Cambio de moneda" en el header.
+    const multiCurrencyEnabled = computed(() => pageProps.multiCurrencyEnabled === true);
 
     const hasAnyRole = (rolesToCheck) => {
         return userData.roles.some(role => rolesToCheck.includes(role.name))
@@ -48,6 +55,12 @@
 
 
     const search = ref(false);
+
+    // Modal de tipo de cambio (Cambio de moneda)
+    const showExchangeRateModal = ref(false);
+    const closeExchangeRateModal = () => {
+        showExchangeRateModal.value = false;
+    };
 
     // multi language
     const i18n = reactive(useI18n());
@@ -169,9 +182,20 @@
                                 <span>Calendario</span>
                             </Link>
                         </li>
-                        <!-- Modo Super Editor (solo rol admin; el servidor decide) -->
+
+                       <!-- Modo Super Editor (solo rol admin; el servidor decide) -->
                         <li>
                             <SuperEditorToggle />
+                        </li>
+
+                        <li v-can="'invo_tipo_cambio'" v-show="multiCurrencyEnabled">
+                            <button type="button"
+                                class="flex items-center px-4 py-1.5 text-sm font-medium text-slate-600 bg-slate-100 border border-slate-200 rounded-full hover:bg-white hover:text-blue-600 hover:shadow-sm dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-700 transition-all"
+                                @click="showExchangeRateModal = true">
+                                <icon-dollar-sign-circle class="w-4 h-4 mr-2" />
+                                <span>Cambio de moneda</span>
+                            </button>
+
                         </li>
                         <!-- <li v-can="'empresa'">
                             <Link :href="route('company_show')"
@@ -260,15 +284,6 @@
                                         <Link :href="route('profile.edit')" class="dark:hover:text-white" @click="close()">
                                             <icon-user class="w-4.5 h-4.5 ltr:mr-2 rtl:ml-2 shrink-0" />
                                             Perfil
-                                        </Link>
-                                    </li>
-                                    <!-- Acceso directo a Configuraciones > Parametros del sistema:
-                                         la entrada del menu lateral vive dentro del modulo
-                                         "Configuraciones" y es facil no encontrarla. -->
-                                    <li v-can="'parametros'">
-                                        <Link :href="route('parameters')" class="dark:hover:text-white" @click="close()">
-                                            <font-awesome-icon :icon="faDna" class="w-4.5 h-4.5 ltr:mr-2 rtl:ml-2 shrink-0" />
-                                            Parámetros del sistema
                                         </Link>
                                     </li>
                                     <li>
@@ -399,5 +414,6 @@
                 </template>
             </ul>
         </div>
+        <ExchangeRateButton :show="showExchangeRateModal" :on-close="closeExchangeRateModal" />
     </header>
 </template>

@@ -73,11 +73,11 @@ createInertiaApp({
     setup({ el, App, props, plugin }) {
         const app = createApp({ render: () => h(App, props) })
             .use(plugin)
+            .use(pinia)
             .use(ZiggyVue, Ziggy)
             .use(VueTheMask)
             .use(VueGates)
             .use(Permissions, props.initialPage?.props)
-            .use(pinia)
             .use(i18n)
             .use(head)
             .use(TippyPlugin)
@@ -106,15 +106,16 @@ createInertiaApp({
             const token = page?.props?.csrf_token;
             setCsrfToken(token);
 
-            // Modo Super Editor: segundo punto de sincronizacion, justo despues de
-            // actualizar la pagina y antes de que Vue repinte, para que las
-            // directivas que se vuelvan a montar ya vean el modo.
+            // Segundo punto de sincronización del Modo Super Editor: se ejecuta
+            // justo después de actualizar la página y antes de que Vue repinte,
+            // así que las directivas que se vuelvan a montar ya ven el modo.
             syncSuperEditorFromPage(page?.props);
         });
 
         setCsrfToken(props.initialPage?.props?.csrf_token);
 
-        // Modo Super Editor: primer punto de sincronizacion, antes de montar.
+        // Primer punto de sincronización: antes de montar, porque las directivas
+        // v-can de la primera página se montan antes que cualquier componente.
         initSuperEditorState(pinia, props.initialPage?.props?.superEditor);
 
         return app.mount(el);

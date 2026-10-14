@@ -32,6 +32,16 @@ const canCancelNegotiation = computed(
     () => isNegotiationManager.value || props.negotiation.created_by === page.props.auth?.user?.id
 );
 
+// Estados posteriores a la confirmacion del alumno: ahi ya pueden existir la persona, su
+// cuenta de usuario, el alumno, la venta y el comprobante, asi que el borrado es sensible
+// y pide la contrasena de quien lo ejecuta. Una negociacion confirmada ademas solo la puede
+// borrar un administrador.
+const protectedStatuses = ["confirmada", "aprobada", "completada"];
+
+const requiresPassword = computed(() => protectedStatuses.includes(props.negotiation.status));
+
+const deleteBlocked = computed(() => props.negotiation.status === "confirmada" && !isNegotiationManager.value);
+
 const statusByValue = (value) => props.statuses.find((item) => item.value === value);
 
 const paymentMethodLabel = (value) => props.paymentMethods.find((item) => item.value === value)?.label || value;
@@ -89,6 +99,61 @@ const estadoClase = computed(() => {
 });
 
 const canVerify = computed(() => props.negotiation.status === "confirmada");
+
+// Fecha de emision del comprobante: por defecto la fecha en que el cliente registro sus
+// datos; el administrador puede ajustarla antes de aprobar (por ejemplo si el pago fue el
+// dia anterior). Se guarda al cambiarla y el proceso de aprobacion la usa para la venta y
+// el comprobante.
+const emissionDate = ref(
+    props.negotiation.document_emission_date
+        ? String(props.negotiation.document_emission_date).slice(0, 10)
+        : ""
+);
+const emissionSaving = ref(false);
+const emissionLocked = computed(() => Boolean(props.negotiation.sale_document_id));
+
+const saveEmissionDate = () => {
+    if (emissionLocked.value || !emissionDate.value) return;
+
+    emissionSaving.value = true;
+
+    axios.post(route("comm_negotiations_process_emission_date", props.negotiation.id), {
+        emission_date: emissionDate.value,
+    }).then((res) => {
+        if (!res.data?.success) {
+            Swal2.fire({
+                title: "No se pudo guardar",
+                text: res.data?.message || "Error al guardar la fecha de emision.",
+                icon: "error",
+                padding: "2em",
+                customClass: "sweet-alerts",
+            });
+            return;
+        }
+
+        Swal2.fire({
+            toast: true,
+            position: "top-end",
+            title: res.data.message || "Fecha actualizada",
+            icon: "success",
+            timer: 2200,
+            timerProgressBar: true,
+            showConfirmButton: false,
+            padding: "1em",
+            customClass: "sweet-alerts",
+        });
+    }).catch((error) => {
+        Swal2.fire({
+            title: "No se pudo guardar",
+            text: error.response?.data?.message || "Error de conexion",
+            icon: "error",
+            padding: "2em",
+            customClass: "sweet-alerts",
+        });
+    }).finally(() => {
+        emissionSaving.value = false;
+    });
+};
 
 const saleDocument = computed(() => props.negotiation.sale_document || null);
 
@@ -356,6 +421,68 @@ const cancel = () => {
     });
 };
 
+const destroy = () => {
+    const needsPassword = requiresPassword.value;
+    const preserved = documentNumber.value
+        ? `Se conservan el cliente, su cuenta de usuario, la venta y el comprobante ${documentNumber.value}, ademas de los registros del proceso.`
+        : "Se conservan el cliente, su cuenta de usuario, la venta, el comprobante y los registros del proceso.";
+
+    Swal2.fire({
+        title: "Eliminar negociacion?",
+        text: `Se eliminara permanentemente la negociacion ${props.negotiation.title}. ${preserved}${needsPassword ? " Ingresa tu contrasena para confirmar." : ""}`,
+        icon: "warning",
+        input: needsPassword ? "password" : undefined,
+        inputLabel: needsPassword ? "Contrasena del usuario que elimina" : undefined,
+        inputPlaceholder: needsPassword ? "Contrasena" : undefined,
+        inputAttributes: needsPassword ? { autocomplete: "current-password" } : undefined,
+        showCancelButton: true,
+        confirmButtonColor: "#d33",
+        cancelButtonColor: "#3085d6",
+        confirmButtonText: "Eliminar",
+        cancelButtonText: "Cancelar",
+        showLoaderOnConfirm: true,
+        padding: "2em",
+        customClass: "sweet-alerts",
+        preConfirm: (password) => {
+            if (needsPassword && !password) {
+                Swal2.showValidationMessage("Ingresa tu contrasena para confirmar la eliminacion.");
+                return false;
+            }
+
+            return axios.delete(route("comm_negotiations_destroy", props.negotiation.id), {
+                data: needsPassword ? { password } : {},
+            }).then((res) => {
+                if (res.data && !res.data.success) {
+                    Swal2.showValidationMessage(res.data.message || "Error al eliminar");
+                    return false;
+                }
+
+                return res.data;
+            }).catch((error) => {
+                const message = error.response?.data?.errors?.password?.[0]
+                    || error.response?.data?.message
+                    || "Error de conexion";
+
+                Swal2.showValidationMessage(message);
+                return false;
+            });
+        },
+        allowOutsideClick: () => !Swal2.isLoading(),
+    }).then((result) => {
+        if (!result.isConfirmed) return;
+
+        Swal2.fire({
+            title: "Negociacion eliminada",
+            text: result.value?.message || "Se elimino correctamente.",
+            icon: "success",
+            padding: "2em",
+            customClass: "sweet-alerts",
+        });
+
+        router.visit(route("comm_negotiations"));
+    });
+};
+
 const reactivate = () => {
     Swal2.fire({
         title: "Generar nuevo enlace?",
@@ -445,6 +572,35 @@ const reactivate = () => {
                         <p class="text-sm text-amber-700 dark:text-amber-300">
                             Revisa el voucher y los datos del cliente para aprobar o rechazar.
                         </p>
+
+                        <div class="mt-3">
+                            <label for="emission_date" class="block text-xs font-semibold uppercase text-amber-800 dark:text-amber-200">
+                                Fecha de emision del comprobante
+                            </label>
+                            <div class="mt-1 flex flex-wrap items-center gap-2">
+                                <input
+                                    id="emission_date"
+                                    v-model="emissionDate"
+                                    type="date"
+                                    class="form-input w-auto"
+                                    :disabled="emissionLocked || emissionSaving"
+                                    @change="saveEmissionDate"
+                                />
+                                <button
+                                    v-if="!emissionLocked"
+                                    type="button"
+                                    class="btn btn-outline-primary btn-sm"
+                                    :disabled="emissionSaving"
+                                    @click="saveEmissionDate"
+                                >
+                                    <IconLoader v-if="emissionSaving" class="mr-2 h-4 w-4 animate-spin" />
+                                    Guardar fecha
+                                </button>
+                            </div>
+                            <p class="mt-1 text-xs text-amber-700 dark:text-amber-300">
+                                Por defecto, la fecha en que el cliente registro sus datos. Ajustala si el pago fue otro dia.
+                            </p>
+                        </div>
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <button type="button" class="btn btn-success" v-can="'comm_negociaciones_verificar'" :disabled="processing" @click="approve">
@@ -627,12 +783,16 @@ const reactivate = () => {
                             <dd class="dark:text-white">{{ negotiation.client_data?.ocupacion || '--' }}</dd>
                         </div>
                         <div>
+                            <dt class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Profesion</dt>
+                            <dd class="dark:text-white">{{ negotiation.client_data?.profesion || '--' }}</dd>
+                        </div>
+                        <div>
                             <dt class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Empresa</dt>
                             <dd class="dark:text-white">{{ negotiation.client_data?.company || '--' }}</dd>
                         </div>
                         <div>
                             <dt class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Industria</dt>
-                            <dd class="dark:text-white">{{ negotiation.client_data?.industry || negotiation.client_data?.profession || '--' }}</dd>
+                            <dd class="dark:text-white">{{ negotiation.client_data?.industry || '--' }}</dd>
                         </div>
                         <div>
                             <dt class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Fecha de nacimiento</dt>
@@ -741,6 +901,19 @@ const reactivate = () => {
                     >
                         <FontAwesomeIcon :icon="faTrashAlt" class="mr-2 h-4 w-4" />
                         Cancelar negociacion
+                    </button>
+
+                    <button
+                        v-if="canCancelNegotiation"
+                        type="button"
+                        v-can="'comm_negociaciones_eliminar'"
+                        class="btn btn-outline-danger btn-sm mt-3 w-full"
+                        :disabled="deleteBlocked"
+                        :title="deleteBlocked ? 'Solo un administrador puede eliminar: el alumno confirmo sus datos' : 'Eliminar la negociacion y conservar sus registros'"
+                        @click="destroy"
+                    >
+                        <FontAwesomeIcon :icon="faTrashAlt" class="mr-2 h-4 w-4" />
+                        Eliminar negociacion
                     </button>
                 </div>
             </div>

@@ -1,5 +1,4 @@
 import { faUserGear } from "@fortawesome/free-solid-svg-icons";
-import { menuRoute } from "@/utils/menuRoute";
 
 const menuHelpdesk = {
     status: false,
@@ -9,19 +8,19 @@ const menuHelpdesk = {
     permissions: "help_dashboard",
     items: [
         {
-            route: menuRoute("help-level.index"),
+            route: route("help-level.index"),
             status: false,
             text: "Niveles",
             permissions: "help_nivel",
         },
         {
-            route: menuRoute("helpdesk_incidents"),
+            route: route("helpdesk_incidents"),
             status: false,
             text: "Banco de Preguntas",
             permissions: "help_incidentes",
         },
         {
-            route: menuRoute("help-boards.index"),
+            route: route("help-boards.index"),
             status: false,
             text: "Tableros",
             permissions: "help_tableros",

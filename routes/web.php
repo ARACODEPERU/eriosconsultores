@@ -4,6 +4,7 @@ use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ComplaintsBookController;
 use App\Http\Controllers\CourseLandingPreviewController;
+use App\Http\Controllers\BrandingController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\KardexController;
@@ -183,6 +184,18 @@ Route::middleware('auth')->group(function () {
         'company/show',
         [CompanyController::class, 'show']
     )->name('company_show');
+
+    // Colores de marca de la instalacion (Configuraciones -> Branding). La
+    // entrada del menu lateral (Security/Menu.js) enlaza a `branding_show`.
+    Route::get(
+        'branding/show',
+        [BrandingController::class, 'show']
+    )->name('branding_show');
+
+    Route::post(
+        'branding/update',
+        [BrandingController::class, 'update']
+    )->name('branding_update');
 
     Route::post(
         'company/update_create',

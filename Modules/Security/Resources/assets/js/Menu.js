@@ -1,12 +1,15 @@
 import {
+    faBug,
     faGear,
     faBuilding,
+    faPalette,
     faDiamond,
     faBookmark,
     faLockOpen,
     faUser,
     faDna,
-    faClock
+    faClock,
+    faBell
 } from "@fortawesome/free-solid-svg-icons";
 
 const menuConfig = {
@@ -21,6 +24,13 @@ const menuConfig = {
             status: false,
             icom: faBuilding,
             text: "Empresa",
+            permissions: "empresa",
+        },
+        {
+            route: route("branding_show"),
+            status: false,
+            icom: faPalette,
+            text: "Branding",
             permissions: "empresa",
         },
         {
@@ -64,6 +74,20 @@ const menuConfig = {
             text: "Historial de Actividades",
             icom: faClock,
             permissions: "conf_historial_actividades",
+        },
+        {
+            route: route("security_alerts"),
+            status: false,
+            text: "Alertas",
+            icom: faBell,
+            permissions: "conf_alertas",
+        },
+        {
+            route: route("security_errors"),
+            status: false,
+            text: "Errores",
+            icom: faBug,
+            permissions: "conf_errores",
         },
 
     ],

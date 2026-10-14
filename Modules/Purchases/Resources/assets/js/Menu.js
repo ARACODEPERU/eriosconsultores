@@ -1,5 +1,4 @@
 import { faCartShopping, faHandshake } from "@fortawesome/free-solid-svg-icons";
-import { menuRoute } from "@/utils/menuRoute";
 
 const menuPurchases = {
     status: false,
@@ -9,14 +8,14 @@ const menuPurchases = {
     permissions: "purc_dashboard",
     items: [
         {
-            route: menuRoute("providers.index"),
+            route: route("providers.index"),
             status: false,
             text: "Proveedores",
             permissions: "proveedores",
             icom: faHandshake,
         },
         {
-            route: menuRoute("purc_documents_list"),
+            route: route("purc_documents_list"),
             status: false,
             text: "Documentos",
             permissions: "purc_documentos_listado",

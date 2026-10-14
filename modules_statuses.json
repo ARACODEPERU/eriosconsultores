@@ -11,5 +11,9 @@
     "Restaurant": true,
     "Socialevents": true,
     "CRM": true,
-    "Health": true
+    "Health": true,
+    "Bibliodata": true,
+    "Integrationhub": true,
+    "Commercial": true,
+    "Treasury": true
 }
