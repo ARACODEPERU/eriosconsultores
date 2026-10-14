@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Parameter;
+use App\Support\OrdenDeParametros;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -12,6 +13,20 @@ use Inertia\Inertia;
 
 class ParametersController extends Controller
 {
+    /**
+     * Tipo de control de los parametros confidenciales (credenciales).
+     *
+     * Se guardan como cualquier otro parametro, pero la pantalla nunca los
+     * vuelve a mostrar: solo indica que hay un valor guardado.
+     */
+    private const SECRET_CONTROL_TYPE = 'pwd';
+
+    /**
+     * Centinela de la mascara: si la interfaz manda este texto (o un valor
+     * vacio) no se pisa el valor guardado.
+     */
+    private const SECRET_PLACEHOLDER = '********';
+
     public function index()
     {
         $parameters = (new Parameter())->newQuery();
@@ -19,7 +34,10 @@ class ParametersController extends Controller
         if (request()->has('search')) {
             $parameters->where('description', 'Like', '%' . request()->input('search') . '%');
         }
-        $parameters = $parameters->get();
+
+        // Por prefijo y no por código como texto: 'P000023' (P) va antes que
+        // 'PW00001' (PW), y dentro de cada prefijo se ordena por el número.
+        $parameters = OrdenDeParametros::ordenar($parameters->get());
 
         $formatted = [];
 
@@ -41,15 +59,34 @@ class ParametersController extends Controller
             // Verificar estado de sincronizacion para archivos (P000026, P000027)
             $sync_status = $this->getFileSyncStatus($parameter);
 
+            // Interruptores (chx): normalizar a '1'/'0' para que el checkbox
+            // refleje el estado real guardado en BD ('true', '1', etc.).
+            $value_default = $parameter->value_default;
+            if ($parameter->control_type == 'chx') {
+                $value_default = in_array(strtolower(trim((string) $value_default)), ['1', 'true']) ? '1' : '0';
+            }
+
+            // Confidenciales (pwd): el valor NO viaja al navegador. Solo se
+            // informa si ya hay uno guardado para que la pantalla lo indique.
+            $is_secret = $parameter->control_type === self::SECRET_CONTROL_TYPE;
+            $has_value = trim((string) $parameter->value_default) !== '';
+
+            if ($is_secret) {
+                $value_default = null;
+            }
+
             array_push($formatted, [
                 'id' => $parameter->id,
                 'parameter_code' => $parameter->parameter_code,
+                // Prefijo del código: es como se agrupan las pestañas de la vista.
+                'prefix' => OrdenDeParametros::prefijo($parameter->parameter_code),
                 'description' => $parameter->description,
                 'control_type' => $parameter->control_type,
                 'json_query_data' => $json_query_data,
-                'value_default' => $parameter->value_default,
+                'value_default' => $value_default,
+                'is_secret' => $is_secret,
+                'has_value' => $has_value,
                 'sync_status' => $sync_status,
-                'selected_values' => $this->selectedValues($parameter) ?? [],
             ]);
         }
         //dd($formatted);
@@ -93,20 +130,35 @@ class ParametersController extends Controller
     public function edit($id)
     {
         $parameter = Parameter::find($id);
+
+        $is_secret = $this->isSecret($parameter);
+        $has_value = $this->hasStoredValue($parameter);
+
+        // El valor de un parametro confidencial no viaja al formulario: solo el
+        // aviso de que ya hay uno guardado.
+        if ($is_secret && $parameter) {
+            $parameter->value_default = null;
+        }
+
         return Inertia::render('Parameters/Edit', [
-            'parameter' => $parameter
+            'parameter' => $parameter,
+            'is_secret' => $is_secret,
+            'has_value' => $has_value,
         ]);
     }
 
     public function update(Request $request, $id)
     {
+        $parameter = Parameter::find($id);
+        $is_secret = $this->isSecret($parameter);
 
         $this->validate($request, [
             'parameter_code'        => 'required|max:10',
             'parameter_code'        => 'unique:parameters,parameter_code,' . $id,
             'description'           => 'required|max:255',
             'control_type'          => 'required',
-            'value_default'         => 'required'
+            // En un confidencial el campo vacio significa "no lo cambies".
+            'value_default'         => $is_secret ? 'nullable' : 'required'
         ]);
 
         $valor_seguro = $request->get('value_default');
@@ -117,14 +169,23 @@ class ParametersController extends Controller
             $valor_seguro = htmlspecialchars($value_default, ENT_QUOTES, 'UTF-8');
         }
 
-        $parameter = Parameter::find($id);
-        $parameter->update([
+        if (! $parameter) {
+            return;
+        }
+
+        $attributes = [
             'parameter_code'        => $request->get('parameter_code'),
             'description'           => $request->get('description'),
             'control_type'          => $request->get('control_type'),
             'json_query_data'       => $request->get('json_query_data'),
-            'value_default'         => $valor_seguro
-        ]);
+        ];
+
+        // Un confidencial que llega vacio conserva su valor guardado.
+        if (! ($is_secret && ! $this->isNewSecretValue((string) $valor_seguro))) {
+            $attributes['value_default'] = $valor_seguro;
+        }
+
+        $parameter->update($attributes);
 
         // Invalidar caches que dependen de valores de parametros (ej: API Key de OpenAI en P000025)
         Cache::forget('academic:openai-api-key:' . $request->get('parameter_code'));
@@ -141,29 +202,21 @@ class ParametersController extends Controller
         return json_encode($result);
     }
 
-    /**
-     * Guarda el valor por defecto de un parametro desde la lista de parametros.
-     *
-     * El valor viaja en el cuerpo de la peticion (no en la URL) para admitir
-     * textareas largos (robots.txt, llms.txt) y multiselecciones como JSON.
-     *
-     * Reemplaza al antiguo updateDefaultValue(), que era un GET de dos segmentos
-     * ({id}/{val}) al que el axios.post() del front nunca podia apuntar: guardar
-     * cualquier parametro desde la lista respondia 405.
-     */
-    public function updateDefaultValuePost(Request $request, $id)
+    public function updateDefaultValue($id, $val)
     {
-        $parameter = Parameter::findOrFail($id);
+        $parameter = Parameter::find($id);
 
-        $value = $request->input('value', $request->input('value_default', ''));
+        if (! $parameter) {
+            return;
+        }
 
-        // Multiseleccion (chq/chj): el front manda el arreglo de opciones marcadas.
-        if (is_array($value)) {
-            $value = json_encode(array_values($value));
+        // Confidencial sin valor nuevo: se conserva el guardado.
+        if ($this->isSecret($parameter) && ! $this->isNewSecretValue((string) $val)) {
+            return;
         }
 
         $parameter->update([
-            'value_default' => $value,
+            'value_default' => $val
         ]);
 
         // Invalidar caches que dependen de valores de parametros (ej: API Key de OpenAI en P000025)
@@ -171,27 +224,72 @@ class ParametersController extends Controller
 
         // Sincronizar archivos (robots.txt, llms.txt)
         $this->syncFileFromParameter($parameter);
+    }
+
+    /**
+     * Endpoint POST para guardar valores largos (textareas como robots.txt / llms.txt)
+     * desde la lista de parametros, evitando el limite de longitud de URL en GET.
+     *
+     * Tambien es el endpoint que usa la lista para los parametros confidenciales
+     * (pwd): un valor vacio o la mascara NO sobrescriben lo guardado.
+     */
+    public function updateDefaultValuePost(Request $request, $id)
+    {
+        $parameter = Parameter::find($id);
+
+        if (! $parameter) {
+            return response()->json(['success' => false, 'message' => 'El parametro no existe.'], 404);
+        }
+
+        $value = (string) $request->input('value_default', '');
+
+        if ($this->isSecret($parameter) && ! $this->isNewSecretValue($value)) {
+            return response()->json([
+                'success' => true,
+                'unchanged' => true,
+                'has_value' => $this->hasStoredValue($parameter),
+            ]);
+        }
+
+        $parameter->update([
+            'value_default' => $value
+        ]);
+
+        Cache::forget('academic:openai-api-key:' . $parameter->parameter_code);
+        $this->syncFileFromParameter($parameter);
 
         return response()->json([
             'success' => true,
-            'value_default' => $parameter->value_default,
-            'selected_values' => $this->selectedValues($parameter) ?? [],
+            'unchanged' => false,
+            'has_value' => trim($value) !== '',
         ]);
     }
 
     /**
-     * Opciones marcadas de los parametros de multiseleccion (chq/chj).
-     * Se guardan como JSON en value_default y el front las espera decodificadas.
+     * true si el parametro es confidencial (credenciales que no se muestran).
      */
-    private function selectedValues(Parameter $parameter): ?array
+    private function isSecret(?Parameter $parameter): bool
     {
-        if (!in_array($parameter->control_type, ['chq', 'chj'], true)) {
-            return null;
-        }
+        return $parameter !== null && $parameter->control_type === self::SECRET_CONTROL_TYPE;
+    }
 
-        $decoded = json_decode((string) $parameter->value_default, true);
+    /**
+     * true si el parametro ya tiene un valor guardado.
+     */
+    private function hasStoredValue(?Parameter $parameter): bool
+    {
+        return $parameter !== null && trim((string) $parameter->value_default) !== '';
+    }
 
-        return is_array($decoded) ? array_values($decoded) : [];
+    /**
+     * true si el valor recibido es un valor nuevo de verdad (no vacio y no la
+     * mascara). Es lo unico que puede reemplazar un valor confidencial.
+     */
+    private function isNewSecretValue(string $value): bool
+    {
+        $value = trim($value);
+
+        return $value !== '' && $value !== self::SECRET_PLACEHOLDER;
     }
 
     /**
