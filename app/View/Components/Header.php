@@ -11,10 +11,22 @@ class Header extends Component
 {
 
     protected $header;
+    protected $footer;
 
     public function __construct()
     {
         $this->header = CmsSection::where('component_id', 'cabecera_1')
+            ->join('cms_section_items', 'section_id', 'cms_sections.id')
+            ->join('cms_items', 'cms_section_items.item_id', 'cms_items.id')
+            ->select(
+                'cms_items.content',
+                'cms_section_items.position'
+            )
+            ->orderBy('cms_section_items.position')
+            ->get();
+
+        // Redes sociales compartidas con el footer (mismo CMS: pie_de_pagina_2)
+        $this->footer = CmsSection::where('component_id', 'pie_de_pagina_2')
             ->join('cms_section_items', 'section_id', 'cms_sections.id')
             ->join('cms_items', 'cms_section_items.item_id', 'cms_items.id')
             ->select(
@@ -28,7 +40,8 @@ class Header extends Component
     public function render(): View|Closure|string
     {
         return view('components.header', [
-            'header' => $this->header
+            'header' => $this->header,
+            'footer' => $this->footer
         ]);
     }
 }

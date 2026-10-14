@@ -3,7 +3,7 @@
 
         {{-- ======== Topbar ======== --}}
         <div class="erc-topbar d-none d-lg-block">
-            <div class="container">
+            <div class="container erc-container-wide">
                 <div class="erc-topbar__inner">
                     <div class="erc-topbar__contact">
                         <a href="mailto:{{ $header[0]->content }}" class="erc-topbar__item">
@@ -27,6 +27,18 @@
                         <a href="{{ $header[4]->content }}" target="_blank" rel="noopener noreferrer" class="erc-topbar__net" aria-label="LinkedIn">
                             <i class="fab fa-linkedin" aria-hidden="true"></i>
                         </a>
+                        <a href="{{ optional($footer->firstWhere('position', 8))->content ?? '#' }}" @if($footer->where('position', 8)->count()) target="_blank" rel="noopener noreferrer" @endif
+                            class="erc-topbar__net" aria-label="TikTok">
+                            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false" style="width: 12px; height: 12px; display: block;"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
+                        </a>
+                        <a href="{{ optional($footer->firstWhere('position', 9))->content ?? '#' }}" @if($footer->where('position', 9)->count()) target="_blank" rel="noopener noreferrer" @endif
+                            class="erc-topbar__net" aria-label="X (Twitter)">
+                            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false" style="width: 12px; height: 12px; display: block;"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/></svg>
+                        </a>
+                        <a href="{{ optional($footer->firstWhere('position', 10))->content ?? '#' }}" @if($footer->where('position', 10)->count()) target="_blank" rel="noopener noreferrer" @endif
+                            class="erc-topbar__net" aria-label="YouTube">
+                            <i class="fab fa-youtube" aria-hidden="true"></i>
+                        </a>
                     </div>
                 </div>
             </div>
@@ -34,7 +46,7 @@
 
         {{-- ======== Navbar ======== --}}
         <div class="erc-nav">
-            <div class="container">
+            <div class="container erc-container-wide">
                 <nav class="navbar navbar-expand-lg erc-nav__bar">
                     <a class="navbar-brand erc-nav__brand" href="{{ route('index_main') }}">
                         <img src="{{ asset('storage/' . $header[5]->content) }}" alt="Logo"
@@ -59,24 +71,29 @@
                                     href="{{ route('web_about') }}">Nosotros</a>
                             </li>
                             <li class="nav-item">
-                                <a class="erc-nav__link {{ request()->routeIs('web_services') ? 'active' : '' }}"
-                                    href="{{ route('web_services') }}">Servicios</a>
-                            </li>
-                            <li class="nav-item">
                                 <a class="erc-nav__link {{ request()->routeIs('web_courses') ? 'active' : '' }}"
                                     href="{{ route('web_courses') }}">Escuela de Negocios</a>
                             </li>
-                            <li class="nav-item">
-                                <a class="erc-nav__link {{ request()->routeIs('web_teachers') ? 'active' : '' }}"
-                                    href="{{ route('web_teachers') }}">Docentes</a>
+                            <li class="nav-item dropdown erc-nav__drop">
+                                <a class="erc-nav__link {{ request()->routeIs('web_services') || request()->routeIs('web_leadership') || request()->routeIs('web_accounting') || request()->routeIs('web_taxcompliance') ? 'active' : '' }} dropdown-toggle"
+                                    href="#" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    Servicios
+                                </a>
+                                <div class="dropdown-menu erc-nav__dropmenu">
+                                    <a class="dropdown-item" href="{{ route('web_services') }}">Visión general</a>
+                                    <div class="dropdown-divider"></div>
+                                    <a class="dropdown-item {{ request()->routeIs('web_leadership') ? 'active' : '' }}" href="{{ route('web_leadership') }}">Liderazgo</a>
+                                    <a class="dropdown-item {{ request()->routeIs('web_accounting') ? 'active' : '' }}" href="{{ route('web_accounting') }}">Contable</a>
+                                    <a class="dropdown-item {{ request()->routeIs('web_taxcompliance') ? 'active' : '' }}" href="{{ route('web_taxcompliance') }}">Tax &amp; Compliance</a>
+                                </div>
                             </li>
                             <li class="nav-item">
                                 <a class="erc-nav__link {{ request()->routeIs('web_contact_us') ? 'active' : '' }}"
-                                    href="{{ route('web_contact_us') }}">Contáctanos</a>
+                                    href="{{ route('web_contact_us') }}">Contacto</a>
                             </li>
                             <li class="nav-item erc-nav__cta-item">
                                 <a class="erc-nav__cta" href="{{ route('login') }}" target="_blank" rel="noopener">
-                                    <i class="fa fa-graduation-cap" aria-hidden="true"></i> Campus Virtual
+                                    <i class="fa fa-graduation-cap" aria-hidden="true"></i> Aula Virtual
                                 </a>
                             </li>
                         </ul>
@@ -177,6 +194,8 @@
             background: #fff;
             box-shadow: 0 2px 18px rgba(14, 23, 38, 0.08);
         }
+        /* Contenedor más ancho que el estándar: el menú completo cabe con aire */
+        .erc-container-wide { max-width: 1400px; width: 100%; margin: 0 auto; }
         .erc-nav__bar { padding: 10px 0; margin: 0; }
         .erc-nav__brand { padding: 0; margin: 0; }
         .erc-nav__brand img { width: 165px; height: auto; display: block; }
@@ -185,20 +204,21 @@
         .erc-nav__link {
             position: relative;
             display: inline-block;
-            padding: 10px 14px !important;
+            padding: 10px 11px !important;
             font-family: 'Montserrat', sans-serif;
-            font-size: 13.5px;
+            font-size: 12px;
             font-weight: 600;
-            letter-spacing: 0.4px;
+            letter-spacing: 0.3px;
             text-transform: uppercase;
             color: #1d2025 !important;
             transition: color .3s ease;
+            white-space: nowrap;
         }
         .erc-nav__link::after {
             content: '';
             position: absolute;
-            left: 14px;
-            right: 14px;
+            left: 11px;
+            right: 11px;
             bottom: 2px;
             height: 2px;
             border-radius: 2px;
@@ -211,6 +231,59 @@
         .erc-nav__link:hover::after { transform: scaleX(1); }
         .erc-nav__link.active { color: #004aad !important; }
         .erc-nav__link.active::after { transform: scaleX(1); }
+
+        /* Dropdown de Servicios (áreas de práctica) */
+        .erc-nav__dropmenu {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            padding: 10px 6px;
+            margin: 0;
+            min-width: 220px;
+            border: 1px solid #eceff5;
+            border-radius: 14px;
+            box-shadow: 0 14px 34px rgba(14, 23, 38, 0.12);
+            background: #fff;
+        }
+        .erc-nav__dropmenu .dropdown-item {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            color: #1d2025;
+            border-radius: 8px;
+            padding: 9px 14px;
+            transition: all .25s ease;
+        }
+        .erc-nav__dropmenu .dropdown-item:hover,
+        .erc-nav__dropmenu .dropdown-item.active {
+            background: rgba(255, 198, 0, 0.14);
+            color: #004aad;
+        }
+        .erc-nav__dropmenu .dropdown-divider { margin: 6px 8px; border-color: #eceff5; }
+        .erc-nav__drop .dropdown-toggle::after {
+            margin-left: 7px;
+            vertical-align: middle;
+            transition: transform .3s ease;
+        }
+
+        /* Desktop: el submenú abre automáticamente al pasar el mouse sobre 'Servicios' */
+        @media (min-width: 992px) {
+            .erc-nav__drop:hover > .erc-nav__dropmenu,
+            .erc-nav__drop.show > .erc-nav__dropmenu {
+                display: block;
+            }
+            .erc-nav__drop:hover .dropdown-toggle::after { transform: rotate(180deg); }
+            /* Puente táctil de 8px para que el menú no se cierre al bajar el mouse */
+            .erc-nav__drop::after {
+                content: '';
+                position: absolute;
+                left: 0;
+                right: 0;
+                top: 100%;
+                height: 8px;
+            }
+            .erc-nav__drop { position: relative; }
+        }
 
         .erc-nav__cta-item { margin-left: 10px; }
         .erc-nav__cta {

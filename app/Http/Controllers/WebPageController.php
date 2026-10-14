@@ -272,6 +272,31 @@ class WebPageController extends Controller
         return view('pages.teachers');
     }
 
+    /**
+     * Página de Liderazgo: coaching y entrenamientos de Esther Rios
+     * (entrenadora certificada en liderazgo).
+     */
+    public function leadership()
+    {
+        return view('pages.leadership');
+    }
+
+    /**
+     * Página de servicios contables de Esther Rios.
+     */
+    public function accounting()
+    {
+        return view('pages.accounting');
+    }
+
+    /**
+     * Página TAX & COMPLIANCE Consultores Tributarios.
+     */
+    public function taxcompliance()
+    {
+        return view('pages.taxcompliance');
+    }
+
     public function contact()
     {
         // $banner = CmsSection::where('component_id', 'nosotros_banner_area_11')  //siempre cambiar el id del componente

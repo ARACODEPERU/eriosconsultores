@@ -40,10 +40,25 @@
         .erc-hero__overlay {
             position: absolute;
             inset: 0;
+            /* Mismo degradado que el slider del home (color y paradas idénticas) */
             background: linear-gradient(100deg,
-                    rgba(5, 29, 56, 0.95) 0%,
-                    rgba(7, 41, 77, 0.88) 45%,
-                    rgba(11, 58, 107, 0.55) 100%);
+                    rgba(59, 181, 254, 0.93) 0%,
+                    rgba(59, 181, 254, 0.78) 34%,
+                    rgba(59, 181, 254, 0.30) 62%,
+                    rgba(59, 181, 254, 0.04) 100%);
+        }
+        /* Velo navy localizado bajo la zona de texto (izquierda): garantiza
+           contraste AA del texto blanco/amarillo sin alterar el degradado azul,
+           que se mantiene intacto en el resto del hero */
+        .erc-hero__overlay::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(100deg,
+                    rgba(5, 29, 56, 0.72) 0%,
+                    rgba(5, 29, 56, 0.65) 45%,
+                    rgba(5, 29, 56, 0.15) 64%,
+                    rgba(5, 29, 56, 0) 78%);
         }
         .erc-hero__overlay::after {
             content: '';
@@ -97,11 +112,12 @@
             text-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
         }
         .erc-hero__subtitle {
-            color: rgba(255, 255, 255, 0.82);
+            color: rgba(255, 255, 255, 0.95);
             font-size: 16px;
             line-height: 28px;
             margin: 0 0 18px;
             max-width: 560px;
+            text-shadow: 0 2px 12px rgba(5, 29, 56, 0.55);
         }
 
         .erc-hero__crumbs ol {
@@ -114,8 +130,9 @@
         }
         .erc-hero__crumbs li {
             font-size: 13.5px;
-            font-weight: 500;
-            color: rgba(255, 255, 255, 0.85);
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.95);
+            text-shadow: 0 1px 8px rgba(5, 29, 56, 0.55);
         }
         .erc-hero__crumbs a {
             display: inline-flex;
@@ -143,6 +160,12 @@
             .erc-hero__title { font-size: 30px; }
             .erc-hero__eyebrow::before { left: 50%; transform: translateX(calc(-100% - 8px)); }
             .erc-hero__eyebrow::after { left: 50%; transform: translateX(8px); width: 35px; opacity: 1; }
+            /* En móvil el texto está centrado: velo uniforme vertical para mantener el contraste */
+            .erc-hero__overlay::before {
+                background: linear-gradient(180deg,
+                        rgba(5, 29, 56, 0.66) 0%,
+                        rgba(5, 29, 56, 0.58) 100%);
+            }
         }
     </style>
 </div>
