@@ -33,8 +33,8 @@ export default {
             }
         })
 
-        // Modo Super Editor: reemplaza v-can / v-permission despues de que
-        // VueGates registro las suyas (este plugin se instala despues de
+        // Modo Super Editor: reemplaza v-can / v-permission después de que
+        // VueGates registró las suyas (este plugin se instala después de
         // app.use(VueGates)), de modo que con el modo activo los elementos no se
         // oculten sino que queden marcados para el engrane. Con el modo apagado
         // el comportamiento es el mismo de siempre.

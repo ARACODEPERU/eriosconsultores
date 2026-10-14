@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, onMounted } from 'vue';
+    import { ref, computed, onMounted } from 'vue';
     import { useAppStore } from '@/stores/index';
     import { Link, usePage } from '@inertiajs/vue3';
     import IconCaretsDown from '@/Components/vristo/icon/icon-carets-down.vue';
@@ -78,8 +78,65 @@
             badge: 'new',
             color: 'warning',
             permissions: 'crm_chatbot'
+        },
+        {
+            id: 'common-questions',
+            title: 'Banco de Consultas',
+            icon: 'ri-question-answer-line',
+            route: route("crm_common_questions"),
+            badge: null,
+            color: 'secondary',
+            permissions: 'crm_dudas_comunes',
+            requiresSubscription: true,
+        },
+        {
+            id: 'testimonials',
+            title: 'Testimonios',
+            icon: 'ri-chat-quote-line',
+            route: route("aca_student_testimonials"),
+            badge: null,
+            color: 'warning',
+            permissions: 'aca_testimonios',
+            // Solo se muestra a alumnos con curso de pago o suscripción activa
+            requiresTestimonialsAccess: true,
+        },
+        {
+            id: 'job-offers',
+            title: 'Ofertas Laborales',
+            icon: 'ri-briefcase-line',
+            route: route("job_offers"),
+            badge: null,
+            color: 'primary',
+            requiresJobOffersAccess: true,
         }
     ]);
+
+    // Indica si el alumno tiene una suscripción activa y vigente
+    const hasActiveSubscription = computed(() => {
+        return page.props.hasActiveSubscription === true;
+    });
+
+    // Indica si el alumno puede ver Ofertas Laborales (programa de especialización o suscripción activa)
+    const canViewJobOffers = computed(() => {
+        return page.props.canViewJobOffers === true;
+    });
+
+    // Indica si el alumno puede ver el apartado Testimonios (misma regla de acceso)
+    const canLeaveTestimonials = computed(() => {
+        return page.props.canLeaveTestimonials === true;
+    });
+
+    // Menú visible: oculta las opciones cuyos requisitos de acceso no se cumplen.
+    // Ofertas Laborales siempre se muestra (bloqueado si no hay acceso).
+    const visibleStudentMenu = computed(() => {
+        return studentMenu.value.filter((menuItem) => {
+            if (menuItem.requiresTestimonialsAccess && !canLeaveTestimonials.value) {
+                return false;
+            }
+
+            return true;
+        });
+    });
 
     // Función para obtener clases de color dinámicas
     const getColorClasses = (colorType, type = 'bg') => {
@@ -278,8 +335,6 @@
         localStorage.setItem('studentChatExpanded', isChatExpanded.value);
     };
 
-
-
 </script>
 <template>
     <div :class="{ 'dark text-white-dark': store.semidark }">
@@ -324,9 +379,22 @@
                                 </div>
                             </div>
                         </div>
-                        <template v-for="menuItem in studentMenu" :key="menuItem.id">
+                        <template v-for="menuItem in visibleStudentMenu" :key="menuItem.id">
                             <li v-if="!menuItem.expandable" class="menu nav-item">
+                                <!-- Sin suscripción o acceso: se muestra el ícono pero bloqueado con tooltip -->
+                                <div
+                                    v-if="(menuItem.requiresSubscription && !hasActiveSubscription) || (menuItem.requiresJobOffersAccess && !canViewJobOffers)"
+                                    v-tippy="{ content: menuItem.requiresJobOffersAccess ? 'Disponible con Suscripción o Programa de Especialización' : 'Disponible con Suscripción', placement: 'bottom' }"
+                                    class="nav-link group w-full px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 text-gray-400 dark:text-gray-500 cursor-not-allowed select-none"
+                                >
+                                    <div class="flex items-center justify-between gap-2">
+                                        <i :class="[menuItem.icon, 'text-xl text-gray-300 dark:text-gray-600']"></i>
+                                        <span class="ltr:pl-3 rtl:pr-3 font-medium">{{ menuItem.title }}</span>
+                                        <i class="ri-lock-2-line text-gray-300 dark:text-gray-600"></i>
+                                    </div>
+                                </div>
                                 <Link
+                                    v-else
                                     :href="menuItem.route"
                                     @click="handleMenuClick(menuItem)"
                                     class="nav-link group px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200"
