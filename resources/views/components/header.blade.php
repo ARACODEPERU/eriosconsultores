@@ -49,8 +49,13 @@
             <div class="container erc-container-wide">
                 <nav class="navbar navbar-expand-lg erc-nav__bar">
                     <a class="navbar-brand erc-nav__brand" href="{{ route('index_main') }}">
-                        <img src="{{ asset('storage/' . $header[5]->content) }}" alt="Logo"
+                        {{-- Logo en claro: imagen del CMS (o su respaldo). En oscuro se
+                             muestra la versión negativa, la misma que usa el pie. --}}
+                        <img class="erc-nav__logo erc-nav__logo--light" src="{{ asset('storage/' . $header[5]->content) }}" alt="ERIOS CONSULTORES"
                             onerror="this.onerror=null;this.src='{{ asset('themes/webpage/images/logo-2.png') }}';">
+                        <img class="erc-nav__logo erc-nav__logo--dark"
+                            src="{{ asset('themes/webpage/images/Logo_Web_Negativo.png') }}"
+                            alt="ERIOS CONSULTORES">
                     </a>
                     <button class="navbar-toggler erc-nav__toggler" type="button" data-toggle="collapse"
                         data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
@@ -90,6 +95,18 @@
                             <li class="nav-item">
                                 <a class="erc-nav__link {{ request()->routeIs('web_contact_us') ? 'active' : '' }}"
                                     href="{{ route('web_contact_us') }}">Contacto</a>
+                            </li>
+                            <li class="nav-item erc-nav__theme-item">
+                                <button type="button" id="erc-theme-toggle" class="erc-theme-toggle"
+                                    aria-pressed="false" aria-label="Activar modo oscuro"
+                                    title="Activar modo oscuro">
+                                    {{-- En modo claro se muestra la luna (pulsa para ir a oscuro);
+                                         en oscuro, el sol. --}}
+                                    <i class="fa fa-moon erc-theme-toggle__icon erc-theme-toggle__icon--moon"
+                                        aria-hidden="true"></i>
+                                    <i class="fa fa-sun erc-theme-toggle__icon erc-theme-toggle__icon--sun"
+                                        aria-hidden="true"></i>
+                                </button>
                             </li>
                             <li class="nav-item erc-nav__cta-item">
                                 <a class="erc-nav__cta" href="{{ route('login') }}" target="_blank" rel="noopener">
@@ -328,6 +345,58 @@
             box-shadow: 0 8px 20px rgba(8, 48, 88, 0.35);
         }
 
+        /* ---- Logo según tema ----
+           Selectores con la clase de la marca para ganar a la regla genérica
+           .erc-nav__brand img (que fija display: block). ---- */
+        .erc-nav__brand .erc-nav__logo--dark { display: none; }
+        html[data-theme="dark"] .erc-nav__brand .erc-nav__logo--light { display: none; }
+        html[data-theme="dark"] .erc-nav__brand .erc-nav__logo--dark { display: block; }
+
+        /* ---- Interruptor de tema (claro/oscuro) ----
+           En modo claro el botón muestra la luna ("pasa a oscuro"); en modo
+           oscuro muestra el sol. ---- */
+        .erc-nav__theme-item { margin-left: 8px; }
+        .erc-theme-toggle {
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #e3e8f0;
+            border-radius: 50%;
+            background: #f6f9fd;
+            color: #07294d;
+            font-size: 16px;
+            line-height: 1;
+            cursor: pointer;
+            transition: background .3s ease, color .3s ease, border-color .3s ease, transform .3s ease;
+        }
+        .erc-theme-toggle:hover {
+            background: #07294d;
+            border-color: #07294d;
+            color: #ffc600;
+            transform: translateY(-2px);
+        }
+        .erc-theme-toggle:focus-visible {
+            outline: 2px solid #004aad;
+            outline-offset: 2px;
+        }
+        html[data-theme="dark"] .erc-theme-toggle {
+            background: #1b2a44;
+            border-color: #33415a;
+            color: #ffc600;
+        }
+        html[data-theme="dark"] .erc-theme-toggle:hover {
+            background: #ffc600;
+            border-color: #ffc600;
+            color: #07294d;
+        }
+        /* Solo se pinta el icono del tema activo */
+        .erc-theme-toggle__icon--sun { display: none; }
+        html[data-theme="dark"] .erc-theme-toggle__icon--moon { display: none; }
+        html[data-theme="dark"] .erc-theme-toggle__icon--sun { display: block; }
+
         /* ---- Toggler móvil ---- */
         .erc-nav__toggler {
             border: 2px solid #004aad;
@@ -353,9 +422,43 @@
             .erc-nav__link { display: block; padding: 10px 8px !important; }
             .erc-nav__link::after { display: none; }
             .erc-nav__cta-item { margin: 8px 0 0; }
+            .erc-nav__theme-item { margin: 10px 0 0; }
             .erc-nav__brand img { width: 140px; }
         }
     </style>
+
+    <script>
+        /* Interruptor de tema. El sitio arranca en claro (ver layout) y la
+           preferencia se guarda en localStorage. */
+        (function () {
+            var root = document.documentElement;
+            var btn = document.getElementById('erc-theme-toggle');
+            if (!btn) return;
+            var moon = btn.querySelector('.erc-theme-toggle__icon--moon');
+            var sun = btn.querySelector('.erc-theme-toggle__icon--sun');
+
+            function isDark() { return root.getAttribute('data-theme') === 'dark'; }
+
+            function paint() {
+                var dark = isDark();
+                var next = dark ? 'Activar modo claro' : 'Activar modo oscuro';
+                btn.setAttribute('aria-pressed', dark ? 'true' : 'false');
+                btn.setAttribute('aria-label', next);
+                btn.setAttribute('title', next);
+                if (moon) moon.style.display = dark ? 'none' : '';
+                if (sun) sun.style.display = dark ? '' : 'none';
+            }
+
+            btn.addEventListener('click', function () {
+                var dark = !isDark();
+                root.setAttribute('data-theme', dark ? 'dark' : 'light');
+                try { localStorage.setItem('erios-theme', dark ? 'dark' : 'light'); } catch (e) { }
+                paint();
+            });
+
+            paint();
+        })();
+    </script>
 
     <script>
         (function () {

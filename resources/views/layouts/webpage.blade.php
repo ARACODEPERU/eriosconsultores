@@ -1,6 +1,8 @@
 
 <!doctype html>
-<html lang="es">
+{{-- El sitio carga en modo claro; si el visitante ya eligió modo oscuro se
+     aplica antes de pintar (script más abajo) para evitar el parpadeo. --}}
+<html lang="es" data-theme="light">
 
 <head>
    
@@ -67,8 +69,26 @@
     <link rel="stylesheet" href="{{ asset('themes/webpage/css/responsive.css') }}">    <!--====== Sky-Tabs css ======-->
     <link rel="stylesheet" href="{{ asset('themes/webpage/css/sky-tabs.css') }}">
 
+    <script>
+        /* Tema guardado por el visitante. Si no eligió nada, el sitio se ve
+           en claro (modo por defecto). */
+        (function () {
+            try {
+                if (localStorage.getItem('erios-theme') === 'dark') {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                }
+            } catch (e) { /* almacenamiento no disponible: se queda en claro */ }
+        })();
+    </script>
+
     @yield('page_styles')
-  
+
+    {{-- El CSS del modo oscuro se aplica al final del body (necesita ir después
+         de los estilos del sitio para respetar la cascada), pero se precarga
+         aquí para no retrasar el primer pintado. --}}
+    <link rel="preload" as="style" href="{{ asset('themes/webpage/css/dark-mode.auto.css') }}">
+    <link rel="preload" as="style" href="{{ asset('themes/webpage/css/dark-mode.css') }}">
+
 </head>
 
 <body>
@@ -164,6 +184,15 @@
 
     <!--====== Main js ======-->
     <script src="{{ asset('themes/webpage/js/main.js') }}"></script>
+
+    {{-- ====== ERIOS · Modo oscuro ======
+         Van al final del body a propósito: usan el prefijo :where(...) (sin
+         especificidad) y así ganan por orden de documento, respetando la
+         jerarquía real del CSS del sitio. dark-mode.auto.css se genera con
+         "python generar-modo-oscuro.py"; dark-mode.css son los ajustes curados
+         y va después para desempatar. --}}
+    <link rel="stylesheet" href="{{ asset('themes/webpage/css/dark-mode.auto.css') }}">
+    <link rel="stylesheet" href="{{ asset('themes/webpage/css/dark-mode.css') }}">
 
     {{-- ====== ERIOS · Reveal on scroll (fade-in) ====== --}}
     <style>

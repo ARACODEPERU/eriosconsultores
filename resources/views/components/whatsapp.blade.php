@@ -48,6 +48,10 @@
             outline: none;
         }
 
+        /* Con un modal abierto (Bootstrap añade .modal-open al body) el botón
+           flotante tapaba el contenido del modal, sobre todo en móvil. */
+        body.modal-open #whatsapp .wtsapp { display: none; }
+
         @keyframes pulse-border{
             0%{
                 transform: translateX(-50%) translateY(-50%) translateZ(0) scale(1);

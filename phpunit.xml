@@ -21,8 +21,16 @@
         <env name="APP_ENV" value="testing"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="CACHE_DRIVER" value="array"/>
-        <!-- <env name="DB_CONNECTION" value="sqlite"/> -->
-        <!-- <env name="DB_DATABASE" value=":memory:"/> -->
+        <!-- ATENCIÓN: los tests de Feature usan RefreshDatabase, que borra y
+             vuelve a migrar la base de datos apuntada. Si estas variables no
+             se fijan aquí, los tests se conectan a la BD del .env y la vacían.
+             Nunca apuntar a una BD con datos reales.
+             Esta BD de pruebas debe existir en el mismo servidor del .env:
+                 CREATE DATABASE base_app_eriosconsultores_testing;
+             (Alternativa 100% aislada: sqlite en memoria, si las migraciones
+             del proyecto son compatibles.) -->
+        <env name="DB_CONNECTION" value="mysql" force="true"/>
+        <env name="DB_DATABASE" value="base_app_eriosconsultores_testing" force="true"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>

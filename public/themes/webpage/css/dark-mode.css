@@ -1,0 +1,294 @@
+/* ============================================================================
+   ERIOS CONSULTORES · Modo oscuro · reglas curadas
+
+   Se carga DESPUÉS de dark-mode.auto.css (que se genera desde el CSS real del
+   sitio con "python generar-modo-oscuro.py"), así que estas reglas afinadas
+   ganan en caso de empate.
+
+   Activación: <html data-theme="dark">. Sin atributo (o con "light") el sitio
+   se ve exactamente como siempre.
+   ============================================================================ */
+
+/* ---------------------------------------------------------------- Base ----- */
+:where(html[data-theme="dark"]) {
+    color-scheme: dark;
+    scrollbar-color: #333f56 #0b1220;
+}
+
+:where(html[data-theme="dark"]) body {
+    background-color: #0b1220;
+    color: #c8d4e3;
+}
+
+:where(html[data-theme="dark"]) ::selection {
+    background: #004aad;
+    color: #fff;
+}
+
+/* Transición suave al cambiar de tema (desactivada si el usuario pide menos
+   movimiento) */
+html[data-theme],
+html[data-theme] body {
+    transition: background-color .28s ease, color .28s ease, border-color .28s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html[data-theme],
+    html[data-theme] body {
+        transition: none;
+    }
+}
+
+/* Encabezados y textos genéricos que el tema deja sin color explícito */
+:where(html[data-theme="dark"]) h1,
+:where(html[data-theme="dark"]) h2,
+:where(html[data-theme="dark"]) h3,
+:where(html[data-theme="dark"]) h4,
+:where(html[data-theme="dark"]) h5,
+:where(html[data-theme="dark"]) h6 {
+    color: #e6edf7;
+}
+
+:where(html[data-theme="dark"]) a {
+    color: #71a9f4;
+}
+
+:where(html[data-theme="dark"]) hr {
+    border-color: #2a3547;
+}
+
+/* --------------------------------------------------------------- Header ---- */
+/* La barra del menú pasa a ser una superficie oscura y el logo cambia a la
+   versión negativa (la misma que usa el pie de página). */
+:where(html[data-theme="dark"]) .erc-nav {
+    background: #121b2c;
+    box-shadow: 0 2px 18px rgba(0, 0, 0, .45);
+}
+
+:where(html[data-theme="dark"]) .erc-nav__toggler {
+    border-color: #3d4c63;
+}
+
+:where(html[data-theme="dark"]) .erc-nav__toggler .icon-bar {
+    background: #cbd7e6;
+}
+
+:where(html[data-theme="dark"]) .erc-nav__dropmenu {
+    background: #16203a;
+    border-color: #2a3547;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, .5);
+}
+
+:where(html[data-theme="dark"]) .erc-nav__dropmenu .dropdown-item {
+    color: #dbe4f0;
+}
+
+:where(html[data-theme="dark"]) .erc-nav__dropmenu .dropdown-item:hover,
+:where(html[data-theme="dark"]) .erc-nav__dropmenu .dropdown-item.active {
+    background: rgba(255, 198, 0, .16);
+    color: #ffc600;
+}
+
+:where(html[data-theme="dark"]) .erc-nav__dropmenu .dropdown-divider {
+    border-color: #2a3547;
+}
+
+@media (max-width: 991px) {
+    :where(html[data-theme="dark"]) .erc-nav__list {
+        border-top-color: #2a3547;
+    }
+}
+
+/* --------------------------------------------------------------- Footer ---- */
+/* El pie ya es navy: en oscuro solo se oscurece un poco para separarse del fondo. */
+:where(html[data-theme="dark"]) .erc-footer__main {
+    background: linear-gradient(135deg, #061726 0%, #07294d 55%, #0b3a6b 100%);
+}
+
+/* ------------------------------------------------- Courselanding (tokens) --- */
+/* Los tokens neutros del sistema de diseño se remapean; los de marca
+   (--erc-blue / --erc-navy) se dejan intactos y se corrigen por selector. */
+:where(html[data-theme="dark"]) .erc-cl {
+    --erc-ink: #e6edf7;
+    --erc-text: #c3cfdf;
+    --erc-muted: #9fb0c6;
+    --erc-line: #2a3547;
+    --erc-soft: #121b2c;
+    --erc-chip: #1b2a44;
+    --erc-shadow: 0 8px 26px rgba(0, 0, 0, .45);
+    --erc-shadow-hover: 0 18px 40px rgba(0, 0, 0, .55);
+}
+
+/* --- Textos e iconos que usan el azul de marca como color de letra ---
+   Van sobre tarjetas blancas (que en oscuro pasan a superficie oscura), así
+   que se aclaran al azul claro de marca. */
+:where(html[data-theme="dark"]) .erc-btn--outline,
+:where(html[data-theme="dark"]) .erc-btn-ghost,
+:where(html[data-theme="dark"]) .erc-checklist li i,
+:where(html[data-theme="dark"]) .erc-cl-ct__mark,
+:where(html[data-theme="dark"]) .erc-cl-ct__more,
+:where(html[data-theme="dark"]) .erc-cl-faq__question:hover,
+:where(html[data-theme="dark"]) .erc-cl-inv__currency,
+:where(html[data-theme="dark"]) .erc-cl-inv__form label,
+:where(html[data-theme="dark"]) .erc-cl-inv__input span,
+:where(html[data-theme="dark"]) .erc-cl-inv__input select:focus,
+:where(html[data-theme="dark"]) .erc-cl-inv__price strong,
+:where(html[data-theme="dark"]) .erc-cl-lead__eyebrow,
+:where(html[data-theme="dark"]) .erc-cl-lead__form label,
+:where(html[data-theme="dark"]) .erc-cl-lead__input span,
+:where(html[data-theme="dark"]) .erc-cl-lead__input select:focus,
+:where(html[data-theme="dark"]) .erc-cl-lead__intro .erc-checklist li i,
+:where(html[data-theme="dark"]) .erc-cl-staff__hint,
+:where(html[data-theme="dark"]) .erc-cl-staff__modal-resumes .erc-checklist li i,
+:where(html[data-theme="dark"]) .erc-chip-icon,
+:where(html[data-theme="dark"]) .erc-pill,
+:where(html[data-theme="dark"]) .erc-pill i,
+:where(html[data-theme="dark"]) .erc-sec-eyebrow {
+    color: #71a9f4;
+}
+
+:where(html[data-theme="dark"]) .erc-btn--outline {
+    border-color: #71a9f4;
+}
+
+:where(html[data-theme="dark"]) .erc-btn--outline:hover {
+    background: #71a9f4;
+    border-color: #71a9f4;
+    color: #0b1220;
+}
+
+/* --- Textos en navy sobre superficies claras --- */
+:where(html[data-theme="dark"]) .erc-cl-faq__question,
+:where(html[data-theme="dark"]) .erc-btn--outline-dark:hover,
+:where(html[data-theme="dark"]) .erc-cl-inv__plan--corporate {
+    color: #e6edf7;
+}
+
+/* --- Se quedan oscuros a propósito: van sobre amarillo --- */
+:where(html[data-theme="dark"]) .erc-cl-inv__tag,
+:where(html[data-theme="dark"]) .erc-cl-plan__badge,
+:where(html[data-theme="dark"]) .erc-card--dark:hover .erc-chip-icon--dark,
+:where(html[data-theme="dark"]) .erc-cl-plan__item:hover .erc-cl-plan__num {
+    color: #07294d;
+}
+
+/* Cerrar del modal de docentes: el círculo translúcido navy desaparece sobre
+   tarjeta oscura, así que pasa a un velo claro. */
+:where(html[data-theme="dark"]) .erc-cl-staff__close {
+    background: rgba(255, 255, 255, .12);
+    color: #e6edf7;
+}
+
+/* Los planes de inversión usan el navy como color de letra sobre fondo claro:
+   con la tarjeta ya oscurecida, el texto pasa a claro. */
+:where(html[data-theme="dark"]) .erc-cl-inv__plan--corporate {
+    border-top-color: #4a86e8;
+}
+
+:where(html[data-theme="dark"]) .erc-cl-inv__plan--corporate .erc-cl-inv__plan-head {
+    background: #1b2436;
+}
+
+/* --------------------------------------------------- Formularios / Bootstrap */
+:where(html[data-theme="dark"]) .form-control,
+:where(html[data-theme="dark"]) .custom-select,
+:where(html[data-theme="dark"]) input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]),
+:where(html[data-theme="dark"]) select,
+:where(html[data-theme="dark"]) textarea {
+    background-color: #16203a;
+    border-color: #2f3c52;
+    color: #dbe4f0;
+}
+
+:where(html[data-theme="dark"]) .form-control::placeholder,
+:where(html[data-theme="dark"]) input::placeholder,
+:where(html[data-theme="dark"]) textarea::placeholder {
+    color: #8494ab;
+}
+
+:where(html[data-theme="dark"]) .form-control:focus,
+:where(html[data-theme="dark"]) input:focus,
+:where(html[data-theme="dark"]) select:focus,
+:where(html[data-theme="dark"]) textarea:focus {
+    background-color: #18233c;
+    border-color: #4a86e8;
+    color: #eef4fb;
+}
+
+:where(html[data-theme="dark"]) .card,
+:where(html[data-theme="dark"]) .modal-content,
+:where(html[data-theme="dark"]) .dropdown-menu,
+:where(html[data-theme="dark"]) .list-group-item,
+:where(html[data-theme="dark"]) .nice-select,
+:where(html[data-theme="dark"]) .nice-select .list,
+:where(html[data-theme="dark"]) .search-box .search-form {
+    background-color: #16203a;
+    border-color: #2a3547;
+    color: #c8d4e3;
+}
+
+:where(html[data-theme="dark"]) .dropdown-item {
+    color: #c8d4e3;
+}
+
+:where(html[data-theme="dark"]) .dropdown-item:hover,
+:where(html[data-theme="dark"]) .dropdown-item:focus {
+    background-color: rgba(255, 198, 0, .14);
+    color: #ffc600;
+}
+
+:where(html[data-theme="dark"]) .dropdown-divider,
+:where(html[data-theme="dark"]) .border,
+:where(html[data-theme="dark"]) .modal-header,
+:where(html[data-theme="dark"]) .modal-footer {
+    border-color: #2a3547;
+}
+
+:where(html[data-theme="dark"]) .bg-white,
+:where(html[data-theme="dark"]) .bg-light {
+    background-color: #16203a !important;
+}
+
+:where(html[data-theme="dark"]) .text-dark {
+    color: #e6edf7 !important;
+}
+
+:where(html[data-theme="dark"]) .text-muted {
+    color: #9fb0c6 !important;
+}
+
+:where(html[data-theme="dark"]) .table {
+    color: #c8d4e3;
+}
+
+:where(html[data-theme="dark"]) .table th,
+:where(html[data-theme="dark"]) .table td {
+    border-color: #2a3547;
+}
+
+/* Paginación y flechas de los carruseles */
+:where(html[data-theme="dark"]) .pagination .page-item .page-link {
+    background-color: #16203a;
+    border-color: #2a3547;
+    color: #c8d4e3;
+}
+
+:where(html[data-theme="dark"]) .pagination .page-item.active .page-link,
+:where(html[data-theme="dark"]) .pagination .page-item .page-link:hover {
+    background-color: #004aad;
+    border-color: #004aad;
+    color: #fff;
+}
+
+/* Volver arriba */
+:where(html[data-theme="dark"]) .back-to-top {
+    color: #fff;
+}
+
+/* Sombras: en oscuro conviene que sean más profundas */
+:where(html[data-theme="dark"]) .erc-card,
+:where(html[data-theme="dark"]) .erc-service-card,
+:where(html[data-theme="dark"]) .erc-mvv-card,
+:where(html[data-theme="dark"]) .erc-tch-card {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+}

@@ -58,23 +58,29 @@
     .erc-btn--outline:hover { background: #004aad; color: #fff; }
 
     /* ---- Hero slider ---- */
-    .erc-hero__content { position: relative; z-index: 2; padding: 76px 0 78px; }
+    /* El hero mide un alto contenido (clamp) y recorta con overflow: hidden, así
+       que el contenido se ajusta de forma fluida para que nunca se corten el
+       texto ni los botones de llamada a la acción. */
+    .erc-hero__content { position: relative; z-index: 2; padding: 60px 0 62px; }
     .erc-hero__badge {
         display: inline-flex; align-items: center; gap: 9px;
         background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.25);
         backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
         color: #fff; font-family: 'Montserrat', sans-serif; font-weight: 600; font-size: 13px;
         letter-spacing: 1.5px; text-transform: uppercase;
-        padding: 8px 18px; border-radius: 50px; margin-bottom: 22px;
+        padding: 8px 18px; border-radius: 50px; margin-bottom: 18px;
     }
     .erc-hero__badge i { color: #ffc600; }
     .erc-hero__title {
-        color: #fff; font-size: 52px; font-weight: 700; line-height: 1.15;
-        margin-bottom: 18px; max-width: 640px;
+        color: #fff; font-size: clamp(30px, 4vw, 52px); font-weight: 700; line-height: 1.15;
+        margin-bottom: 16px; max-width: 640px;
         text-shadow: 0 2px 24px rgba(7, 41, 77, 0.45);
     }
-    .erc-hero__text { color: rgba(255,255,255,.88); font-size: 17px; line-height: 29px; max-width: 560px; margin-bottom: 30px; }
-    .erc-hero__actions { display: flex; gap: 14px; flex-wrap: wrap; }
+    .erc-hero__text {
+        color: rgba(255,255,255,.88); font-size: clamp(14.5px, 1.25vw, 17px);
+        line-height: 1.6; max-width: 560px; margin-bottom: 26px;
+    }
+    .erc-hero__actions { display: flex; gap: 12px; flex-wrap: wrap; }
     .erc-hero__actions .erc-btn--yellow { box-shadow: 0 10px 26px rgba(255, 198, 0, 0.35); }
     .erc-slick-dots { position: absolute; bottom: 34px; left: 0; right: 0; text-align: center; z-index: 5; }
     .erc-slick-dots button { background: rgba(255,255,255,.45) !important; border: none; border-radius: 50px; width: 26px; height: 4px; padding: 0; transition: all .3s ease; }
@@ -105,7 +111,7 @@
                     rgba(0, 160, 240, 0.04) 100%);
     }
     /* Altura contenida: siempre se nota que hay más secciones debajo */
-    #slider-part { height: clamp(430px, 62vh, 560px); overflow: hidden; }
+    #slider-part { height: clamp(470px, 62vh, 560px); overflow: hidden; }
     .single-slider {
         position: relative;
         padding: 0 !important; /* anula el padding-bottom:300px de la plantilla Edubin */
@@ -168,9 +174,42 @@
 
     /* Testimonios: el CSS vive dentro del componente (autocontenido) */
 
+    /* Móvil y tabletas verticales: el texto se centra en la banda del hero y se
+       compacta, porque en pantallas estrechas envuelve en muchas líneas. */
+    @media (max-width: 767px) {
+        #slider-part { height: clamp(470px, 60vh, 560px); }
+        .erc-hero__content {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 36px 0 40px;
+        }
+        .erc-hero__badge {
+            font-size: 11px;
+            letter-spacing: 1px;
+            padding: 6px 14px;
+            margin-bottom: 14px;
+        }
+        .erc-hero__title { font-size: 27px; line-height: 1.18; margin-bottom: 12px; }
+        .erc-hero__text { font-size: 14.5px; line-height: 22px; margin-bottom: 20px; }
+        .erc-hero__actions { gap: 10px; }
+        .erc-hero__actions .erc-btn { padding: 11px 20px; font-size: 13.5px; }
+    }
     @media (max-width: 575px) {
-        .erc-hero__title { font-size: 34px; }
         .erc-sec-head h2, .erc-habout__title { font-size: 27px; }
+    }
+    /* Pantallas bajas (portátiles 1366x768 y similares): menos aire arriba y
+       abajo para que los botones del hero queden completos. */
+    @media (min-width: 768px) and (max-height: 820px) {
+        .erc-hero__content { padding: 44px 0 46px; }
+    }
+    /* Teléfonos muy estrechos (320px): un punto menos de tipografía para que
+       el contenido siga cabiendo en el mínimo de altura del hero. */
+    @media (max-width: 359px) {
+        .erc-hero__content { padding: 28px 0 30px; }
+        .erc-hero__title { font-size: 24px; }
+        .erc-hero__text { font-size: 13.5px; line-height: 20px; margin-bottom: 16px; }
     }
 </style>
 @endsection
