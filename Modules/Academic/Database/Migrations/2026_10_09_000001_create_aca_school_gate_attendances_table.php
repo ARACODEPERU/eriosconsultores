@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('aca_school_gate_attendances')) {
+            return;
+        }
+
         /*
          * Asistencia institucional (portería): el registro de la INSTITUCIÓN,
          * no el del aula. Una fila por alumno y día, con la hora real en que
@@ -55,9 +59,12 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('aca_school_gate_attendances', function (Blueprint $table) {
-            $table->dropForeign(['user_id_registers']);
-        });
+        if (Schema::hasTable('aca_school_gate_attendances')) {
+            Schema::table('aca_school_gate_attendances', function (Blueprint $table) {
+                $table->dropForeign(['user_id_registers']);
+            });
+        }
+
         Schema::dropIfExists('aca_school_gate_attendances');
     }
 };

@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -18,6 +19,11 @@ return new class extends Migration
             return;
         }
 
+        // Reaplicar el MODIFY es inocuo, pero la tabla debe existir.
+        if (! Schema::hasTable('event_edition_matches')) {
+            return;
+        }
+
         DB::statement("
             ALTER TABLE event_edition_matches
             MODIFY status ENUM('pending', 'live', 'finished', 'cancelled', 'walk_over', 'closed', 'no_points')
@@ -28,6 +34,10 @@ return new class extends Migration
     public function down(): void
     {
         if (! $this->supportsEnumModify()) {
+            return;
+        }
+
+        if (! Schema::hasTable('event_edition_matches')) {
             return;
         }
 

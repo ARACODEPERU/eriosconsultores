@@ -18,6 +18,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('heal_google_calendar_states')) {
+            return;
+        }
+
         Schema::create('heal_google_calendar_states', function (Blueprint $table) {
             $table->id();
             $table->string('calendar_id', 190)->default('primary');

@@ -21,6 +21,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('aca_school_notice_deliveries')) {
+            return;
+        }
+
         Schema::create('aca_school_notice_deliveries', function (Blueprint $table) {
             $table->id();
             $table->foreignId('gate_attendance_id')->constrained('aca_school_gate_attendances')->cascadeOnDelete();

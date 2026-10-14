@@ -25,6 +25,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('heal_google_calendar_events')) {
+            return;
+        }
+
         Schema::create('heal_google_calendar_events', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('appointment_id')->nullable();

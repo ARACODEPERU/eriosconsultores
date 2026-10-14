@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('aca_school_enrollments')) {
+            return;
+        }
+
         Schema::create('aca_school_enrollments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('school_id')->constrained('aca_schools')->cascadeOnDelete();
@@ -39,11 +43,14 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('aca_school_enrollments', function (Blueprint $table) {
-            $table->dropForeign(['student_id']);
-            $table->dropForeign(['section_id']);
-            $table->dropForeign(['guardian_person_id']);
-        });
+        if (Schema::hasTable('aca_school_enrollments')) {
+            Schema::table('aca_school_enrollments', function (Blueprint $table) {
+                $table->dropForeign(['student_id']);
+                $table->dropForeign(['section_id']);
+                $table->dropForeign(['guardian_person_id']);
+            });
+        }
+
         Schema::dropIfExists('aca_school_enrollments');
     }
 };

@@ -15,30 +15,61 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('event_edition_matches', function (Blueprint $table) {
-            // Override de tiempos solo para este partido (null = usa la edición)
-            $table->unsignedSmallInteger('half_minutes_override')->nullable()->after('location');
-            $table->unsignedTinyInteger('halves_override')->nullable()->after('half_minutes_override');
-            $table->unsignedSmallInteger('extra_half_minutes_override')->nullable()->after('halves_override');
+        if (! Schema::hasTable('event_edition_matches')) {
+            return;
+        }
 
-            // ¿Se jugó la prórroga? y el marcador al final del tiempo reglamentario
-            $table->boolean('extra_time_played')->default(false)->after('penalties');
-            $table->unsignedTinyInteger('score_regular_h')->nullable()->after('extra_time_played');
-            $table->unsignedTinyInteger('score_regular_a')->nullable()->after('score_regular_h');
-        });
+        if (! Schema::hasColumn('event_edition_matches', 'half_minutes_override')) {
+            Schema::table('event_edition_matches', function (Blueprint $table) {
+                // Override de tiempos solo para este partido (null = usa la edición)
+                $table->unsignedSmallInteger('half_minutes_override')->nullable()->after('location');
+            });
+        }
+
+        if (! Schema::hasColumn('event_edition_matches', 'halves_override')) {
+            Schema::table('event_edition_matches', function (Blueprint $table) {
+                $table->unsignedTinyInteger('halves_override')->nullable()->after('half_minutes_override');
+            });
+        }
+
+        if (! Schema::hasColumn('event_edition_matches', 'extra_half_minutes_override')) {
+            Schema::table('event_edition_matches', function (Blueprint $table) {
+                $table->unsignedSmallInteger('extra_half_minutes_override')->nullable()->after('halves_override');
+            });
+        }
+
+        if (! Schema::hasColumn('event_edition_matches', 'extra_time_played')) {
+            Schema::table('event_edition_matches', function (Blueprint $table) {
+                // ¿Se jugó la prórroga? y el marcador al final del tiempo reglamentario
+                $table->boolean('extra_time_played')->default(false)->after('penalties');
+            });
+        }
+
+        if (! Schema::hasColumn('event_edition_matches', 'score_regular_h')) {
+            Schema::table('event_edition_matches', function (Blueprint $table) {
+                $table->unsignedTinyInteger('score_regular_h')->nullable()->after('extra_time_played');
+            });
+        }
+
+        if (! Schema::hasColumn('event_edition_matches', 'score_regular_a')) {
+            Schema::table('event_edition_matches', function (Blueprint $table) {
+                $table->unsignedTinyInteger('score_regular_a')->nullable()->after('score_regular_h');
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::table('event_edition_matches', function (Blueprint $table) {
-            $table->dropColumn([
-                'half_minutes_override',
-                'halves_override',
-                'extra_half_minutes_override',
-                'extra_time_played',
-                'score_regular_h',
-                'score_regular_a',
-            ]);
-        });
+        if (! Schema::hasTable('event_edition_matches')) {
+            return;
+        }
+
+        foreach (['half_minutes_override', 'halves_override', 'extra_half_minutes_override', 'extra_time_played', 'score_regular_h', 'score_regular_a'] as $column) {
+            if (Schema::hasColumn('event_edition_matches', $column)) {
+                Schema::table('event_edition_matches', function (Blueprint $table) use ($column) {
+                    $table->dropColumn($column);
+                });
+            }
+        }
     }
 };

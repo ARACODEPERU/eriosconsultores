@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('event_edition_match_substitutions')) {
+            return;
+        }
+
         Schema::create('event_edition_match_substitutions', function (Blueprint $table) {
             $table->id();
 

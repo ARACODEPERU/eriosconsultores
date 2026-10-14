@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('aca_school_attendances')) {
+            return;
+        }
+
         // Registro mensual de asistencia estilo SIAGIE (MINEDU):
         // un registro por matricula y dia con estado A/T/J/F.
         Schema::create('aca_school_attendances', function (Blueprint $table) {
@@ -29,9 +33,12 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('aca_school_attendances', function (Blueprint $table) {
-            $table->dropForeign(['user_id_registers']);
-        });
+        if (Schema::hasTable('aca_school_attendances')) {
+            Schema::table('aca_school_attendances', function (Blueprint $table) {
+                $table->dropForeign(['user_id_registers']);
+            });
+        }
+
         Schema::dropIfExists('aca_school_attendances');
     }
 };

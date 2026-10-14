@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('aca_school_sections')) {
+            return;
+        }
+
         Schema::create('aca_school_sections', function (Blueprint $table) {
             $table->id();
             $table->foreignId('school_id')->constrained('aca_schools')->cascadeOnDelete();
@@ -27,9 +31,12 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('aca_school_sections', function (Blueprint $table) {
-            $table->dropForeign(['tutor_person_id']);
-        });
+        if (Schema::hasTable('aca_school_sections')) {
+            Schema::table('aca_school_sections', function (Blueprint $table) {
+                $table->dropForeign(['tutor_person_id']);
+            });
+        }
+
         Schema::dropIfExists('aca_school_sections');
     }
 };
