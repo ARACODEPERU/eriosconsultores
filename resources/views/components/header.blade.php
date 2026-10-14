@@ -64,7 +64,7 @@
                             </li>
                             <li class="nav-item">
                                 <a class="erc-nav__link {{ request()->routeIs('web_courses') ? 'active' : '' }}"
-                                    href="{{ route('web_courses') }}">Cursos</a>
+                                    href="{{ route('web_courses') }}">Escuela de Negocios</a>
                             </li>
                             <li class="nav-item">
                                 <a class="erc-nav__link {{ request()->routeIs('web_teachers') ? 'active' : '' }}"

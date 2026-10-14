@@ -196,7 +196,7 @@
     <div class="cursos-catalogo">
         
     {{-- ======== Hero de la página ======== --}}
-    <x-page-hero eyebrow="Formación ERIOS" title="Catálogo de Cursos"
+    <x-page-hero eyebrow="Formación ERIOS" title="Escuela de Negocios 360"
         subtitle="Capacítate con especialistas en materia tributaria, contable y empresarial: modalidades En Vivo, Presencial y E-learning, con certificación incluida."
         heroComponent="hero_cursos_15" />
 
