@@ -18,15 +18,20 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('heal_appointment_notices', function (Blueprint $table) {
-            $table->id();
-            $table->string('key', 30)->unique()->comment('first, second o day_before');
-            $table->boolean('active')->default(false);
-            $table->unsignedSmallInteger('minutes_before')->nullable()->comment('Minutos antes de la cita (bloques first y second)');
-            $table->time('send_time')->nullable()->comment('Hora del dia en que se envia (bloque day_before)');
-            $table->text('message')->nullable();
-            $table->timestamps();
-        });
+        // Se sigue sin salir temprano aunque la tabla exista: los tres avisos por
+        // defecto de abajo se completan igual (cada uno se inserta solo si su key
+        // falta), asi que una corrida interrumpida deja la pantalla utilizable.
+        if (! Schema::hasTable('heal_appointment_notices')) {
+            Schema::create('heal_appointment_notices', function (Blueprint $table) {
+                $table->id();
+                $table->string('key', 30)->unique()->comment('first, second o day_before');
+                $table->boolean('active')->default(false);
+                $table->unsignedSmallInteger('minutes_before')->nullable()->comment('Minutos antes de la cita (bloques first y second)');
+                $table->time('send_time')->nullable()->comment('Hora del dia en que se envia (bloque day_before)');
+                $table->text('message')->nullable();
+                $table->timestamps();
+            });
+        }
 
         $now = now();
 

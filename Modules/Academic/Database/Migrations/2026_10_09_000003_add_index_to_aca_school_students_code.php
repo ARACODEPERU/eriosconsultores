@@ -16,15 +16,27 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('aca_school_students', function (Blueprint $table) {
-            $table->index(['school_id', 'student_code'], 'aca_school_students_school_code_index');
-        });
+        if (! Schema::hasTable('aca_school_students')) {
+            return;
+        }
+
+        if (! Schema::hasIndex('aca_school_students', 'aca_school_students_school_code_index')) {
+            Schema::table('aca_school_students', function (Blueprint $table) {
+                $table->index(['school_id', 'student_code'], 'aca_school_students_school_code_index');
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::table('aca_school_students', function (Blueprint $table) {
-            $table->dropIndex('aca_school_students_school_code_index');
-        });
+        if (! Schema::hasTable('aca_school_students')) {
+            return;
+        }
+
+        if (Schema::hasIndex('aca_school_students', 'aca_school_students_school_code_index')) {
+            Schema::table('aca_school_students', function (Blueprint $table) {
+                $table->dropIndex('aca_school_students_school_code_index');
+            });
+        }
     }
 };

@@ -32,11 +32,13 @@ return new class extends Migration
         }
 
         // course_id nullable: una campana de prueba puede lanzarse sin programa.
-        Schema::table('aca_notification_campaigns', function (Blueprint $table) {
-            $table->unsignedBigInteger('course_id')->nullable()
-                ->comment('Programa de especializacion notificado (null en modo prueba)')
-                ->change();
-        });
+        if (Schema::hasColumn('aca_notification_campaigns', 'course_id')) {
+            Schema::table('aca_notification_campaigns', function (Blueprint $table) {
+                $table->unsignedBigInteger('course_id')->nullable()
+                    ->comment('Programa de especializacion notificado (null en modo prueba)')
+                    ->change();
+            });
+        }
     }
 
     public function down(): void
@@ -51,10 +53,12 @@ return new class extends Migration
             });
         }
 
-        Schema::table('aca_notification_campaigns', function (Blueprint $table) {
-            $table->unsignedBigInteger('course_id')->nullable(false)
-                ->comment('Programa de especializacion notificado')
-                ->change();
-        });
+        if (Schema::hasColumn('aca_notification_campaigns', 'course_id')) {
+            Schema::table('aca_notification_campaigns', function (Blueprint $table) {
+                $table->unsignedBigInteger('course_id')->nullable(false)
+                    ->comment('Programa de especializacion notificado')
+                    ->change();
+            });
+        }
     }
 };

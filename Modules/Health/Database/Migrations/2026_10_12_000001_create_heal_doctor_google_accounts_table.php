@@ -19,6 +19,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('heal_doctor_google_accounts')) {
+            return;
+        }
+
         Schema::create('heal_doctor_google_accounts', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('doctor_id')->unique();

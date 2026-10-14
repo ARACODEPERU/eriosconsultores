@@ -8,15 +8,27 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('commercial_negotiations', function (Blueprint $table) {
-            $table->date('document_emission_date')->nullable()->after('verified_at')->comment('Fecha de emision del comprobante; por defecto la fecha en que el cliente registro sus datos');
-        });
+        if (! Schema::hasTable('commercial_negotiations')) {
+            return;
+        }
+
+        if (! Schema::hasColumn('commercial_negotiations', 'document_emission_date')) {
+            Schema::table('commercial_negotiations', function (Blueprint $table) {
+                $table->date('document_emission_date')->nullable()->after('verified_at')->comment('Fecha de emision del comprobante; por defecto la fecha en que el cliente registro sus datos');
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::table('commercial_negotiations', function (Blueprint $table) {
-            $table->dropColumn('document_emission_date');
-        });
+        if (! Schema::hasTable('commercial_negotiations')) {
+            return;
+        }
+
+        if (Schema::hasColumn('commercial_negotiations', 'document_emission_date')) {
+            Schema::table('commercial_negotiations', function (Blueprint $table) {
+                $table->dropColumn('document_emission_date');
+            });
+        }
     }
 };
