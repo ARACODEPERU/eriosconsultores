@@ -32,6 +32,7 @@ use Spatie\Permission\Models\Role;
 use Modules\CMS\Entities\CmsTestimony;
 use Illuminate\Support\Str;
 use App\Support\CourseLandingPresenter;
+use App\Support\PaginaPrincipal;
 
 class WebPageController extends Controller
 {
@@ -43,7 +44,10 @@ class WebPageController extends Controller
 
     public function index()
     {
-        return view('pages.home');
+        // Portada publicada en la raíz del dominio: la elige el parámetro
+        // PW00001 desde Parámetros y el catálogo de portadas disponibles vive
+        // en config/pagina_principal.php (ver App\Support\PaginaPrincipal).
+        return view(PaginaPrincipal::vista());
     }
 
     public function about()
