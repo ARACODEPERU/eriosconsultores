@@ -70,9 +70,9 @@
     .erc-hero__overlay {
         position: absolute; inset: 0;
         /* Izquierda sólida para legibilidad; derecha casi transparente para ver la imagen completa */
-        /* background: linear-gradient(100deg, rgba(7, 41, 77, 0.93) 0%, rgba(7, 41, 77, 0.78) 34%, rgba(7, 41, 77, 0.30) 62%, rgba(7, 41, 77, 0.04) 100%);
-         */
-        background: linear-gradient(100deg, rgba(59, 181, 254, 0.93) 0%, rgba(59, 181, 254, 0.78) 34%, rgba(59, 181, 254, 0.30) 62%, rgba(59, 181, 254, 0.04) 100%);
+        background: linear-gradient(100deg, rgba(7, 41, 77, 0.93) 0%, rgba(7, 41, 77, 0.78) 34%, rgba(7, 41, 77, 0.30) 62%, rgba(7, 41, 77, 0.04) 100%);
+        
+        /* background: linear-gradient(100deg, rgba(59, 181, 254, 0.93) 0%, rgba(59, 181, 254, 0.78) 34%, rgba(59, 181, 254, 0.30) 62%, rgba(59, 181, 254, 0.04) 100%); */
     }
     /* Altura contenida: siempre se nota que hay más secciones debajo */
     #slider-part { height: clamp(430px, 62vh, 560px); overflow: hidden; }
