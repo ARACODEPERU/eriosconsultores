@@ -218,6 +218,14 @@ html[data-theme] body {
     background: #1b2436;
 }
 
+/* --------------------------------------------- Liderazgo (perfil CEO) ------ */
+/* La píldora del cargo lleva un velo celeste: sobre el fondo oscuro la letra
+   navy sería ilegible, así que pasa a blanca. */
+:where(html[data-theme="dark"]) .erc-ceo__role {
+    background: rgba(0, 182, 255, .18);
+    color: #fff;
+}
+
 /* --------------------------------------------------- Hero (slider) --------- */
 /* El distintivo del hero también deja el amarillo: su icono va en blanco, como
    su etiqueta, en los dos temas (el CSS generado seguía fijando ahí un amarillo

@@ -22,9 +22,11 @@
         padding-bottom: 12px;
         margin-bottom: 12px;
     }
-    .erc-sec-eyebrow::before { content: ''; position: absolute; bottom: 0; left: 0; width: 35px; height: 2px; background: #ffc600; }
+    /* Las líneas del guion de sección dejan el amarillo y van con los colores del
+       logotipo: degradado del azul fuerte al celeste de marca. */
+    .erc-sec-eyebrow::before { content: ''; position: absolute; bottom: 0; left: 0; width: 35px; height: 2px; background: linear-gradient(90deg, #0048b0 0%, #00b6ff 100%); }
     .erc-sec-head:not(.erc-sec-head--left) .erc-sec-eyebrow::after {
-        content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(8px); width: 35px; height: 2px; background: #ffc600;
+        content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(8px); width: 35px; height: 2px; background: linear-gradient(90deg, #0048b0 0%, #00b6ff 100%);
     }
     .erc-sec-head:not(.erc-sec-head--left) .erc-sec-eyebrow::before { left: 50%; transform: translateX(calc(-100% - 8px)); }
     .erc-sec-head h2 { font-size: 36px; font-weight: 700; color: #1d2025; line-height: 1.3; margin-bottom: 14px; }
@@ -38,8 +40,9 @@
         padding: 13px 28px; border-radius: 14px; text-decoration: none; transition: all .35s ease;
     }
     .erc-btn:hover { text-decoration: none; transform: translateY(-2px); }
-    /* Amarillo sólido: contraste garantizado sobre fondos claros (secciones blancas) */
-    /* Degradado del botón Aula Virtual aplicado a todos los botones amarillos */
+    /* Botón principal de las secciones: en reposo lleva el degradado del botón
+       «Aula Virtual» con letra blanca; el nombre de la clase es histórico (el
+       amarillo que le daba el color ya no se usa). */
     .erc-btn--yellow {
         background:
             linear-gradient(100deg, rgba(8, 48, 88, 0.85) 0%, rgba(8, 48, 88, 0.45) 55%, rgba(8, 48, 88, 0) 85%),
@@ -48,14 +51,20 @@
         color: #fff;
     }
     .erc-btn--yellow:hover {
-        background: #ffc600;
-        color: #07294d;
-        box-shadow: 0 12px 28px rgba(255, 198, 0, 0.45);
+        /* Hover celeste de marca con la letra en blanco, igual que en el header. */
+        background: #00b6ff;
+        color: #fff;
+        box-shadow: 0 12px 28px rgba(0, 182, 255, 0.45);
     }
     .erc-btn--ghost { border: 2px solid #fff; color: #fff; }
     .erc-btn--ghost:hover { background: #ffc600; border-color: #ffc600; color: #07294d; }
     .erc-btn--outline { border: 2px solid #004aad; color: #004aad; }
-    .erc-btn--outline:hover { background: #ffc600; border-color: #ffc600; color: #07294d; }
+    .erc-btn--outline:hover {
+        /* El contorno se rellena de celeste con la letra en blanco al pasar el ratón. */
+        background: #00b6ff;
+        border-color: #00b6ff;
+        color: #fff;
+    }
 
     /* ---- Hero slider ---- */
     /* El hero mide un alto contenido (clamp) y recorta con overflow: hidden, así
@@ -156,7 +165,10 @@
        así no puede provocar scroll horizontal a ningún ancho (con -20px se salía
        5px en cuanto el contenedor ocupaba todo el ancho, por debajo de los
        1200px de max-width del tema). */
-    .erc-habout__accent { position: absolute; right: -10px; bottom: -10px; width: 55%; height: 55%; border: 3px solid #ffc600; border-radius: 16px; z-index: -1; }
+    /* El adorno de la imagen deja el amarillo por el celeste de marca. Se queda en
+       celeste plano: un aro con degradado y esquinas redondeadas exige una máscara,
+       y en un elemento decorativo no compensa el riesgo. */
+    .erc-habout__accent { position: absolute; right: -10px; bottom: -10px; width: 55%; height: 55%; border: 3px solid #00b6ff; border-radius: 16px; z-index: -1; }
     .erc-habout__title { font-size: 36px; font-weight: 700; color: #1d2025; line-height: 1.25; margin: 0 0 16px; }
     .erc-habout__text { font-size: 15.5px; line-height: 27px; color: #505050; margin: 0 0 14px; }
     .erc-habout__actions { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 26px; }

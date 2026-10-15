@@ -94,13 +94,28 @@
             background: linear-gradient(135deg, #004aad, #4a86e8);
             padding: 70px;
         }
+        /* El marco deja el amarillo por el degradado del logotipo. Un contorno con
+           degradado y esquinas redondeadas exige máscara (border-image se llevaría
+           el radio), así que el celeste plano queda como respaldo y el degradado
+           solo se aplica donde la máscara existe. */
         .erc-ceo__frame {
             position: absolute;
             inset: 26px -26px -26px 26px;
-            border: 3px solid #ffc600;
+            border: 3px solid #00b6ff;
             border-radius: 22px;
             z-index: 0;
             pointer-events: none;
+        }
+        @supports ((mask-composite: exclude) or (-webkit-mask-composite: xor)) {
+            .erc-ceo__frame {
+                border: 0;
+                padding: 3px;
+                background: linear-gradient(135deg, #0048b0 0%, #00b6ff 100%);
+                -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+                -webkit-mask-composite: xor;
+                mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+                mask-composite: exclude;
+            }
         }
         .erc-ceo__ring {
             position: absolute;
@@ -116,11 +131,13 @@
             right: -20px; top: 30px;
             width: 58px; height: 58px;
             border-radius: 50%;
-            background: #ffc600;
-            color: #07294d;
+            /* El fondo del icono pasa al celeste de marca con el icono en blanco,
+               como el resto de hovers y acentos del sitio. */
+            background: #00b6ff;
+            color: #fff;
             display: flex; align-items: center; justify-content: center;
             font-size: 24px;
-            box-shadow: 0 12px 26px rgba(255, 198, 0, 0.45);
+            box-shadow: 0 12px 26px rgba(0, 182, 255, 0.45);
             z-index: 2;
         }
 
@@ -138,11 +155,14 @@
             font-size: 38px; font-weight: 800; color: #1d2025;
             margin: 0 0 6px;
         }
+        /* La píldora del cargo deja el amarillo por un velo celeste translúcido
+           (mismo criterio que las píldoras del menú); la letra se queda en navy,
+           que sobre un velo claro se lee mejor que el blanco. */
         .erc-ceo__role {
             display: inline-block;
             font-family: 'Montserrat', sans-serif;
             font-size: 14px; font-weight: 700;
-            color: #07294d; background: #ffc600;
+            color: #07294d; background: rgba(0, 182, 255, 0.14);
             padding: 6px 16px; border-radius: 50px;
             margin-bottom: 18px;
         }
