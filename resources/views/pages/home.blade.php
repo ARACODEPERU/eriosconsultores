@@ -70,7 +70,9 @@
         letter-spacing: 1.5px; text-transform: uppercase;
         padding: 8px 18px; border-radius: 50px; margin-bottom: 18px;
     }
-    .erc-hero__badge i { color: #ffc600; }
+    /* El icono del distintivo va en blanco, igual que su etiqueta: así los dos
+       comparten color y contraste sobre el velo translúcido del distintivo. */
+    .erc-hero__badge i { color: #fff; }
     .erc-hero__title {
         color: #fff; font-size: clamp(30px, 4vw, 52px); font-weight: 700; line-height: 1.15;
         margin-bottom: 16px; max-width: 640px;
@@ -81,10 +83,23 @@
         line-height: 1.6; max-width: 560px; margin-bottom: 26px;
     }
     .erc-hero__actions { display: flex; gap: 12px; flex-wrap: wrap; }
-    /* Resplandor blanco en el hero: el botón va sobre el degradado celeste del
-       slider, así que el halo amarillo anterior desentonaba con el fondo. */
+    /* Hover del hero: el primario se enciende en celeste de marca con la letra
+       en blanco (regla de la casa: todo hover celeste lleva letra blanca) y el
+       secundario se rellena de blanco con la letra en navy (14,7:1), así al
+       pasar el ratón siguen siendo dos botones distintos. El halo blanco se
+       refuerza porque el relleno solo da 3,7:1 contra el azul del slider: es el
+       halo el que lo mantiene recortado. */
     .erc-hero__actions .erc-btn--yellow { box-shadow: 0 10px 26px rgba(255, 255, 255, 0.35); }
-    .erc-hero__actions .erc-btn--yellow:hover { box-shadow: 0 12px 28px rgba(255, 255, 255, 0.5); }
+    .erc-hero__actions .erc-btn--yellow:hover {
+        background: #00b6ff;
+        color: #fff;
+        box-shadow: 0 12px 28px rgba(255, 255, 255, 0.5);
+    }
+    .erc-hero__actions .erc-btn--ghost:hover {
+        background: #fff;
+        border-color: #fff;
+        color: #07294d;
+    }
     .erc-slick-dots { position: absolute; bottom: 34px; left: 0; right: 0; text-align: center; z-index: 5; }
     .erc-slick-dots button { background: rgba(255,255,255,.45) !important; border: none; border-radius: 50px; width: 26px; height: 4px; padding: 0; transition: all .3s ease; }
     .erc-slick-dots .slick-active button { background: #ffc600 !important; width: 40px; }

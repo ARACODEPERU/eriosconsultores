@@ -185,9 +185,13 @@
             transition: all .3s ease;
         }
         .erc-topbar__net:hover {
-            background: #ffc600;
-            border-color: #ffc600;
-            color: #07294d;
+            /* Petición expresa: fondo celeste con el icono en blanco y sin aro
+               (el borde se vuelve transparente para que el círculo sea un
+               bloque celeste limpio). Queda por debajo de AA de forma
+               deliberada y asumida. */
+            background: #00b6ff;
+            border-color: transparent;
+            color: #fff;
             transform: translateY(-2px);
             text-decoration: none;
         }
@@ -226,6 +230,9 @@
            Activo (página actual): píldora más densa, texto en 700 y barra
            celeste debajo. El hover nunca muestra la barra, así el «estás aquí»
            se distingue del simple pasar por encima.
+           El acento es el celeste de marca (#00B6FF). El texto se queda en el
+           azul fuerte porque el celeste sobre blanco da 2,3:1 y no vale para
+           texto.
            El indicador va en ::before porque ::after lo usa el caret del
            desplegable «Servicios». */
         .erc-nav__link {
@@ -250,23 +257,23 @@
             bottom: -7px;
             height: 3px;
             border-radius: 3px;
-            background: #00a0f0;
+            background: #00b6ff;
             transform: scaleX(0);
             transition: transform .2s ease;
         }
         .erc-nav__link:hover {
-            background-color: rgba(0, 160, 240, 0.10);
+            background-color: rgba(0, 182, 255, 0.10);
             color: #004aad !important;
             text-decoration: none;
         }
         .erc-nav__link:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
         .erc-nav__link.active {
-            background-color: rgba(0, 160, 240, 0.16);
+            background-color: rgba(0, 182, 255, 0.16);
             color: #004aad !important;
             font-weight: 700;
         }
         /* Pasar por encima de la página actual no debe aclararle la píldora */
-        .erc-nav__link.active:hover { background-color: rgba(0, 160, 240, 0.20); }
+        .erc-nav__link.active:hover { background-color: rgba(0, 182, 255, 0.20); }
         .erc-nav__link.active::before { transform: scaleX(1); }
         @media (prefers-reduced-motion: reduce) {
             .erc-nav__link, .erc-nav__link::before { transition: none !important; }
@@ -301,8 +308,9 @@
         }
         .erc-nav__dropmenu .dropdown-item:hover,
         .erc-nav__dropmenu .dropdown-item.active {
-            /* Resalte del submenú en el celeste de marca (el mismo del slider) */
-            background: rgba(0, 160, 240, 0.14);
+            /* Resalte del submenú en el celeste de marca (#00B6FF), igual que el
+               hover y el activo de los ítems de arriba. */
+            background: rgba(0, 182, 255, 0.14);
             color: #004aad;
         }
         .erc-nav__dropmenu .dropdown-divider { margin: 6px 8px; border-color: #eceff5; }
@@ -360,11 +368,13 @@
             white-space: nowrap;
         }
         .erc-nav__cta:hover {
-            /* Hover unificado: amarillo de marca con texto navy */
-            background: #ffc600;
-            color: #07294d;
+            /* Petición expresa: fondo celeste con la letra en blanco y sin aro.
+               Queda por debajo de AA de forma deliberada y asumida; se mantiene
+               solo la sombra suave que ya tenía el hover. */
+            background: #00b6ff;
+            color: #fff;
             text-decoration: none;
-            box-shadow: 0 8px 20px rgba(255, 198, 0, 0.4);
+            box-shadow: 0 8px 20px rgba(0, 182, 255, 0.35);
         }
 
         /* ---- Logo según tema ----
@@ -395,9 +405,11 @@
             transition: background .3s ease, color .3s ease, border-color .3s ease, transform .3s ease;
         }
         .erc-theme-toggle:hover {
-            background: #ffc600;
-            border-color: #ffc600;
-            color: #07294d;
+            /* Mismo criterio que el resto del header: fondo celeste, icono en
+               blanco y sin aro. */
+            background: #00b6ff;
+            border-color: transparent;
+            color: #fff;
             transform: translateY(-2px);
         }
         .erc-theme-toggle:focus-visible {
@@ -410,9 +422,9 @@
             color: #ffc600;
         }
         html[data-theme="dark"] .erc-theme-toggle:hover {
-            background: #ffc600;
-            border-color: #ffc600;
-            color: #07294d;
+            background: #00b6ff;
+            border-color: transparent;
+            color: #fff;
         }
         /* Solo se pinta el icono del tema activo */
         .erc-theme-toggle__icon--sun { display: none; }

@@ -73,23 +73,30 @@ html[data-theme] body {
     background: #cbd7e6;
 }
 
-/* Menú: la píldora y su barra usan el celeste claro del modo oscuro (el
-   amarillo del indicador anterior desentonaba y el texto lo fija el CSS
-   generado). */
+/* Menú: píldora y barra usan el celeste de marca; el hover y el activo se
+   saltan la variante clara del CSS generado (#71A9F4) porque el celeste
+   sobre el navy oscuro sí tiene contraste para texto. Las densidades están
+   medidas para que el celeste no baje de 5:1 sobre su propia píldora
+   (0,14 → 5,9:1 · 0,18 → 5,4:1 · 0,22 → 5,0:1). */
 :where(html[data-theme="dark"]) .erc-nav__link:hover {
-    background-color: rgba(113, 169, 244, .14);
+    background-color: rgba(0, 182, 255, .14);
 }
 
 :where(html[data-theme="dark"]) .erc-nav__link.active {
-    background-color: rgba(113, 169, 244, .22);
+    background-color: rgba(0, 182, 255, .18);
 }
 
 :where(html[data-theme="dark"]) .erc-nav__link.active:hover {
-    background-color: rgba(113, 169, 244, .26);
+    background-color: rgba(0, 182, 255, .22);
 }
 
 :where(html[data-theme="dark"]) .erc-nav__link::before {
-    background: #71a9f4;
+    background: #00b6ff;
+}
+
+:where(html[data-theme="dark"]) .erc-nav__link:hover,
+:where(html[data-theme="dark"]) .erc-nav__link.active {
+    color: #00b6ff !important;
 }
 
 :where(html[data-theme="dark"]) .erc-nav__dropmenu {
@@ -104,9 +111,10 @@ html[data-theme] body {
 
 :where(html[data-theme="dark"]) .erc-nav__dropmenu .dropdown-item:hover,
 :where(html[data-theme="dark"]) .erc-nav__dropmenu .dropdown-item.active {
-    /* Resalte del submenú en el celeste de marca (el mismo del slider) */
-    background: rgba(0, 160, 240, .22);
-    color: #71a9f4;
+    /* Resalte del submenú en el celeste de marca, igual que el resto del menú
+       (0,18 y no 0,22 para no bajar de 5:1 sobre el desplegable oscuro) */
+    background: rgba(0, 182, 255, .18);
+    color: #00b6ff;
 }
 
 :where(html[data-theme="dark"]) .erc-nav__dropmenu .dropdown-divider {
@@ -208,6 +216,14 @@ html[data-theme] body {
 
 :where(html[data-theme="dark"]) .erc-cl-inv__plan--corporate .erc-cl-inv__plan-head {
     background: #1b2436;
+}
+
+/* --------------------------------------------------- Hero (slider) --------- */
+/* El distintivo del hero también deja el amarillo: su icono va en blanco, como
+   su etiqueta, en los dos temas (el CSS generado seguía fijando ahí un amarillo
+   apagado). */
+:where(html[data-theme="dark"]) .erc-hero__badge i {
+    color: #fff;
 }
 
 /* --------------------------------------------------- Formularios / Bootstrap */
