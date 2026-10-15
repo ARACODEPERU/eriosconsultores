@@ -148,13 +148,15 @@
             text-decoration: none;
             transition: color .3s ease;
         }
-        a.erc-topbar__item:hover { color: #ffc600; text-decoration: none; }
+        /* a.erc-topbar__item:hover { color: #ffc600; text-decoration: none; } */
+        a.erc-topbar__item:hover { color: #fff; text-decoration: none; }
         .erc-topbar__icon {
             width: 22px;
             height: 22px;
             border-radius: 6px;
             background: rgba(255, 198, 0, 0.16);
-            color: #ffc600;
+            /* color: #ffc600; */
+            color: #fff;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -316,7 +318,8 @@
                 linear-gradient(100deg,
                         rgba(0, 72, 176, 0.95) 0%,
                         rgba(0, 72, 176, 0.80) 100%);
-            color: #ffc600;
+            /* color: #ffc600; */
+            color: #fff;
             font-family: 'Montserrat', sans-serif;
             font-size: 13px;
             font-weight: 700;
