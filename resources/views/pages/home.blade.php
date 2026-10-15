@@ -136,14 +136,12 @@
     }
     .erc-habout__img { width: 100%; height: 400px; object-fit: cover; display: block; }
     .erc-habout__img--fallback { width: auto; max-width: 60%; margin: 0 auto; height: 400px; object-fit: contain; filter: brightness(0) invert(1); opacity: .92; }
-    .erc-habout__accent { position: absolute; right: -20px; bottom: -20px; width: 55%; height: 55%; border: 3px solid #ffc600; border-radius: 16px; z-index: -1; }
-    /* El adorno se sale 20px a la derecha del bloque, pero por debajo de 576px el
-       contenedor ocupa todo el ancho y solo aporta 15px de padding: los 5px
-       restantes provocaban scroll horizontal. En ese rango se reduce el
-       desplazamiento para que quede dentro sin recortarlo. */
-    @media (max-width: 575px) {
-        .erc-habout__accent { right: -8px; bottom: -8px; }
-    }
+    /* El adorno se desfasa 10px por debajo y a la derecha del bloque de imagen.
+       El desfase se queda siempre dentro de los 15px de padding del contenedor:
+       así no puede provocar scroll horizontal a ningún ancho (con -20px se salía
+       5px en cuanto el contenedor ocupaba todo el ancho, por debajo de los
+       1200px de max-width del tema). */
+    .erc-habout__accent { position: absolute; right: -10px; bottom: -10px; width: 55%; height: 55%; border: 3px solid #ffc600; border-radius: 16px; z-index: -1; }
     .erc-habout__title { font-size: 36px; font-weight: 700; color: #1d2025; line-height: 1.25; margin: 0 0 16px; }
     .erc-habout__text { font-size: 15.5px; line-height: 27px; color: #505050; margin: 0 0 14px; }
     .erc-habout__actions { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 26px; }
