@@ -19,12 +19,14 @@ tampoco vale (2,3:1).
 ### Reglas de hover (petición expresa del cliente)
 
 - **Todo hover con relleno celeste lleva la letra (o el icono) en blanco.** Aplicado en el
-  menú de ítems, el botón «Aula Virtual», el switch de tema, los iconos del topbar y los
-  botones del hero. El 2,3:1 del blanco sobre celeste queda como decisión asumida, no como
-  descuido: no hace falta volver a plantearlo.
-- **Única excepción:** cuando el hover es un *velo* celeste translúcido sobre fondo claro
-  (las píldoras del menú, `rgba(0, 182, 255, .10)` sobre blanco) la letra va en azul fuerte
-  `#004AAD`, porque el blanco desaparecería sobre un fondo casi blanco.
+  botón «Aula Virtual», el switch de tema, los iconos del topbar y los botones del hero. El
+  2,3:1 del blanco sobre celeste queda como decisión asumida, no como descuido: no hace falta
+  volver a plantearlo.
+- **Excepciones: los velos, que no son rellenos.** En las píldoras del menú el hover es un
+  velo translúcido, así que la letra no va en blanco: en claro es azul fuerte `#004AAD`
+  (velo del 10-20 % sobre blanco) y en oscuro es celeste `#00B6FF` (velo del 14-22 % sobre
+  navy). Pendiente de decidir si en oscuro esas píldoras pasan a letra blanca: ganarían
+  contraste (12,4:1 frente a 5,4:1).
 
 ### Deuda conocida: el celeste antiguo `#00A0F0`
 
