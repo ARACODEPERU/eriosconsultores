@@ -206,19 +206,19 @@
             box-shadow: 0 6px 18px rgba(255, 198, 0, 0.22);
         }
         .erc-hs-card__btn--info:hover {
-            background: #004aad;
-            color: #ffc600;
-            box-shadow: 0 10px 24px rgba(0, 74, 173, 0.4);
+            background: #ffc600;
+            color: #07294d;
+            box-shadow: 0 10px 24px rgba(255, 198, 0, 0.45);
         }
         .erc-hs-card__btn--wa {
             border: 2px solid rgba(37, 211, 102, 0.6);
             color: #25D366;
         }
         .erc-hs-card__btn--wa:hover {
-            background: #25D366;
-            border-color: #25D366;
-            color: #fff;
-            box-shadow: 0 10px 24px rgba(37, 211, 102, 0.35);
+            background: #ffc600;
+            border-color: #ffc600;
+            color: #07294d;
+            box-shadow: 0 10px 24px rgba(255, 198, 0, 0.45);
         }
         @media (max-width: 575px) {
             .erc-hs { padding: 60px 0 70px; }

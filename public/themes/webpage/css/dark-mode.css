@@ -152,9 +152,10 @@ html[data-theme] body {
 }
 
 :where(html[data-theme="dark"]) .erc-btn--outline:hover {
-    background: #71a9f4;
-    border-color: #71a9f4;
-    color: #0b1220;
+    /* Hover unificado del sitio: amarillo de marca también en oscuro */
+    background: #ffc600;
+    border-color: #ffc600;
+    color: #07294d;
 }
 
 /* --- Textos en navy sobre superficies claras --- */

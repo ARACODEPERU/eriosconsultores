@@ -187,13 +187,13 @@
             transition: all .35s ease;
         }
         .erc-ceo__btn:hover {
-        background:
-            linear-gradient(100deg, rgba(8, 48, 88, 0.55) 0%, rgba(8, 48, 88, 0.30) 55%, rgba(8, 48, 88, 0) 85%),
-            linear-gradient(100deg, rgba(0, 160, 240, 0.95) 0%, rgba(0, 160, 240, 0.75) 60%, rgba(0, 160, 240, 0.55) 100%);
-        color: #fff;
+            /* Hover unificado: amarillo de marca con texto navy */
+            background: #ffc600;
+            color: #07294d;
             transform: translateY(-3px);
-            box-shadow: 0 14px 30px rgba(0, 74, 173, 0.3);
+            box-shadow: 0 14px 30px rgba(255, 198, 0, 0.4);
             text-decoration: none;
+        }
 
         /* ---- Responsivo ---- */
         @media (max-width: 991px) {

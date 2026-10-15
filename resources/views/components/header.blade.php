@@ -333,19 +333,11 @@
             white-space: nowrap;
         }
         .erc-nav__cta:hover {
-            /* Hover: versión clara del degradado (celeste del logo) */
-            background:
-                linear-gradient(100deg,
-                        rgba(8, 48, 88, 0.55) 0%,
-                        rgba(8, 48, 88, 0.30) 55%,
-                        rgba(8, 48, 88, 0) 85%),
-                linear-gradient(100deg,
-                        rgba(0, 160, 240, 0.95) 0%,
-                        rgba(0, 160, 240, 0.75) 60%,
-                        rgba(0, 160, 240, 0.55) 100%);
-            color: #fff;
+            /* Hover unificado: amarillo de marca con texto navy */
+            background: #ffc600;
+            color: #07294d;
             text-decoration: none;
-            box-shadow: 0 8px 20px rgba(8, 48, 88, 0.35);
+            box-shadow: 0 8px 20px rgba(255, 198, 0, 0.4);
         }
 
         /* ---- Logo según tema ----
@@ -376,9 +368,9 @@
             transition: background .3s ease, color .3s ease, border-color .3s ease, transform .3s ease;
         }
         .erc-theme-toggle:hover {
-            background: #07294d;
-            border-color: #07294d;
-            color: #ffc600;
+            background: #ffc600;
+            border-color: #ffc600;
+            color: #07294d;
             transform: translateY(-2px);
         }
         .erc-theme-toggle:focus-visible {
@@ -405,7 +397,14 @@
             border: 2px solid #004aad;
             border-radius: 8px;
             padding: 8px 10px;
+            transition: background .3s ease, border-color .3s ease;
         }
+        /* Hover unificado: amarillo de marca con las barras en navy */
+        .erc-nav__toggler:hover {
+            background: #ffc600;
+            border-color: #ffc600;
+        }
+        .erc-nav__toggler:hover .icon-bar { background: #07294d; }
         .erc-nav__toggler .icon-bar {
             display: block;
             width: 22px;

@@ -2146,8 +2146,11 @@ p {
     display: none;
 }
 .back-to-top:hover {
-    color: #fff;
-    background-color: #021d3a;
+    /* Hover unificado del sitio: se mantiene el amarillo de marca */
+    color: #07294d;
+    background-color: #ffc600;
+    -webkit-transform: translateY(-4px);
+    transform: translateY(-4px);
 }
 /*=====================================================
     14. CATEGORY 2 css 

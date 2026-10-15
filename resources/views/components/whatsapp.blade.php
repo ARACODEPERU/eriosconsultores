@@ -8,7 +8,7 @@
     <style type="text/css">
         #whatsapp .wtsapp{
             position: fixed;
-            transform: all .5s ease;
+            transition: background-color .3s ease, color .3s ease;
             background-color: #25D366;
             display: block;
             text-align: center;
@@ -46,6 +46,18 @@
         #whatsapp .wtsapp:focus{
             border: none;
             outline: none;
+        }
+
+        /* Hover unificado: el botón flotante también pasa a amarillo con el
+           icono en navy (se incluye el anillo pulsante para que no quede verde). */
+        #whatsapp .wtsapp:hover,
+        #whatsapp .wtsapp:focus-visible{
+            background-color: #ffc600;
+            color: #07294d;
+        }
+        #whatsapp .wtsapp:hover:before,
+        #whatsapp .wtsapp:focus-visible:before{
+            background-color: #ffc600;
         }
 
         /* Con un modal abierto (Bootstrap añade .modal-open al body) el botón

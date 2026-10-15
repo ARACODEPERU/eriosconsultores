@@ -48,15 +48,14 @@
         color: #fff;
     }
     .erc-btn--yellow:hover {
-        background:
-            linear-gradient(100deg, rgba(8, 48, 88, 0.55) 0%, rgba(8, 48, 88, 0.30) 55%, rgba(8, 48, 88, 0) 85%),
-            linear-gradient(100deg, rgba(0, 160, 240, 0.95) 0%, rgba(0, 160, 240, 0.75) 60%, rgba(0, 160, 240, 0.55) 100%);
-        color: #fff;
+        background: #ffc600;
+        color: #07294d;
+        box-shadow: 0 12px 28px rgba(255, 198, 0, 0.45);
     }
     .erc-btn--ghost { border: 2px solid #fff; color: #fff; }
     .erc-btn--ghost:hover { background: #ffc600; border-color: #ffc600; color: #07294d; }
     .erc-btn--outline { border: 2px solid #004aad; color: #004aad; }
-    .erc-btn--outline:hover { background: #004aad; color: #fff; }
+    .erc-btn--outline:hover { background: #ffc600; border-color: #ffc600; color: #07294d; }
 
     /* ---- Hero slider ---- */
     /* El hero mide un alto contenido (clamp) y recorta con overflow: hidden, así
@@ -135,6 +134,13 @@
     .erc-habout__img { width: 100%; height: 400px; object-fit: cover; display: block; }
     .erc-habout__img--fallback { width: auto; max-width: 60%; margin: 0 auto; height: 400px; object-fit: contain; filter: brightness(0) invert(1); opacity: .92; }
     .erc-habout__accent { position: absolute; right: -20px; bottom: -20px; width: 55%; height: 55%; border: 3px solid #ffc600; border-radius: 16px; z-index: -1; }
+    /* El adorno se sale 20px a la derecha del bloque, pero por debajo de 576px el
+       contenedor ocupa todo el ancho y solo aporta 15px de padding: los 5px
+       restantes provocaban scroll horizontal. En ese rango se reduce el
+       desplazamiento para que quede dentro sin recortarlo. */
+    @media (max-width: 575px) {
+        .erc-habout__accent { right: -8px; bottom: -8px; }
+    }
     .erc-habout__title { font-size: 36px; font-weight: 700; color: #1d2025; line-height: 1.25; margin: 0 0 16px; }
     .erc-habout__text { font-size: 15.5px; line-height: 27px; color: #505050; margin: 0 0 14px; }
     .erc-habout__actions { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 26px; }
