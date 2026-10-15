@@ -44,7 +44,8 @@
         background:
             linear-gradient(100deg, rgba(8, 48, 88, 0.85) 0%, rgba(8, 48, 88, 0.45) 55%, rgba(8, 48, 88, 0) 85%),
             linear-gradient(100deg, rgba(0, 72, 176, 0.95) 0%, rgba(0, 72, 176, 0.80) 100%);
-        color: #ffc600;
+        /* color: #ffc600; */
+        color: #fff;
     }
     .erc-btn--yellow:hover {
         background:
