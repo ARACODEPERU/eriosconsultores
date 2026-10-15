@@ -275,7 +275,8 @@
         }
         .erc-nav__dropmenu .dropdown-item:hover,
         .erc-nav__dropmenu .dropdown-item.active {
-            background: rgba(255, 198, 0, 0.14);
+            /* Resalte del submenú en el celeste de marca (el mismo del slider) */
+            background: rgba(0, 160, 240, 0.14);
             color: #004aad;
         }
         .erc-nav__dropmenu .dropdown-divider { margin: 6px 8px; border-color: #eceff5; }

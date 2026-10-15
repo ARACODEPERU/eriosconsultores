@@ -81,7 +81,10 @@
         line-height: 1.6; max-width: 560px; margin-bottom: 26px;
     }
     .erc-hero__actions { display: flex; gap: 12px; flex-wrap: wrap; }
-    .erc-hero__actions .erc-btn--yellow { box-shadow: 0 10px 26px rgba(255, 198, 0, 0.35); }
+    /* Resplandor blanco en el hero: el botón va sobre el degradado celeste del
+       slider, así que el halo amarillo anterior desentonaba con el fondo. */
+    .erc-hero__actions .erc-btn--yellow { box-shadow: 0 10px 26px rgba(255, 255, 255, 0.35); }
+    .erc-hero__actions .erc-btn--yellow:hover { box-shadow: 0 12px 28px rgba(255, 255, 255, 0.5); }
     .erc-slick-dots { position: absolute; bottom: 34px; left: 0; right: 0; text-align: center; z-index: 5; }
     .erc-slick-dots button { background: rgba(255,255,255,.45) !important; border: none; border-radius: 50px; width: 26px; height: 4px; padding: 0; transition: all .3s ease; }
     .erc-slick-dots .slick-active button { background: #ffc600 !important; width: 40px; }
