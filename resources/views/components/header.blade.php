@@ -220,36 +220,62 @@
         .erc-nav__brand img { width: 165px; height: auto; display: block; }
         .erc-nav__list { align-items: center; }
         .erc-nav__list .nav-item { padding: 0 2px; }
+        /* ---- Menú: cada ítem es una píldora ----
+           Reposo: texto oscuro sin fondo.
+           Hover: píldora con tinte celeste + texto navy.
+           Activo (página actual): píldora más densa, texto en 700 y barra
+           celeste debajo. El hover nunca muestra la barra, así el «estás aquí»
+           se distingue del simple pasar por encima.
+           El indicador va en ::before porque ::after lo usa el caret del
+           desplegable «Servicios». */
         .erc-nav__link {
             position: relative;
             display: inline-block;
-            padding: 10px 11px !important;
+            padding: 9px 14px !important;
             font-family: 'Montserrat', sans-serif;
             font-size: 12px;
             font-weight: 600;
-            letter-spacing: 0.3px;
+            letter-spacing: 0.6px;
             text-transform: uppercase;
             color: #1d2025 !important;
-            transition: color .3s ease;
+            border-radius: 10px;
+            transition: background-color .18s ease, color .18s ease;
             white-space: nowrap;
         }
-        .erc-nav__link::after {
+        .erc-nav__link::before {
             content: '';
             position: absolute;
-            left: 11px;
-            right: 11px;
-            bottom: 2px;
-            height: 2px;
-            border-radius: 2px;
-            background: #ffc600;
+            left: 14px;
+            right: 14px;
+            bottom: -7px;
+            height: 3px;
+            border-radius: 3px;
+            background: #00a0f0;
             transform: scaleX(0);
-            transform-origin: left;
-            transition: transform .3s ease;
+            transition: transform .2s ease;
         }
-        .erc-nav__link:hover { color: #004aad !important; text-decoration: none; }
-        .erc-nav__link:hover::after { transform: scaleX(1); }
-        .erc-nav__link.active { color: #004aad !important; }
-        .erc-nav__link.active::after { transform: scaleX(1); }
+        .erc-nav__link:hover {
+            background-color: rgba(0, 160, 240, 0.10);
+            color: #004aad !important;
+            text-decoration: none;
+        }
+        .erc-nav__link:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+        .erc-nav__link.active {
+            background-color: rgba(0, 160, 240, 0.16);
+            color: #004aad !important;
+            font-weight: 700;
+        }
+        /* Pasar por encima de la página actual no debe aclararle la píldora */
+        .erc-nav__link.active:hover { background-color: rgba(0, 160, 240, 0.20); }
+        .erc-nav__link.active::before { transform: scaleX(1); }
+        @media (prefers-reduced-motion: reduce) {
+            .erc-nav__link, .erc-nav__link::before { transition: none !important; }
+        }
+        /* Justo por encima del colapso del menú el espacio va muy justo (el logo
+           ya se encoge solo): se estrecha la píldora para no quitarle más sitio. */
+        @media (min-width: 992px) and (max-width: 1199px) {
+            .erc-nav__link { padding: 9px 11px !important; letter-spacing: 0.3px; }
+        }
 
         /* Dropdown de Servicios (áreas de práctica) */
         .erc-nav__dropmenu {
@@ -422,8 +448,19 @@
                 margin-top: 10px;
             }
             .erc-nav__list .nav-item { padding: 0; }
-            .erc-nav__link { display: block; padding: 10px 8px !important; }
+            .erc-nav__link { display: block; padding: 10px 12px !important; }
+            /* El caret del desplegable no se usa en el menú apilado */
             .erc-nav__link::after { display: none; }
+            /* En móvil el indicador del activo es una barra vertical a la
+               izquierda en lugar de la barra inferior. */
+            .erc-nav__link::before {
+                left: 0;
+                right: auto;
+                top: 9px;
+                bottom: 9px;
+                width: 3px;
+                height: auto;
+            }
             .erc-nav__cta-item { margin: 8px 0 0; }
             .erc-nav__theme-item { margin: 10px 0 0; }
             .erc-nav__brand img { width: 140px; }

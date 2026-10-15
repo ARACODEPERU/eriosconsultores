@@ -73,6 +73,25 @@ html[data-theme] body {
     background: #cbd7e6;
 }
 
+/* Menú: la píldora y su barra usan el celeste claro del modo oscuro (el
+   amarillo del indicador anterior desentonaba y el texto lo fija el CSS
+   generado). */
+:where(html[data-theme="dark"]) .erc-nav__link:hover {
+    background-color: rgba(113, 169, 244, .14);
+}
+
+:where(html[data-theme="dark"]) .erc-nav__link.active {
+    background-color: rgba(113, 169, 244, .22);
+}
+
+:where(html[data-theme="dark"]) .erc-nav__link.active:hover {
+    background-color: rgba(113, 169, 244, .26);
+}
+
+:where(html[data-theme="dark"]) .erc-nav__link::before {
+    background: #71a9f4;
+}
+
 :where(html[data-theme="dark"]) .erc-nav__dropmenu {
     background: #16203a;
     border-color: #2a3547;
