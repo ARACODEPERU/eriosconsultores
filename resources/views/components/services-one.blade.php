@@ -81,11 +81,18 @@
             font-size: 14px;
             letter-spacing: 2.5px;
             text-transform: uppercase;
-            color: #00b6ff;
+            /* La banda es navy en los dos temas, así que la frase va en blanco
+               (13:1) en lugar del celeste, que aquí solo daba 7,5:1 y se perdía
+               con la letra fina en mayúsculas. */
+            color: #fff;
             position: relative;
             padding-bottom: 12px;
             margin-bottom: 12px;
         }
+        /* Guiones del encabezado: degradado celeste→blanco. Van espejados para
+           que el blanco caiga hacia el texto y los dos extremos cierren la
+           frase. Se usa blanco puro y no el de los bordes translúcidos porque
+           a 2px de alto un alfa se convierte en una línea descolorida. */
         .erc-hs-eyebrow::before,
         .erc-hs-eyebrow::after {
             content: '';
@@ -93,8 +100,9 @@
             bottom: 0;
             width: 35px;
             height: 2px;
-            background: #00b6ff;
         }
+        .erc-hs-eyebrow::before { background: linear-gradient(90deg, #00b6ff 0%, #fff 100%); }
+        .erc-hs-eyebrow::after { background: linear-gradient(90deg, #fff 0%, #00b6ff 100%); }
         .erc-hs-eyebrow::before { left: 50%; transform: translateX(calc(-100% - 8px)); }
         .erc-hs-eyebrow::after { left: 50%; transform: translateX(8px); }
         .erc-hs-head h2 {

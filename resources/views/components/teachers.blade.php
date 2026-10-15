@@ -100,7 +100,7 @@
             padding: 0 44px 12px; margin-bottom: 12px;
         }
         .erc-tch-eyebrow::before, .erc-tch-eyebrow::after {
-            content: ''; position: absolute; bottom: 0; width: 32px; height: 2px; background: #ffc600;
+            content: ''; position: absolute; bottom: 0; width: 32px; height: 2px; background: #00b6ff; /* celeste de marca */
         }
         .erc-tch-eyebrow::before { left: 0; }
         .erc-tch-eyebrow::after { right: 0; }
@@ -134,7 +134,7 @@
         .erc-tch-card:hover {
             transform: translateY(-8px);
             box-shadow: 0 20px 44px rgba(0, 74, 173, 0.16);
-            border-color: rgba(255, 198, 0, 0.55);
+            border-color: rgba(0, 182, 255, 0.55);
         }
         .erc-tch-card__trigger {
             display: block; width: 100%;
@@ -193,7 +193,7 @@
         .erc-tch-card__body {
             padding: 18px 20px 22px;
             text-align: center;
-            border-top: 3px solid #ffc600;
+            border-top: 3px solid #00b6ff; /* el filete pasa a celeste: el modo oscuro ya usaba este valor, así los dos temas coinciden */
         }
         .erc-tch-card__name-btn {
             background: none; border: none; padding: 0;
@@ -205,7 +205,7 @@
         }
         .erc-tch-card__name-btn::after {
             content: ''; position: absolute; left: 50%; bottom: -5px;
-            width: 0; height: 2px; background: #ffc600;
+            width: 0; height: 2px; background: #00b6ff;
             transform: translateX(-50%);
             transition: width .35s ease;
         }

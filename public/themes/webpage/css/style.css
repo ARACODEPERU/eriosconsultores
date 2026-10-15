@@ -2135,7 +2135,9 @@ p {
     width: 40px;
     height: 40px;
     line-height: 35px;
-    background-color: #ffc600;
+    /* El botón deja el amarillo y pasa al celeste de marca: el modo oscuro ya
+       usaba este mismo valor, así que los dos temas coinciden. */
+    background-color: #00b6ff;
     color: #fff;
     font-size: 28px;
     border-radius: 5px;
@@ -2146,9 +2148,10 @@ p {
     display: none;
 }
 .back-to-top:hover {
-    /* Hover unificado del sitio: se mantiene el amarillo de marca */
-    color: #07294d;
-    background-color: #ffc600;
+    /* Hover con relleno celeste: la letra va en blanca, como en el resto del
+       sitio, y el único cambio visible es la elevación. */
+    color: #fff;
+    background-color: #00b6ff;
     -webkit-transform: translateY(-4px);
     transform: translateY(-4px);
 }

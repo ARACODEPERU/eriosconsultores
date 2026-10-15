@@ -69,8 +69,12 @@ html[data-theme] body {
     border-color: #3d4c63;
 }
 
-:where(html[data-theme="dark"]) .erc-nav__toggler .icon-bar {
-    background: #cbd7e6;
+/* Las barras de la hamburguesa pasan a celeste de marca en oscuro: el #004aad
+   de style.css les ganaba la especificidad y dejaba el icono en 2,1:1 sobre el
+   navy del menú, es decir casi invisible. Se refuerza el selector con
+   .erc-nav__bar para que dark-mode.auto.css y style.css no vuelvan a pisarlo. */
+:where(html[data-theme="dark"]) .navbar.erc-nav__bar .erc-nav__toggler .icon-bar {
+    background: #00b6ff;
 }
 
 /* Menú: píldora y barra usan el celeste de marca; el hover y el activo se

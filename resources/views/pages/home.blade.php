@@ -180,6 +180,10 @@
     .erc-video-band::before { content: ''; position: absolute; width: 320px; height: 320px; border-radius: 50%; border: 2px solid rgba(0,182,255,.16); top: -120px; right: -80px; }
     .erc-video-band::after { content: ''; position: absolute; width: 420px; height: 420px; border-radius: 50%; border: 2px solid rgba(0,182,255,.16); bottom: -180px; left: -120px; }
     .erc-video-band .container { position: relative; z-index: 1; }
+    /* El eyebrow de esta sección va sobre el navy de la banda: el azul fuerte daba
+       1,4:1 sobre el degradado y la frase apenas se leía, así que aquí pasa a blanco
+       como en el resto de bandas oscuras. El guion bajo la frase se queda en celeste. */
+    .erc-video-band .erc-sec-eyebrow { color: #fff; }
     .erc-video__playwrap { display: flex; justify-content: center; align-items: center; }
     .erc-video__play {
         width: 92px; height: 92px; border-radius: 50%; background: rgba(255,255,255,.08);

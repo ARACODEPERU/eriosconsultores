@@ -57,6 +57,20 @@
                             src="{{ asset('themes/webpage/images/Logo_Web_Negativo.png') }}"
                             alt="ERIOS CONSULTORES">
                     </a>
+                    {{-- Copia del interruptor de tema para la barra: en celular queda
+                         pegado a la izquierda de la hamburguesa, que es donde el
+                         visitante lo busca. El que vive dentro del menú se oculta en
+                         móvil para no tener dos switches a la vista; el guion de abajo
+                         pinta el estado en los dos. --}}
+                    <button type="button" class="erc-nav__theme erc-theme-toggle"
+                        aria-pressed="false" aria-label="Activar modo oscuro"
+                        title="Activar modo oscuro">
+                        <i class="fa fa-moon erc-theme-toggle__icon erc-theme-toggle__icon--moon"
+                            aria-hidden="true"></i>
+                        <i class="fa fa-sun erc-theme-toggle__icon erc-theme-toggle__icon--sun"
+                            aria-hidden="true"></i>
+                    </button>
+
                     <button class="navbar-toggler erc-nav__toggler" type="button" data-toggle="collapse"
                         data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
                         aria-expanded="false" aria-label="Toggle navigation">
@@ -389,6 +403,10 @@
            En modo claro el botón muestra la luna ("pasa a oscuro"); en modo
            oscuro muestra el sol. ---- */
         .erc-nav__theme-item { margin-left: 8px; }
+        /* El interruptor de la barra es solo para móvil (ver media query). Va con
+           .erc-nav__bar delante porque .erc-theme-toggle, que viene después y fija
+           display: inline-flex, si no le gana el empate. */
+        .erc-nav__bar .erc-nav__theme { display: none; }
         .erc-theme-toggle {
             width: 40px;
             height: 40px;
@@ -441,12 +459,18 @@
             padding: 8px 10px;
             transition: background .3s ease, border-color .3s ease;
         }
-        /* Hover unificado: amarillo de marca con las barras en navy */
-        .erc-nav__toggler:hover {
-            background: #ffc600;
-            border-color: #ffc600;
+        /* La hamburguesa deja el amarillo: hover con relleno celeste de marca y
+           las barras en blanco, como el resto de hovers del sitio (en oscuro ya
+           era celeste). Lleva :focus-visible porque en móvil el hover no llega y
+           el foco es la única señal al tocar el botón, y .navbar delante para
+           superar sin empates al `.navbar .navbar-toggler .icon-bar` de style.css. */
+        .navbar .erc-nav__toggler:hover,
+        .navbar .erc-nav__toggler:focus-visible {
+            background: #00b6ff;
+            border-color: #00b6ff;
         }
-        .erc-nav__toggler:hover .icon-bar { background: #07294d; }
+        .navbar .erc-nav__toggler:hover .icon-bar,
+        .navbar .erc-nav__toggler:focus-visible .icon-bar { background: #fff; }
         .erc-nav__toggler .icon-bar {
             display: block;
             width: 22px;
@@ -477,7 +501,11 @@
                 height: auto;
             }
             .erc-nav__cta-item { margin: 8px 0 0; }
-            .erc-nav__theme-item { margin: 10px 0 0; }
+            /* El interruptor del menú se esconde: en móvil el suyo es el de la barra. */
+            .erc-nav__theme-item { display: none; }
+            /* El de la barra va pegado a la hamburguesa: margin-left auto lo empuja a
+               la derecha junto al botón y el margen derecho los separa un poco. */
+            .erc-nav__bar .erc-nav__theme { display: inline-flex; margin-left: auto; margin-right: 10px; }
             .erc-nav__brand img { width: 140px; }
         }
     </style>
@@ -487,29 +515,37 @@
            preferencia se guarda en localStorage. */
         (function () {
             var root = document.documentElement;
-            var btn = document.getElementById('erc-theme-toggle');
-            if (!btn) return;
-            var moon = btn.querySelector('.erc-theme-toggle__icon--moon');
-            var sun = btn.querySelector('.erc-theme-toggle__icon--sun');
+            /* Hay dos interruptores con el mismo comportamiento (el de la barra, que
+               solo se ve en móvil, y el del menú), así que el estado se pinta en
+               todos y cualquiera de ellos cambia el tema. */
+            var btns = document.querySelectorAll('.erc-theme-toggle');
+            if (!btns.length) return;
 
             function isDark() { return root.getAttribute('data-theme') === 'dark'; }
 
             function paint() {
                 var dark = isDark();
                 var next = dark ? 'Activar modo claro' : 'Activar modo oscuro';
-                btn.setAttribute('aria-pressed', dark ? 'true' : 'false');
-                btn.setAttribute('aria-label', next);
-                btn.setAttribute('title', next);
-                if (moon) moon.style.display = dark ? 'none' : '';
-                if (sun) sun.style.display = dark ? '' : 'none';
+                for (var i = 0; i < btns.length; i++) {
+                    var btn = btns[i];
+                    var moon = btn.querySelector('.erc-theme-toggle__icon--moon');
+                    var sun = btn.querySelector('.erc-theme-toggle__icon--sun');
+                    btn.setAttribute('aria-pressed', dark ? 'true' : 'false');
+                    btn.setAttribute('aria-label', next);
+                    btn.setAttribute('title', next);
+                    if (moon) moon.style.display = dark ? 'none' : '';
+                    if (sun) sun.style.display = dark ? '' : 'none';
+                }
             }
 
-            btn.addEventListener('click', function () {
-                var dark = !isDark();
-                root.setAttribute('data-theme', dark ? 'dark' : 'light');
-                try { localStorage.setItem('erios-theme', dark ? 'dark' : 'light'); } catch (e) { }
-                paint();
-            });
+            for (var j = 0; j < btns.length; j++) {
+                btns[j].addEventListener('click', function () {
+                    var dark = !isDark();
+                    root.setAttribute('data-theme', dark ? 'dark' : 'light');
+                    try { localStorage.setItem('erios-theme', dark ? 'dark' : 'light'); } catch (e) { }
+                    paint();
+                });
+            }
 
             paint();
         })();

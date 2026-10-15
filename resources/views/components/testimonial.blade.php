@@ -56,18 +56,24 @@
 
         /* ---- Encabezado de sección (propio del componente) ---- */
         .erc-testi-head { text-align: center; max-width: 720px; margin: 0 auto 46px; padding: 0 15px; }
-        .erc-testi-head__eyebrow {
+        /* Con dos clases para ganarle al celeste que dark-mode.auto.css fija a
+           esta misma frase en modo oscuro (una sola clase empata y ese archivo
+           carga después). */
+        .erc-testi-band .erc-testi-head__eyebrow {
             display: inline-block;
             font-weight: 700;
             font-size: 14px;
             letter-spacing: 2.5px;
             text-transform: uppercase;
-            /* La banda de testimonios es azul fuerte: el amarillo pasa a celeste. */
-            color: #00b6ff;
+            /* La banda de testimonios es azul fuerte: la frase va en blanco,
+               como el h2 que lleva debajo, en lugar del celeste. */
+            color: #fff;
             position: relative;
             padding-bottom: 12px;
             margin-bottom: 12px;
         }
+        /* Guiones degradados celeste→blanco, espejados para que el blanco caiga
+           hacia la frase. */
         .erc-testi-head__eyebrow::before,
         .erc-testi-head__eyebrow::after {
             content: '';
@@ -75,8 +81,9 @@
             bottom: 0;
             width: 35px;
             height: 2px;
-            background: #00b6ff;
         }
+        .erc-testi-head__eyebrow::before { background: linear-gradient(90deg, #00b6ff 0%, #fff 100%); }
+        .erc-testi-head__eyebrow::after { background: linear-gradient(90deg, #fff 0%, #00b6ff 100%); }
         .erc-testi-head__eyebrow::before { left: 50%; transform: translateX(calc(-100% - 8px)); }
         .erc-testi-head__eyebrow::after { left: 50%; transform: translateX(8px); }
         .erc-testi-head h2 {

@@ -103,7 +103,7 @@
         <div class="erc-footer__bottom">
             <div class="container">
                 <div class="erc-footer__bottom-inner">
-                    <p>&copy; {{ date('Y') }} | ERIOS CONSULTORES Todos los derechos reservados.</p>
+                    <p>&copy; {{ date('Y') }} | <span class="erc-footer__brand">ERIOS CONSULTORES</span> Todos los derechos reservados.</p>
                     <p>Desarrollado por
                         <a href="https://aracodeperu.com/" target="_blank" rel="noopener noreferrer">ARACODE SMART SOLUTIONS</a>
                     </p>
@@ -273,13 +273,20 @@
             font-size: 13.5px;
             margin: 0;
         }
-        .erc-footer__bottom-inner a {
-            color: #00b6ff;
+        /* El nombre de la casa va en celeste de marca: sobre este navy da 7,9:1,
+           así que aquí sí puede llevar texto (el celeste solo falla sobre blanco). */
+        .erc-footer__bottom-inner .erc-footer__brand { color: #00b6ff; font-weight: 600; }
+        /* La firma del desarrollador pasa a blanco intenso, con dos clases para
+           ganarle al celeste que dark-mode.auto.css fija a este enlace (con una
+           sola, ese archivo carga después y el empate cae de su lado). */
+        .erc-footer .erc-footer__bottom-inner a {
+            color: #fff;
             font-weight: 600;
             text-decoration: none;
             transition: color .3s ease;
         }
-        .erc-footer__bottom-inner a:hover { color: #fff; text-decoration: none; }
+        /* Hover al revés que antes: el enlace blanco se enciende en celeste. */
+        .erc-footer .erc-footer__bottom-inner a:hover { color: #00b6ff; text-decoration: none; }
         @media (max-width: 767px) {
             .erc-footer__bottom-inner { justify-content: center; text-align: center; }
         }
