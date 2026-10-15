@@ -60,7 +60,8 @@
             content: '';
             position: absolute;
             border-radius: 50%;
-            border: 2px solid rgba(255, 198, 0, 0.12);
+            /* La banda es navy: los adornos dejan el amarillo y van en celeste. */
+            border: 2px solid rgba(0, 182, 255, 0.16);
         }
         .erc-hs::before { width: 320px; height: 320px; top: -120px; right: -80px; }
         .erc-hs::after { width: 420px; height: 420px; bottom: -180px; left: -120px; }
@@ -80,7 +81,7 @@
             font-size: 14px;
             letter-spacing: 2.5px;
             text-transform: uppercase;
-            color: #ffc600;
+            color: #00b6ff;
             position: relative;
             padding-bottom: 12px;
             margin-bottom: 12px;
@@ -92,7 +93,7 @@
             bottom: 0;
             width: 35px;
             height: 2px;
-            background: #ffc600;
+            background: #00b6ff;
         }
         .erc-hs-eyebrow::before { left: 50%; transform: translateX(calc(-100% - 8px)); }
         .erc-hs-eyebrow::after { left: 50%; transform: translateX(8px); }
@@ -133,7 +134,7 @@
         .erc-hs-card:hover {
             transform: translateY(-6px);
             background: rgba(255, 255, 255, 0.09);
-            border-color: rgba(255, 198, 0, 0.45);
+            border-color: rgba(0, 182, 255, 0.5);
         }
         .erc-hs-card__top {
             display: flex;
@@ -145,8 +146,8 @@
             width: 52px;
             height: 52px;
             border-radius: 14px;
-            background: rgba(255, 198, 0, 0.14);
-            color: #ffc600;
+            background: rgba(0, 182, 255, 0.16);
+            color: #00b6ff;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -154,8 +155,9 @@
             transition: all .35s ease;
         }
         .erc-hs-card:hover .erc-hs-card__icon {
-            background: #ffc600;
-            color: #07294d;
+            /* Relleno celeste con el icono en blanco. */
+            background: #00b6ff;
+            color: #fff;
             transform: rotate(-6deg);
         }
         .erc-hs-card__num {
@@ -200,25 +202,30 @@
         }
         .erc-hs-card__btn i { font-size: 15px; }
         .erc-hs-card__btn:hover { text-decoration: none; transform: translateY(-2px); }
+        /* Formato homologado del botón «Conócenos»: degradado del logo con la
+           letra en blanca y hover celeste con la letra en blanca. */
         .erc-hs-card__btn--info {
-            background: #ffc600;
-            color: #07294d;
-            box-shadow: 0 6px 18px rgba(255, 198, 0, 0.22);
+            background:
+                linear-gradient(100deg, rgba(8, 48, 88, 0.85) 0%, rgba(8, 48, 88, 0.45) 55%, rgba(8, 48, 88, 0) 85%),
+                linear-gradient(100deg, rgba(0, 72, 176, 0.95) 0%, rgba(0, 72, 176, 0.80) 100%);
+            color: #fff;
         }
         .erc-hs-card__btn--info:hover {
-            background: #ffc600;
-            color: #07294d;
-            box-shadow: 0 10px 24px rgba(255, 198, 0, 0.45);
+            background: #00b6ff;
+            color: #fff;
+            box-shadow: 0 12px 28px rgba(0, 182, 255, 0.45);
         }
         .erc-hs-card__btn--wa {
             border: 2px solid rgba(37, 211, 102, 0.6);
             color: #25D366;
         }
+        /* El hover del «Consultar» se rellena con el verde de WhatsApp, igual que
+           en la página de servicios. */
         .erc-hs-card__btn--wa:hover {
-            background: #ffc600;
-            border-color: #ffc600;
-            color: #07294d;
-            box-shadow: 0 10px 24px rgba(255, 198, 0, 0.45);
+            background: #25D366;
+            border-color: #25D366;
+            color: #fff;
+            box-shadow: 0 10px 24px rgba(37, 211, 102, 0.35);
         }
         @media (max-width: 575px) {
             .erc-hs { padding: 60px 0 70px; }

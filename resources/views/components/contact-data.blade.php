@@ -59,7 +59,8 @@
             width: 240px;
             height: 240px;
             border-radius: 50%;
-            border: 2px solid rgba(255, 198, 0, 0.14);
+            /* La tarjeta de contacto es navy: aquí el amarillo pasa a celeste. */
+            border: 2px solid rgba(0, 182, 255, 0.16);
             top: -90px;
             right: -70px;
             pointer-events: none;
@@ -97,8 +98,8 @@
             width: 46px;
             height: 46px;
             border-radius: 12px;
-            background: rgba(255, 198, 0, 0.14);
-            color: #ffc600;
+            background: rgba(0, 182, 255, 0.16);
+            color: #00b6ff;
             font-size: 18px;
             display: flex;
             align-items: center;
@@ -106,12 +107,13 @@
             transition: all .35s ease;
         }
         .erc-cdata__list li:hover .erc-cdata__icon {
-            background: #ffc600;
-            color: #07294d;
+            /* Relleno celeste con el icono en blanco. */
+            background: #00b6ff;
+            color: #fff;
             transform: rotate(-6deg);
         }
         .erc-cdata__list h6 {
-            color: #ffc600;
+            color: #00b6ff;
             font-size: 12px;
             font-weight: 700;
             letter-spacing: 1.2px;
@@ -129,7 +131,7 @@
             text-decoration: none;
             transition: color .3s ease;
         }
-        .erc-cdata__list a:hover { color: #ffc600; text-decoration: none; }
+        .erc-cdata__list a:hover { color: #00b6ff; text-decoration: none; }
 
         .erc-cdata__wa {
             position: relative;

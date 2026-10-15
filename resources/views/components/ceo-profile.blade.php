@@ -174,12 +174,14 @@
             margin: 0 0 26px;
             background: #fff;
             border: 1px solid #eceff5;
-            border-left: 4px solid #ffc600;
+            border-left: 4px solid #00b6ff;
             border-radius: 14px;
             padding: 18px 22px;
             box-shadow: 0 8px 22px rgba(14, 23, 38, 0.06);
         }
-        .erc-ceo__quote i { color: #ffc600; font-size: 20px; margin-top: 3px; }
+        /* El filete y el icono de la cita son adornos, no texto: ahí el celeste de
+           marca sí vale (sobre blanco no serviría para letra). */
+        .erc-ceo__quote i { color: #00b6ff; font-size: 20px; margin-top: 3px; }
         .erc-ceo__quote span { font-style: italic; color: #07294d; font-size: 15px; line-height: 1.7; font-weight: 500; }
 
         .erc-ceo__stats { display: flex; gap: 34px; }
@@ -194,24 +196,25 @@
         .erc-ceo__actions { margin-top: 28px; }
         .erc-ceo__btn {
             display: inline-flex; align-items: center; gap: 10px;
-            /* Degradado del botón Aula Virtual */
+            /* Degradado del botón Aula Virtual, con la letra en blanco como el
+               resto de botones principales (antes iba en amarillo). */
             background:
                 linear-gradient(100deg, rgba(8, 48, 88, 0.85) 0%, rgba(8, 48, 88, 0.45) 55%, rgba(8, 48, 88, 0) 85%),
                 linear-gradient(100deg, rgba(0, 72, 176, 0.95) 0%, rgba(0, 72, 176, 0.80) 100%);
-            color: #ffc600;
+            color: #fff;
             font-family: 'Montserrat', sans-serif;
-            font-size: 14px; font-weight: 700;
-            padding: 13px 26px; border-radius: 14px;
+            font-size: 14.5px; font-weight: 700;
+            padding: 13px 28px; border-radius: 14px;
             text-decoration: none;
-            box-shadow: 0 8px 22px rgba(8, 48, 88, 0.35);
             transition: all .35s ease;
         }
         .erc-ceo__btn:hover {
-            /* Hover unificado: amarillo de marca con texto navy */
-            background: #ffc600;
-            color: #07294d;
-            transform: translateY(-3px);
-            box-shadow: 0 14px 30px rgba(255, 198, 0, 0.4);
+            /* Hover celeste de marca con la letra en blanco, con el mismo realce y
+               la misma sombra que «Conócenos». */
+            background: #00b6ff;
+            color: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 12px 28px rgba(0, 182, 255, 0.45);
             text-decoration: none;
         }
 

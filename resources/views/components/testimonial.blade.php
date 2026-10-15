@@ -62,7 +62,8 @@
             font-size: 14px;
             letter-spacing: 2.5px;
             text-transform: uppercase;
-            color: #ffc600;
+            /* La banda de testimonios es azul fuerte: el amarillo pasa a celeste. */
+            color: #00b6ff;
             position: relative;
             padding-bottom: 12px;
             margin-bottom: 12px;
@@ -74,7 +75,7 @@
             bottom: 0;
             width: 35px;
             height: 2px;
-            background: #ffc600;
+            background: #00b6ff;
         }
         .erc-testi-head__eyebrow::before { left: 50%; transform: translateX(calc(-100% - 8px)); }
         .erc-testi-head__eyebrow::after { left: 50%; transform: translateX(8px); }
@@ -106,7 +107,7 @@
         .erc-testi-card:hover {
             transform: translateY(-6px);
             background: rgba(255, 255, 255, 0.11);
-            border-color: rgba(255, 198, 0, 0.5);
+            border-color: rgba(0, 182, 255, 0.55);
         }
         .erc-testi-card__quote {
             position: absolute;
@@ -115,13 +116,14 @@
             width: 44px;
             height: 44px;
             border-radius: 12px;
-            background: #ffc600;
-            color: #07294d;
+            /* Comilla en relleno celeste con el icono en blanco. */
+            background: #00b6ff;
+            color: #fff;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 18px;
-            box-shadow: 0 8px 20px rgba(255, 198, 0, 0.4);
+            box-shadow: 0 8px 20px rgba(0, 182, 255, 0.4);
         }
         .erc-testi-card__text {
             color: #fff;

@@ -265,12 +265,13 @@
                 box-shadow: 0 18px 44px rgba(7, 41, 77, 0.24);
                 margin-bottom: 30px;
             }
+            /* El bloque es navy: la píldora deja el amarillo por el celeste. */
             .erc-cl-inv__free-badge {
                 display: inline-flex;
                 align-items: center;
                 gap: 8px;
-                background: rgba(255, 198, 0, 0.16);
-                color: var(--erc-yellow);
+                background: rgba(0, 182, 255, 0.18);
+                color: #00b6ff;
                 font-family: 'Montserrat', sans-serif;
                 font-size: 12px;
                 font-weight: 700;

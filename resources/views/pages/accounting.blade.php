@@ -90,10 +90,14 @@
         padding: 26px 22px; text-align: center; transition: all .3s ease; position: relative;
     }
     .erc-acc-step:hover { transform: translateY(-4px); box-shadow: 0 14px 32px rgba(7, 41, 77, .10); border-color: rgba(255, 198, 0, .55); }
-    .erc-acc-step__num {
+    /* El número del paso es un chip navy: su letra deja el amarillo por el celeste. */
+    /* Con dos clases gana a `.erc-acc-step span`, que pisaba el color y el tamaño
+       y dejaba el número gris sobre el chip navy. */
+    .erc-acc-step .erc-acc-step__num {
         counter-increment: step;
         width: 46px; height: 46px; margin: 0 auto 14px; border-radius: 50%;
-        background: #07294d; color: #ffc600; font-family: 'Montserrat', sans-serif;
+        /* Chip navy: la letra deja el amarillo por el celeste de marca. */
+        background: #07294d; color: #00b6ff; font-family: 'Montserrat', sans-serif;
         font-weight: 800; font-size: 17px; display: flex; align-items: center; justify-content: center;
     }
     .erc-acc-step__num::before { content: counter(step); }
@@ -106,10 +110,13 @@
         background: linear-gradient(135deg, #07294d 0%, #0b3a6b 60%, #0e4a8f 100%);
         padding: 74px 0; text-align: center;
     }
-    .erc-acc-band::before { content: ''; position: absolute; width: 320px; height: 320px; border-radius: 50%; border: 2px solid rgba(255, 198, 0, .12); top: -120px; right: -80px; }
-    .erc-acc-band::after { content: ''; position: absolute; width: 420px; height: 420px; border-radius: 50%; border: 2px solid rgba(255, 198, 0, .12); bottom: -180px; left: -120px; }
+    /* La banda es navy: sus adornos dejan el amarillo y pasan a celeste. */
+    .erc-acc-band::before { content: ''; position: absolute; width: 320px; height: 320px; border-radius: 50%; border: 2px solid rgba(0, 182, 255, .16); top: -120px; right: -80px; }
+    .erc-acc-band::after { content: ''; position: absolute; width: 420px; height: 420px; border-radius: 50%; border: 2px solid rgba(0, 182, 255, .16); bottom: -180px; left: -120px; }
     .erc-acc-band .container { position: relative; z-index: 2; }
     .erc-acc-band .erc-sec-eyebrow { color: #fff; }
+    .erc-acc-band .erc-sec-eyebrow::before,
+    .erc-acc-band .erc-sec-eyebrow::after { background: #00b6ff; }
     .erc-acc-band h2 { font-family: 'Montserrat', sans-serif; font-size: 32px; font-weight: 800; color: #fff; margin: 14px 0 12px; }
     .erc-acc-band p { color: rgba(255, 255, 255, .78); font-size: 15.5px; line-height: 27px; max-width: 620px; margin: 0 auto 30px; }
 
@@ -119,19 +126,22 @@
         background:
             linear-gradient(100deg, rgba(8, 48, 88, 0.85) 0%, rgba(8, 48, 88, 0.45) 55%, rgba(8, 48, 88, 0) 85%),
             linear-gradient(100deg, rgba(0, 72, 176, 0.95) 0%, rgba(0, 72, 176, 0.80) 100%);
-        color: #ffc600;
+        /* Sobre el degradado navy la letra va en blanca, como en el resto de
+           botones del sitio (el celeste ahí solo daría 3,5:1). */
+        color: #fff;
         box-shadow: 0 10px 26px rgba(8, 48, 88, .35);
     }
     .erc-btn--yellow:hover {
         background:
             linear-gradient(100deg, rgba(8, 48, 88, 0.55) 0%, rgba(8, 48, 88, 0.30) 55%, rgba(8, 48, 88, 0) 85%),
-            linear-gradient(100deg, rgba(0, 160, 240, 0.95) 0%, rgba(0, 160, 240, 0.75) 60%, rgba(0, 160, 240, 0.55) 100%);
+            linear-gradient(100deg, rgba(0, 182, 255, 0.95) 0%, rgba(0, 182, 255, 0.75) 60%, rgba(0, 182, 255, 0.55) 100%);
         color: #fff;
         transform: translateY(-2px);
         text-decoration: none;
     }
     .erc-btn--outline { border: 2px solid #fff; color: #fff; }
-    .erc-btn--outline:hover { background: #ffc600; color: #07294d; border-color: #ffc600; text-decoration: none; }
+    /* Hover celeste con la letra en blanca, también en la banda navy. */
+    .erc-btn--outline:hover { background: #00b6ff; color: #fff; border-color: #00b6ff; text-decoration: none; }
     .erc-acc-actions { display: flex; gap: 14px; flex-wrap: wrap; }
     .erc-acc-actions--center { justify-content: center; }
 

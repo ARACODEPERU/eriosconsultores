@@ -177,7 +177,9 @@
             background:
                 linear-gradient(100deg, rgba(8, 48, 88, 0.85) 0%, rgba(8, 48, 88, 0.45) 55%, rgba(8, 48, 88, 0) 85%),
                 linear-gradient(100deg, rgba(0, 72, 176, 0.95) 0%, rgba(0, 72, 176, 0.80) 100%);
-            color: #ffc600;
+            /* Sobre el degradado navy la letra va en blanca, como en el resto de
+               botones del sitio (el celeste ahí solo daría 3,5:1). */
+            color: #fff;
             font-family: 'Montserrat', sans-serif;
             font-size: 13px; font-weight: 700; letter-spacing: .4px;
             padding: 9px 18px; border-radius: 14px;
@@ -230,7 +232,8 @@
             background:
                 linear-gradient(100deg, rgba(8, 48, 88, 0.85) 0%, rgba(8, 48, 88, 0.45) 55%, rgba(8, 48, 88, 0) 85%),
                 linear-gradient(100deg, rgba(0, 72, 176, 0.95) 0%, rgba(0, 72, 176, 0.80) 100%);
-            color: #ffc600;
+            /* Sobre el degradado navy la letra va en blanca (el celeste daría 3,5:1). */
+            color: #fff;
             font-family: 'Montserrat', sans-serif;
             font-size: 14px; font-weight: 700;
             padding: 14px 30px; border-radius: 14px;
@@ -239,11 +242,11 @@
             transition: all .35s ease;
         }
         .erc-teachers__more .erc-btn--yellow:hover {
-            /* Hover unificado: amarillo de marca con texto navy */
-            background: #ffc600;
-            color: #07294d;
-            transform: translateY(-3px);
-            box-shadow: 0 12px 28px rgba(255, 198, 0, 0.45);
+            /* Hover celeste de marca con la letra en blanco, como el resto. */
+            background: #00b6ff;
+            color: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 12px 28px rgba(0, 182, 255, 0.45);
         }
 
         /* ---- Modal ---- */
@@ -264,7 +267,7 @@
             width: 110px; height: 110px;
             border-radius: 50%;
             object-fit: cover;
-            border: 3px solid rgba(255, 198, 0, 0.7);
+            border: 3px solid rgba(0, 182, 255, 0.7);
             margin-bottom: 12px;
             background: #0b3a6b;
         }
@@ -273,7 +276,8 @@
             padding: 18px;
         }
         .erc-teacher-modal__name { color: #fff; font-size: 21px; font-weight: 700; margin: 0 0 4px; }
-        .erc-teacher-modal__role { color: #ffc600; font-size: 13.5px; font-weight: 600; }
+        /* La cabecera del modal es navy: el rótulo y el cierre dejan el amarillo. */
+        .erc-teacher-modal__role { color: #00b6ff; font-size: 13.5px; font-weight: 600; }
         .erc-teacher-modal__close {
             position: absolute;
             top: 14px;
@@ -289,7 +293,7 @@
             transition: all .3s ease;
             z-index: 2;
         }
-        .erc-teacher-modal__close:hover { background: #ffc600; color: #07294d; }
+        .erc-teacher-modal__close:hover { background: #00b6ff; color: #fff; }
         .erc-teacher-modal__body { padding: 24px 28px 28px; }
         .erc-teacher-modal__body ul { margin: 0; padding: 0; list-style: none; }
         .erc-teacher-modal__body li {

@@ -130,7 +130,8 @@
     }
     .erc-submit:hover {
         background: #004aad;
-        color: #ffc600;
+        /* Sobre el azul fuerte la letra deja el amarillo por el celeste. */
+        color: #00b6ff;
         transform: translateY(-2px);
         box-shadow: 0 12px 26px rgba(0, 74, 173, 0.3);
     }

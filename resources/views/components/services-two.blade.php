@@ -243,7 +243,8 @@
         }
         .erc-svc-btn--request:hover {
             background: #004aad;
-            color: #ffc600;
+            /* Sobre el azul fuerte la letra deja el amarillo por el celeste. */
+            color: #00b6ff;
             box-shadow: 0 10px 24px rgba(0, 74, 173, 0.4);
         }
         .erc-svc-btn--request:hover .erc-anim-arrow { transform: translateX(6px); }
@@ -282,7 +283,8 @@
             cursor: pointer;
             transition: all .3s ease;
         }
-        .erc-svc-modal__close:hover { background: #ffc600; color: #07294d; }
+        /* El cierre vive en la cabecera navy del modal. */
+        .erc-svc-modal__close:hover { background: #00b6ff; color: #fff; }
         .erc-svc-modal__head {
             position: relative;
             background: linear-gradient(135deg, #07294d 0%, #0b3a6b 60%, #0e4a8f 100%);
@@ -307,7 +309,8 @@
             font-size: 12px;
             letter-spacing: 2.5px;
             text-transform: uppercase;
-            color: #ffc600;
+            /* Rótulo y píldora viven en la cabecera navy del modal. */
+            color: #00b6ff;
             margin-bottom: 8px;
         }
         .erc-svc-modal__head h3 {
@@ -333,7 +336,7 @@
             font-size: 13.5px;
             font-weight: 600;
         }
-        .erc-svc-modal__service i { color: #ffc600; }
+        .erc-svc-modal__service i { color: #00b6ff; }
         .erc-svc-modal__body { padding: 28px 34px 34px; }
 
         .erc-svc-form .single-form { margin-top: 16px; }

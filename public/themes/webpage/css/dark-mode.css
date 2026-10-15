@@ -180,10 +180,10 @@ html[data-theme] body {
 }
 
 :where(html[data-theme="dark"]) .erc-btn--outline:hover {
-    /* Hover unificado del sitio: amarillo de marca también en oscuro */
-    background: #ffc600;
-    border-color: #ffc600;
-    color: #07294d;
+    /* Hover unificado del sitio: relleno celeste con la letra en blanca. */
+    background: #00b6ff;
+    border-color: #00b6ff;
+    color: #fff;
 }
 
 /* --- Textos en navy sobre superficies claras --- */
@@ -193,12 +193,12 @@ html[data-theme] body {
     color: #e6edf7;
 }
 
-/* --- Se quedan oscuros a propósito: van sobre amarillo --- */
+/* --- En oscuro no queda relleno amarillo: esos badges pasan a celeste, así que
+       su letra deja el navy y va en blanca, como el resto de rellenos celestes --- */
 :where(html[data-theme="dark"]) .erc-cl-inv__tag,
 :where(html[data-theme="dark"]) .erc-cl-plan__badge,
-:where(html[data-theme="dark"]) .erc-card--dark:hover .erc-chip-icon--dark,
 :where(html[data-theme="dark"]) .erc-cl-plan__item:hover .erc-cl-plan__num {
-    color: #07294d;
+    color: #fff;
 }
 
 /* Cerrar del modal de docentes: el círculo translúcido navy desaparece sobre
@@ -218,12 +218,32 @@ html[data-theme] body {
     background: #1b2436;
 }
 
+/* ------------------------------------------------- Landing de curso ------- */
+/* El generador no toca las variables CSS, así que los amarillos de la landing
+   (que salen de --erc-yellow / --erc-yellow-dark) hay que pasarlos aquí: en
+   oscuro todo fondo es azul oscuro y el amarillo no tiene sitio. */
+:where(html[data-theme="dark"]) .erc-cl {
+    --erc-yellow: #00b6ff;
+    --erc-yellow-dark: #00b6ff;
+}
+
 /* --------------------------------------------- Liderazgo (perfil CEO) ------ */
 /* La píldora del cargo lleva un velo celeste: sobre el fondo oscuro la letra
    navy sería ilegible, así que pasa a blanca. */
 :where(html[data-theme="dark"]) .erc-ceo__role {
     background: rgba(0, 182, 255, .18);
     color: #fff;
+}
+
+/* La cita: el filete de la izquierda va en celeste de marca, igual que en claro,
+   y el icono deja el amarillo apagado del CSS generado. El generado reescribía el
+   borde entero con un `border` de 1px, así que allí el filete había desaparecido. */
+:where(html[data-theme="dark"]) .erc-ceo__quote {
+    border-left: 4px solid #00b6ff;
+}
+
+:where(html[data-theme="dark"]) .erc-ceo__quote i {
+    color: #00b6ff;
 }
 
 /* --------------------------------------------------- Hero (slider) --------- */

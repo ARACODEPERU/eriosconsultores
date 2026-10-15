@@ -3,8 +3,9 @@
 Toma el CSS real del sitio (bloques <style> de las vistas Blade + las hojas del
 tema) y produce las reglas equivalentes para el modo oscuro, preservando el tono
 de cada color: las superficies claras se oscurecen y los textos oscuros se
-aclaran, mientras que los colores saturados de marca (amarillo/azul/verde) se
-mantienen.
+aclaran, mientras que los colores saturados de marca (azul/verde) se mantienen y
+el amarillo de marca pasa al celeste #00b6ff (peticion del cliente: sobre fondo
+azul oscuro no queda amarillo).
 """
 
 import colorsys
@@ -118,11 +119,21 @@ def is_vivid(color, min_alpha=0.6):
     return s >= 0.45 and 0.22 <= l <= 0.80
 
 
+def es_amarillo(h, s, l):
+    """Amarillo de marca (#FFC600) y sus apagados (#B58100, #F4D671)."""
+    return s >= 0.45 and 0.15 <= l <= 0.85 and 30 <= h * 360 <= 75
+
+
 def remap_background(color):
     r, g, b, a = color
+    h, l, s = colorsys.rgb_to_hls(r, g, b)
+    # Regla del cliente: en el tema oscuro no queda amarillo, ni en rellenos ni en
+    # velados. Las superficies claras ya no existen ahi, asi que todo el amarillo
+    # de marca pasa al celeste de marca.
+    if es_amarillo(h, s, l):
+        return 0.0, 182 / 255, 1.0, a
     if a < 0.6:
         return None
-    h, l, s = colorsys.rgb_to_hls(r, g, b)
     light = l >= 0.93 or (l >= 0.82 and s <= 0.5)
     if not light:
         return None
@@ -140,6 +151,12 @@ def remap_foreground(color):
     if l > 0.55:
         return None
     if s >= 0.45:
+        # Regla del cliente: sobre fondo azul oscuro no queda amarillo. En modo
+        # oscuro todas las superficies lo son, asi que el amarillo de marca (y el
+        # celeste heredado) pasan al celeste de marca #00B6FF, que sobre el navy
+        # oscuro contrasta 7,5:1 (mejor que el 7,1:1 del azul claro anterior).
+        if es_amarillo(h, s, l) or 185 <= h * 360 <= 205:
+            return 0.0, 182 / 255, 1.0, a
         h2, s2, l2 = h, min(s, 0.85), 0.70
     else:
         h2 = h if s >= 0.06 else BRAND_HUE
@@ -151,9 +168,11 @@ def remap_foreground(color):
 
 def remap_border(color):
     r, g, b, a = color
+    h, l, s = colorsys.rgb_to_hls(r, g, b)
+    if es_amarillo(h, s, l):
+        return 0.0, 182 / 255, 1.0, a
     if a < 0.6:
         return None
-    h, l, s = colorsys.rgb_to_hls(r, g, b)
     if l < 0.62 or s > 0.5:
         return None
     h2 = h if s >= 0.06 else BRAND_HUE
@@ -355,7 +374,8 @@ def main():
         "   Generado con storage/app/theme-gen.py a partir del CSS real del sitio:",
         "   cada superficie clara se oscurece y cada texto oscuro se aclara",
         "   conservando el tono original; los colores de marca saturados",
-        "   (amarillo #ffc600, azul #004aad, WhatsApp, verde) no se modifican.",
+        "   (azul #004aad, WhatsApp, verde) no se modifican y el amarillo de marca",
+        "   pasa al celeste #00b6ff, porque aqui todo fondo es azul oscuro.",
         "",
         "   Se activa con <html data-theme=\"dark\">. La carga por defecto es el",
         "   modo claro. No editar a mano: regenerar con el script.",

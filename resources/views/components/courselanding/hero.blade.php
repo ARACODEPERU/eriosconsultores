@@ -145,12 +145,13 @@
             content: '';
             position: absolute;
             inset: 0;
-            background: linear-gradient(180deg, rgba(255, 198, 0, 0.06), transparent 42%);
+            /* El héroe es navy: el lavado y los aros dejan el amarillo por el celeste. */
+            background: linear-gradient(180deg, rgba(0, 182, 255, 0.07), transparent 42%);
         }
         .erc-cl-hero__ring {
             position: absolute;
             border-radius: 50%;
-            border: 2px solid rgba(255, 198, 0, 0.16);
+            border: 2px solid rgba(0, 182, 255, 0.2);
             pointer-events: none;
         }
         .erc-cl-hero__ring--a { width: 300px; height: 300px; top: -110px; right: -70px; }
@@ -174,7 +175,7 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            color: #ffc600;
+            color: #00b6ff;
             text-decoration: none;
             transition: color .3s ease;
         }
@@ -204,7 +205,7 @@
             border-radius: 50px;
             margin-bottom: 20px;
         }
-        .erc-cl-hero__badge i { color: #ffc600; }
+        .erc-cl-hero__badge i { color: #00b6ff; }
 
         .erc-cl-hero__title {
             color: #fff;
@@ -243,7 +244,7 @@
             padding: 8px 15px;
             border-radius: 50px;
         }
-        .erc-cl-hero__meta li i { color: #ffc600; }
+        .erc-cl-hero__meta li i { color: #00b6ff; }
 
         .erc-cl-hero__actions { display: flex; flex-wrap: wrap; gap: 14px; }
 

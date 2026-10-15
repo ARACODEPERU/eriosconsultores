@@ -61,18 +61,19 @@
                     rgba(8, 48, 88, 0.15) 64%,
                     rgba(8, 48, 88, 0) 78%);
         }
+        /* El héroe es navy: el lavado y los aros dejan el amarillo por el celeste. */
         .erc-hero__overlay::after {
             content: '';
             position: absolute;
             inset: 0;
-            background: linear-gradient(180deg, rgba(255, 198, 0, 0.05), transparent 40%);
+            background: linear-gradient(180deg, rgba(0, 182, 255, 0.06), transparent 40%);
         }
 
-        /* Anillos decorativos amarillos (del diseño Docentes) */
+        /* Anillos decorativos del diseño Docentes, ahora en celeste de marca */
         .erc-hero__ring {
             position: absolute;
             border-radius: 50%;
-            border: 2px solid rgba(255, 198, 0, 0.18);
+            border: 2px solid rgba(0, 182, 255, 0.2);
             pointer-events: none;
         }
         .erc-hero__ring--a { width: 300px; height: 300px; top: -110px; right: -70px; }
@@ -87,7 +88,7 @@
             font-size: 13px;
             letter-spacing: 2.5px;
             text-transform: uppercase;
-            color: #ffc600;
+            color: #00b6ff;
             position: relative;
             padding-bottom: 12px;
             margin-bottom: 12px;
@@ -99,7 +100,7 @@
             bottom: 0;
             width: 35px;
             height: 2px;
-            background: #ffc600;
+            background: #00b6ff;
         }
         .erc-hero__eyebrow::before { left: 0; }
         .erc-hero__eyebrow::after { left: 43px; width: 12px; opacity: .55; }
@@ -139,7 +140,7 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            color: #ffc600;
+            color: #00b6ff;
             text-decoration: none;
             transition: color .3s ease;
         }

@@ -52,7 +52,8 @@
         content: '';
         position: absolute;
         border-radius: 50%;
-        border: 2px solid rgba(255, 198, 0, 0.12);
+        /* Las bandas navy de la landing también dejan el amarillo por el celeste. */
+        border: 2px solid rgba(0, 182, 255, 0.16);
         pointer-events: none;
     }
     .erc-cl-sec--dark::before { width: 320px; height: 320px; top: -120px; right: -80px; }
@@ -122,7 +123,14 @@
     }
     .erc-sec-head--dark h2 { color: #fff; }
     .erc-sec-head--dark p { color: rgba(255, 255, 255, 0.78); }
-    .erc-sec-head--dark .erc-sec-eyebrow { color: var(--erc-yellow); }
+    .erc-sec-head--dark .erc-sec-eyebrow { color: #00b6ff; }
+    /* Sólo en la cabecera oscura: sobre blanco las barras siguen amarillas.
+       Se repiten con :not() para igualar la especificidad de la regla original
+       de la barra corta, que si no gana por ir más arriba. */
+    .erc-sec-head--dark .erc-sec-eyebrow::before,
+    .erc-sec-head--dark .erc-sec-eyebrow::after,
+    .erc-sec-head--dark:not(.erc-sec-head--left) .erc-sec-eyebrow::before,
+    .erc-sec-head--dark:not(.erc-sec-head--left) .erc-sec-eyebrow::after { background: #00b6ff; }
 
     /* ---- Botones ---- */
     .erc-btn {
@@ -146,13 +154,16 @@
         background:
             linear-gradient(100deg, rgba(8, 48, 88, 0.85) 0%, rgba(8, 48, 88, 0.45) 55%, rgba(8, 48, 88, 0) 85%),
             linear-gradient(100deg, rgba(0, 72, 176, 0.95) 0%, rgba(0, 72, 176, 0.80) 100%);
-        color: #ffc600;
+        /* Sobre el degradado navy la letra va en blanca, como en el resto de
+           botones del sitio (el celeste ahí solo daría 3,5:1). */
+        color: #fff;
         box-shadow: 0 10px 26px rgba(8, 48, 88, 0.35);
     }
     .erc-btn--yellow:hover {
+        /* El celeste heredado #00A0F0 se unifica al de marca al tocar esta regla. */
         background:
             linear-gradient(100deg, rgba(8, 48, 88, 0.55) 0%, rgba(8, 48, 88, 0.30) 55%, rgba(8, 48, 88, 0) 85%),
-            linear-gradient(100deg, rgba(0, 160, 240, 0.95) 0%, rgba(0, 160, 240, 0.75) 60%, rgba(0, 160, 240, 0.55) 100%);
+            linear-gradient(100deg, rgba(0, 182, 255, 0.95) 0%, rgba(0, 182, 255, 0.75) 60%, rgba(0, 182, 255, 0.55) 100%);
         color: #fff;
     }
     /* Variante degradada para fondos OSCUROS (banda navy del hero/FAQ de la landing) */
@@ -160,13 +171,15 @@
         background:
             linear-gradient(100deg, rgba(8, 48, 88, 0.25) 0%, rgba(8, 48, 88, 0.10) 55%, rgba(8, 48, 88, 0) 85%),
             linear-gradient(100deg, rgba(0, 72, 176, 0.95) 0%, rgba(0, 72, 176, 0.80) 100%);
-        color: #ffc600;
+        /* Sobre fondo oscuro la letra va en blanca (el celeste daría 3,5:1). */
+        color: #fff;
         box-shadow: 0 10px 26px rgba(8, 48, 88, 0.35);
     }
     .erc-btn--on-dark:hover {
+        /* El celeste heredado #00A0F0 se unifica al de marca al tocar esta regla. */
         background:
             linear-gradient(100deg, rgba(8, 48, 88, 0.55) 0%, rgba(8, 48, 88, 0.25) 55%, rgba(8, 48, 88, 0) 85%),
-            linear-gradient(100deg, rgba(0, 160, 240, 0.95) 0%, rgba(0, 160, 240, 0.75) 60%, rgba(0, 160, 240, 0.55) 100%);
+            linear-gradient(100deg, rgba(0, 182, 255, 0.95) 0%, rgba(0, 182, 255, 0.75) 60%, rgba(0, 182, 255, 0.55) 100%);
         color: #fff;
     }
     .erc-btn--yellow:hover {
@@ -178,7 +191,8 @@
     .erc-btn--blue { background: var(--erc-blue); color: #fff; }
     .erc-btn--blue:hover { background: var(--erc-navy); color: #fff; }
     .erc-btn--ghost { border-color: rgba(255, 255, 255, 0.55); color: #fff; }
-    .erc-btn--ghost:hover { background: var(--erc-yellow); border-color: var(--erc-yellow); color: var(--erc-navy); }
+    /* El contorno va sobre bandas oscuras: hover celeste con la letra en blanca. */
+    .erc-btn--ghost:hover { background: #00b6ff; border-color: #00b6ff; color: #fff; }
     .erc-btn--outline { border-color: var(--erc-blue); color: var(--erc-blue); background: #fff; }
     .erc-btn--outline:hover { background: var(--erc-blue); color: #fff; }
     .erc-btn--outline-dark { border-color: rgba(255, 255, 255, 0.35); color: #fff; background: transparent; }
@@ -220,7 +234,7 @@
     }
     .erc-card--dark:hover {
         background: rgba(255, 255, 255, 0.09);
-        border-color: rgba(255, 198, 0, 0.45);
+        border-color: rgba(0, 182, 255, 0.5);
         box-shadow: none;
     }
     .erc-card--dark h3 { color: #fff; }
@@ -240,8 +254,9 @@
         transition: all .35s ease;
     }
     .erc-card:hover .erc-chip-icon { background: var(--erc-blue); color: var(--erc-yellow); }
-    .erc-chip-icon--dark { background: rgba(255, 198, 0, 0.14); color: var(--erc-yellow); }
-    .erc-card--dark:hover .erc-chip-icon--dark { background: var(--erc-yellow); color: var(--erc-navy); }
+    .erc-chip-icon--dark { background: rgba(0, 182, 255, 0.16); color: #00b6ff; }
+    /* Relleno celeste con el icono en blanco. */
+    .erc-card--dark:hover .erc-chip-icon--dark { background: #00b6ff; color: #fff; }
     .erc-chip-icon--lg { width: 68px; height: 68px; border-radius: 20px; font-size: 26px; }
 
     /* ---- Numeros fantasma (como las tarjetas de la home) ---- */
@@ -272,7 +287,7 @@
         border: 1px solid rgba(255, 255, 255, 0.18);
         color: rgba(255, 255, 255, 0.9);
     }
-    .erc-pill--dark i { color: var(--erc-yellow); }
+    .erc-pill--dark i { color: #00b6ff; }
 
     .erc-checklist { list-style: none; margin: 0; padding: 0; }
     .erc-checklist li {
@@ -287,7 +302,7 @@
     .erc-checklist li:last-child { margin-bottom: 0; }
     .erc-checklist li i { color: var(--erc-blue); margin-top: 5px; }
     .erc-cl-sec--dark .erc-checklist li { color: rgba(255, 255, 255, 0.85); }
-    .erc-cl-sec--dark .erc-checklist li i { color: var(--erc-yellow); }
+    .erc-cl-sec--dark .erc-checklist li i { color: #00b6ff; }
 
     /* ---- Utilidades ---- */
     .erc-muted { color: var(--erc-muted); }

@@ -124,9 +124,11 @@
         font-size: 22px;
         transition: background .3s ease, color .3s ease;
     }
+    /* Hover con relleno celeste y el icono en blanco, como las tarjetas de la
+       home: antes se pintaba de azul con el icono amarillo. */
     .erc-service-card:hover .erc-service-card__icon {
-        background: #004aad;
-        color: #ffc600;
+        background: #00b6ff;
+        color: #fff;
         transform: rotate(-6deg);
         transition: all .35s ease;
     }
@@ -223,8 +225,10 @@
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        background: #ffc600;
-        color: #07294d;
+        /* La banda es azul: el botón deja el amarillo por el celeste de marca,
+           con la letra en blanca. */
+        background: #00b6ff;
+        color: #fff;
         font-family: 'Montserrat', sans-serif;
         font-weight: 700;
         font-size: 15px;
@@ -236,7 +240,7 @@
     }
     .erc-cta-band__btn:hover {
         background: #07294d;
-        color: #ffc600;
+        color: #00b6ff;
         text-decoration: none;
     }
     @media (max-width: 575px) {

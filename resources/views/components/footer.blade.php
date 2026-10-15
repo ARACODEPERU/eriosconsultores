@@ -125,7 +125,8 @@
         .erc-footer__circle {
             position: absolute;
             border-radius: 50%;
-            background: rgba(255, 198, 0, 0.06);
+            /* El pie es navy: aquí el amarillo pasa a celeste de marca. */
+            background: rgba(0, 182, 255, 0.07);
             pointer-events: none;
         }
         .erc-footer__circle--a { width: 320px; height: 320px; top: -140px; right: -90px; }
@@ -169,7 +170,7 @@
             width: 36px;
             height: 3px;
             border-radius: 3px;
-            background: #ffc600;
+            background: #00b6ff;
         }
 
         /* ---- Enlaces ---- */
@@ -185,12 +186,12 @@
             transition: color .3s ease, transform .3s ease;
         }
         .erc-footer__links a i {
-            color: #ffc600;
+            color: #00b6ff;
             font-size: 13px;
             transition: transform .3s ease;
         }
         .erc-footer__links a:hover {
-            color: #ffc600;
+            color: #00b6ff;
             text-decoration: none;
             transform: translateX(4px);
         }
@@ -208,8 +209,8 @@
             width: 32px;
             height: 32px;
             border-radius: 8px;
-            background: rgba(255, 198, 0, 0.14);
-            color: #ffc600;
+            background: rgba(0, 182, 255, 0.16);
+            color: #00b6ff;
             font-size: 13px;
             display: inline-flex;
             align-items: center;
@@ -222,7 +223,7 @@
             margin: 4px 0 0;
         }
         .erc-footer__mail {
-            color: #ffc600;
+            color: #00b6ff;
             text-decoration: none;
             transition: color .3s ease;
         }
@@ -245,11 +246,12 @@
             transition: all .3s ease;
         }
         .erc-footer__net:hover {
-            background: #ffc600;
-            border-color: #ffc600;
-            color: #07294d;
+            /* Relleno celeste: el icono va en blanco, como el resto de hovers. */
+            background: #00b6ff;
+            border-color: #00b6ff;
+            color: #fff;
             transform: translateY(-3px);
-            box-shadow: 0 8px 18px rgba(255, 198, 0, 0.25);
+            box-shadow: 0 8px 18px rgba(0, 182, 255, 0.35);
             text-decoration: none;
         }
 
@@ -272,7 +274,7 @@
             margin: 0;
         }
         .erc-footer__bottom-inner a {
-            color: #ffc600;
+            color: #00b6ff;
             font-weight: 600;
             text-decoration: none;
             transition: color .3s ease;

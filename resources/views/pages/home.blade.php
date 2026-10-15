@@ -57,7 +57,8 @@
         box-shadow: 0 12px 28px rgba(0, 182, 255, 0.45);
     }
     .erc-btn--ghost { border: 2px solid #fff; color: #fff; }
-    .erc-btn--ghost:hover { background: #ffc600; border-color: #ffc600; color: #07294d; }
+    /* Va sobre el navy del hero: relleno celeste con la letra en blanca. */
+    .erc-btn--ghost:hover { background: #00b6ff; border-color: #00b6ff; color: #fff; }
     .erc-btn--outline { border: 2px solid #004aad; color: #004aad; }
     .erc-btn--outline:hover {
         /* El contorno se rellena de celeste con la letra en blanco al pasar el ratón. */
@@ -175,18 +176,19 @@
 
     /* ---- Video/beneficios ---- */
     .erc-video-band { position: relative; background: linear-gradient(135deg, #07294d 0%, #0b3a6b 60%, #0e4a8f 100%); padding: 90px 0; overflow: hidden; }
-    .erc-video-band::before { content: ''; position: absolute; width: 320px; height: 320px; border-radius: 50%; border: 2px solid rgba(255,198,0,.12); top: -120px; right: -80px; }
-    .erc-video-band::after { content: ''; position: absolute; width: 420px; height: 420px; border-radius: 50%; border: 2px solid rgba(255,198,0,.12); bottom: -180px; left: -120px; }
+    /* La banda es navy: sus adornos dejan el amarillo y pasan a celeste. */
+    .erc-video-band::before { content: ''; position: absolute; width: 320px; height: 320px; border-radius: 50%; border: 2px solid rgba(0,182,255,.16); top: -120px; right: -80px; }
+    .erc-video-band::after { content: ''; position: absolute; width: 420px; height: 420px; border-radius: 50%; border: 2px solid rgba(0,182,255,.16); bottom: -180px; left: -120px; }
     .erc-video-band .container { position: relative; z-index: 1; }
     .erc-video__playwrap { display: flex; justify-content: center; align-items: center; }
     .erc-video__play {
         width: 92px; height: 92px; border-radius: 50%; background: rgba(255,255,255,.08);
-        border: 1px solid rgba(255,255,255,.25); color: #ffc600; font-size: 30px;
+        border: 1px solid rgba(255,255,255,.25); color: #00b6ff; font-size: 30px;
         display: flex; align-items: center; justify-content: center; text-decoration: none;
         position: relative; transition: all .35s ease;
     }
-    .erc-video__play::before { content: ''; position: absolute; inset: -14px; border-radius: 50%; border: 2px solid rgba(255,198,0,.35); animation: erc-pulse 2s ease-out infinite; }
-    .erc-video__play:hover { background: #ffc600; color: #07294d; transform: scale(1.06); }
+    .erc-video__play::before { content: ''; position: absolute; inset: -14px; border-radius: 50%; border: 2px solid rgba(0,182,255,.4); animation: erc-pulse 2s ease-out infinite; }
+    .erc-video__play:hover { background: #00b6ff; color: #fff; transform: scale(1.06); }
     @keyframes erc-pulse { 0% { transform: scale(.9); opacity: 1; } 100% { transform: scale(1.25); opacity: 0; } }
     .erc-video__note { color: rgba(255,255,255,.75); font-size: 13px; letter-spacing: 1px; text-transform: uppercase; font-family: 'Montserrat', sans-serif; margin-top: 20px; text-align: center; }
     .erc-vfeat-grid { display: grid; grid-template-columns: 1fr; gap: 18px; }
@@ -195,13 +197,14 @@
         background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1);
         border-radius: 14px; padding: 20px 22px; transition: all .35s ease;
     }
-    .erc-vfeat:hover { background: rgba(255,255,255,.09); border-color: rgba(255,198,0,.45); transform: translateX(6px); }
+    .erc-vfeat:hover { background: rgba(255,255,255,.09); border-color: rgba(0,182,255,.5); transform: translateX(6px); }
     .erc-vfeat__icon {
         flex: none; width: 48px; height: 48px; border-radius: 12px;
-        background: rgba(255,198,0,.14); color: #ffc600;
+        background: rgba(0,182,255,.16); color: #00b6ff;
         display: flex; align-items: center; justify-content: center; font-size: 20px; transition: all .35s ease;
     }
-    .erc-vfeat:hover .erc-vfeat__icon { background: #ffc600; color: #07294d; }
+    /* Relleno celeste con el icono en blanco. */
+    .erc-vfeat:hover .erc-vfeat__icon { background: #00b6ff; color: #fff; }
     .erc-vfeat h4 { color: #fff; font-size: 17px; font-weight: 700; margin: 0 0 6px; }
     .erc-vfeat p { color: rgba(255,255,255,.72); font-size: 14px; line-height: 24px; margin: 0; }
 

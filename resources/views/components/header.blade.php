@@ -154,8 +154,9 @@
             width: 22px;
             height: 22px;
             border-radius: 6px;
-            background: rgba(255, 198, 0, 0.16);
-            /* color: #ffc600; */
+            /* La topbar es navy: el velo deja el amarillo por el celeste y el
+               icono sigue en blanco. */
+            background: rgba(0, 182, 255, 0.16);
             color: #fff;
             display: inline-flex;
             align-items: center;
@@ -416,10 +417,12 @@
             outline: 2px solid #004aad;
             outline-offset: 2px;
         }
+        /* En oscuro el chip del interruptor es navy: el icono pasa a celeste,
+           que además contrasta algo mejor que el amarillo apagado (7,5:1). */
         html[data-theme="dark"] .erc-theme-toggle {
             background: #1b2a44;
             border-color: #33415a;
-            color: #ffc600;
+            color: #00b6ff;
         }
         html[data-theme="dark"] .erc-theme-toggle:hover {
             background: #00b6ff;

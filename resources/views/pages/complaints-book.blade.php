@@ -98,16 +98,19 @@
             background:
                 linear-gradient(100deg, rgba(8, 48, 88, 0.85) 0%, rgba(8, 48, 88, 0.45) 55%, rgba(8, 48, 88, 0) 85%),
                 linear-gradient(100deg, rgba(0, 72, 176, 0.95) 0%, rgba(0, 72, 176, 0.80) 100%);
-            color: #ffc600; border: none; border-radius: 14px;
+            /* Sobre el degradado navy la letra va en blanca, como en el resto de
+               botones del sitio (el celeste ahí solo daría 3,5:1). */
+            color: #fff; border: none; border-radius: 14px;
         font-family: 'Montserrat', sans-serif; font-size: 15px; font-weight: 700;
-        cursor: pointer; box-shadow: 0 10px 24px rgba(255, 198, 0, 0.35);
+        cursor: pointer; box-shadow: 0 10px 24px rgba(8, 48, 88, 0.3);
         transition: all .3s ease;
     }
     .erc-claims__submit:hover {
         /* Hover del degradado Aula Virtual */
+        /* El celeste heredado #00A0F0 se unifica al de marca al tocar esta regla. */
         background:
             linear-gradient(100deg, rgba(8, 48, 88, 0.55) 0%, rgba(8, 48, 88, 0.30) 55%, rgba(8, 48, 88, 0) 85%),
-            linear-gradient(100deg, rgba(0, 160, 240, 0.95) 0%, rgba(0, 160, 240, 0.75) 60%, rgba(0, 160, 240, 0.55) 100%);
+            linear-gradient(100deg, rgba(0, 182, 255, 0.95) 0%, rgba(0, 182, 255, 0.75) 60%, rgba(0, 182, 255, 0.55) 100%);
         color: #fff;
 
     .erc-claims__submit[disabled] { opacity: .5; cursor: not-allowed; transform: none; }
