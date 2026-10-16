@@ -6,7 +6,9 @@
 
         <div class="container erc-hero__container">
             <div class="erc-hero__content">
-                <span class="erc-hero__eyebrow">{{ $eyebrow }}</span>
+                {{-- El eyebrow se retiró a petición del cliente: sin él el título
+                     arranca más arriba. La prop $eyebrow se sigue aceptando para no
+                     tocar las 13 páginas que la pasan; simplemente no se pinta. --}}
                 <h1 class="erc-hero__title">{{ $title }}</h1>
                 @if($subtitle)
                     <p class="erc-hero__subtitle">{{ $subtitle }}</p>
@@ -35,38 +37,26 @@
             font-family: 'Montserrat', sans-serif;
         }
 
-        /* Overlay degradado navy: sólido a la izquierda (donde está el texto),
-           transparente a la derecha para que se vea la imagen */
-        /* Mismos colores del logotipo ERIOS: azul fuerte #0048B0, celeste #00A0F0 y navy #083058 */
+        /* Overlay idéntico al del slider de la portada: un solo degradado de dos
+           capas (velo navy→celeste arriba, lavado celeste de marca abajo, en
+           diagonal 100deg). De ese modo el hero interno y el de la home enseñan
+           el mismo formato. Antes había aquí tres capas —dos velos y un lavado—
+           que aclaraban de más la imagen y no coincidían con la portada. */
         .erc-hero__overlay {
             position: absolute;
             inset: 0;
-            background: linear-gradient(100deg,
-                    rgba(0, 160, 240, 0.93) 0%,
-                    rgba(0, 160, 240, 0.78) 34%,
-                    rgba(0, 160, 240, 0.30) 62%,
-                    rgba(0, 160, 240, 0.04) 100%);
-        }
-        /* Velo navy localizado bajo la zona de texto (izquierda): garantiza
-           contraste AA del texto blanco/amarillo sin alterar el degradado azul,
-           que se mantiene intacto en el resto del hero */
-        .erc-hero__overlay::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            /* Velo navy del logo (#083058) para contraste del texto */
-            background: linear-gradient(100deg,
-                    rgba(8, 48, 88, 0.72) 0%,
-                    rgba(8, 48, 88, 0.65) 45%,
-                    rgba(8, 48, 88, 0.15) 64%,
-                    rgba(8, 48, 88, 0) 78%);
-        }
-        /* El héroe es navy: el lavado y los aros dejan el amarillo por el celeste. */
-        .erc-hero__overlay::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(180deg, rgba(0, 182, 255, 0.06), transparent 40%);
+            /* En CSS la primera capa listada es la que se pinta encima. */
+            background:
+                linear-gradient(100deg,
+                        rgba(8, 48, 88, 0.72) 0%,
+                        rgba(0, 182, 255, 0.65) 45%,
+                        rgba(0, 182, 255, 0.15) 64%,
+                        rgba(0, 182, 255, 0) 78%),
+                linear-gradient(100deg,
+                        rgba(0, 182, 255, 0.93) 0%,
+                        rgba(0, 182, 255, 0.78) 34%,
+                        rgba(0, 182, 255, 0.30) 62%,
+                        rgba(0, 182, 255, 0.04) 100%);
         }
 
         /* Anillos decorativos del diseño Docentes, ahora en celeste de marca */
@@ -81,29 +71,6 @@
 
         .erc-hero__container { position: relative; z-index: 2; }
         .erc-hero__content { max-width: 640px; }
-
-        .erc-hero__eyebrow {
-            display: inline-block;
-            font-weight: 700;
-            font-size: 13px;
-            letter-spacing: 2.5px;
-            text-transform: uppercase;
-            color: #00b6ff;
-            position: relative;
-            padding-bottom: 12px;
-            margin-bottom: 12px;
-        }
-        .erc-hero__eyebrow::before,
-        .erc-hero__eyebrow::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            width: 35px;
-            height: 2px;
-            background: #00b6ff;
-        }
-        .erc-hero__eyebrow::before { left: 0; }
-        .erc-hero__eyebrow::after { left: 43px; width: 12px; opacity: .55; }
 
         .erc-hero__title {
             color: #fff;
@@ -122,29 +89,40 @@
             text-shadow: 0 2px 12px rgba(5, 29, 56, 0.55);
         }
 
+        /* El breadcrumb va en navy, así que necesita una superficie clara debajo:
+           la pastilla redondeada le da un suelo de contraste de ~11:1 sobre
+           cualquier foto y, de paso, separa la miga del fondo. */
         .erc-hero__crumbs ol {
             list-style: none;
-            display: flex;
+            display: inline-flex;
             align-items: center;
             gap: 10px;
             margin: 0;
-            padding: 0;
+            padding: 7px 16px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 999px;
         }
         .erc-hero__crumbs li {
             font-size: 13.5px;
             font-weight: 600;
-            color: rgba(255, 255, 255, 0.95);
-            text-shadow: 0 1px 8px rgba(5, 29, 56, 0.55);
+            color: #083058;
         }
         .erc-hero__crumbs a {
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            color: #00b6ff;
+            color: #083058;
             text-decoration: none;
             transition: color .3s ease;
         }
-        .erc-hero__crumbs a:hover { color: #fff; text-decoration: none; }
+        /* El navy tiene que ganar al celeste que el CSS generado del modo oscuro
+           fuerza en este enlace para que siga leyéndose sobre la pastilla. */
+        .erc-hero .erc-hero__crumbs a { color: #083058; }
+        /* Dentro de la pastilla clara el hover blanco desaparecía: pasa a azul
+           fuerte con subrayado, que es como se marca un enlace en texto. Va con
+           la misma .erc-hero delante que la regla de arriba para ganarle el empate
+           por orden y que el hover sí se note. */
+        .erc-hero .erc-hero__crumbs a:hover { color: #004aad; text-decoration: underline; }
         .erc-hero__crumb-current {
             position: relative;
             padding-left: 16px;
@@ -153,17 +131,21 @@
             content: '/';
             position: absolute;
             left: 0;
-            color: rgba(255, 255, 255, 0.4);
+            color: rgba(8, 48, 88, 0.45);
         }
 
         @media (max-width: 767px) {
             .erc-hero { padding: 56px 0 60px; text-align: center; }
             .erc-hero__content { margin: 0 auto; }
             .erc-hero__title { font-size: 30px; }
-            .erc-hero__eyebrow::before { left: 50%; transform: translateX(calc(-100% - 8px)); }
-            .erc-hero__eyebrow::after { left: 50%; transform: translateX(8px); width: 35px; opacity: 1; }
-            /* En móvil el texto está centrado: velo uniforme vertical para mantener el contraste */
+            /* En móvil el texto va centrado y cae sobre la parte más clara del
+               degradado, así que aquí sí se añade un velo navy uniforme: sin él el
+               título blanco se queda en torno a 2,4:1 sobre las fotos claras. El
+               slider no lo necesita porque su texto va alineado a la izquierda. */
             .erc-hero__overlay::before {
+                content: '';
+                position: absolute;
+                inset: 0;
                 background: linear-gradient(180deg,
                         rgba(8, 48, 88, 0.66) 0%,
                         rgba(8, 48, 88, 0.58) 100%);

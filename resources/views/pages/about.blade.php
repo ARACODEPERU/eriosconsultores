@@ -42,40 +42,57 @@
         filter: brightness(0) invert(1);
         opacity: .92;
     }
-    .erc-about__media-accent {
+    /* El aro deja el amarillo por el degradado navy→celeste de la marca. Un borde
+       no admite degradado, así que se pinta el relleno con el degradado y se
+       recorta el interior con una máscara: queda el filete con las esquinas
+       redondeadas intactas. Va con .erc-about delante para ganarle al
+       `border: 3px solid #00b6ff` que el CSS generado del modo oscuro fija aquí
+       (ese borde tapaba el degradado y lo dejaba en celeste plano). */
+    .erc-about .erc-about__media-accent {
         position: absolute;
         right: 0;
         bottom: 0;
         width: 55%;
         height: 55%;
-        border: 3px solid #ffc600;
+        border: 3px solid transparent;
         border-radius: 16px;
+        background: linear-gradient(100deg, #083058 0%, #00b6ff 100%) border-box;
+        -webkit-mask:
+            linear-gradient(#fff 0 0) padding-box,
+            linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask:
+            linear-gradient(#fff 0 0) padding-box,
+            linear-gradient(#fff 0 0);
+        mask-composite: exclude;
         z-index: -1;
     }
     .erc-about__badge {
         position: absolute;
         right: -6px;
         bottom: 44px;
-        background: #ffc600;
+        /* Fondo celeste de marca con el número y la etiqueta en blanco (antes el
+           amarillo con letra navy). */
+        background: #00b6ff;
         border-radius: 14px;
         padding: 14px 18px;
         display: flex;
         align-items: center;
         gap: 10px;
-        box-shadow: 0 10px 26px rgba(255, 198, 0, 0.35);
+        box-shadow: 0 10px 26px rgba(0, 182, 255, 0.38);
     }
     .erc-about__badge-num {
         font-family: 'Montserrat', sans-serif;
         font-size: 34px;
         font-weight: 700;
-        color: #07294d;
+        color: #fff;
         line-height: 1;
     }
     .erc-about__badge-label {
         font-size: 13px;
         line-height: 17px;
         font-weight: 600;
-        color: #07294d;
+        color: #fff;
     }
 
     /* ---- Columna de contenido ---- */
@@ -91,14 +108,17 @@
         padding-bottom: 12px;
         margin-bottom: 14px;
     }
-    .erc-about__eyebrow::before {
+    /* La línea del eyebrow deja el amarillo por el mismo degradado navy→celeste
+       que usan los encabezados de sección. También con .erc-about delante: el CSS
+       generado del modo oscuro la fijaba en celeste plano. */
+    .erc-about .erc-about__eyebrow::before {
         content: '';
         position: absolute;
         bottom: 0;
         left: 0;
         width: 35px;
         height: 2px;
-        background: #ffc600;
+        background: linear-gradient(90deg, #083058 0%, #00b6ff 100%);
     }
     .erc-about__title {
         font-size: 36px;

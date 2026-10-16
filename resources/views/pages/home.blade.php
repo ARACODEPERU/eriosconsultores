@@ -122,10 +122,12 @@
         /* DEGRADADO ANTERIOR (solo azul claro): impersonizado y comentado por si se reutiliza más adelante */
         /* background: linear-gradient(100deg, rgba(59, 181, 254, 0.93) 0%, rgba(59, 181, 254, 0.78) 34%, rgba(59, 181, 254, 0.30) 62%, rgba(59, 181, 254, 0.04) 100%); */
 
-        /* Mismo degradado que el hero de las páginas internas (page-hero),
-           con los colores del logotipo ERIOS: celeste #00A0F0 y navy #083058.
-           Capa 1 (arriba) velo navy para contraste + capa 2 (abajo) celeste de marca.
-           En CSS la primera capa listada es la que se pinta encima. */
+        /* Este degradado es la referencia que comparten la portada y los heros
+           internos (page-hero). Dos capas: velo navy→celeste de marca arriba y
+           lavado celeste abajo. El celeste antiguo (#00A0F0) que traía la capa de
+           abajo se unifica al celeste de marca #00B6FF para que los dos heroes
+           sean exactamente el mismo formato. En CSS la primera capa listada es la
+           que se pinta encima. */
         background:
             linear-gradient(100deg,
                     rgba(8, 48, 88, 0.72) 0%,
@@ -133,10 +135,10 @@
                     rgba(0, 182, 255, 0.15) 64%,
                     rgba(0, 182, 255, 0) 78%),
             linear-gradient(100deg,
-                    rgba(0, 160, 240, 0.93) 0%,
-                    rgba(0, 160, 240, 0.78) 34%,
-                    rgba(0, 160, 240, 0.30) 62%,
-                    rgba(0, 160, 240, 0.04) 100%);
+                    rgba(0, 182, 255, 0.93) 0%,
+                    rgba(0, 182, 255, 0.78) 34%,
+                    rgba(0, 182, 255, 0.30) 62%,
+                    rgba(0, 182, 255, 0.04) 100%);
     }
     /* Altura contenida: siempre se nota que hay más secciones debajo */
     #slider-part { height: clamp(470px, 62vh, 560px); overflow: hidden; }

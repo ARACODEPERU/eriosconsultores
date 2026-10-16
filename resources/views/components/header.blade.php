@@ -89,6 +89,12 @@
                                 <a class="erc-nav__link {{ request()->routeIs('web_about') ? 'active' : '' }}"
                                     href="{{ route('web_about') }}">Nosotros</a>
                             </li>
+                            {{-- Docentes va junto a Nosotros: es la misma familia de páginas
+                                 institucionales y así el menú mantiene el bloque. --}}
+                            <li class="nav-item">
+                                <a class="erc-nav__link {{ request()->routeIs('web_teachers') ? 'active' : '' }}"
+                                    href="{{ route('web_teachers') }}">Docentes</a>
+                            </li>
                             <li class="nav-item">
                                 <a class="erc-nav__link {{ request()->routeIs('web_courses') ? 'active' : '' }}"
                                     href="{{ route('web_courses') }}">Escuela de Negocios</a>
@@ -296,7 +302,14 @@
         /* Justo por encima del colapso del menú el espacio va muy justo (el logo
            ya se encoge solo): se estrecha la píldora para no quitarle más sitio. */
         @media (min-width: 992px) and (max-width: 1199px) {
-            .erc-nav__link { padding: 9px 11px !important; letter-spacing: 0.3px; }
+            /* Con el ítem de Docentes el menú ya no cabía en esta franja: el flex
+               resolvía comprimiendo el logo hasta dejarlo diminuto. Se aprieta el
+               bloque en lugar de dejar que encoga: enlaces más juntos, un punto
+               menos de letra, ítems sin relleno lateral y el logo a 140px, que es
+               el mismo que ya usa el móvil. */
+            .erc-nav__link { padding: 9px 8px !important; letter-spacing: 0.3px; font-size: 11.5px; }
+            .erc-nav__list .nav-item { padding: 0; }
+            .erc-nav__brand img { width: 140px; }
         }
 
         /* Dropdown de Servicios (áreas de práctica) */
