@@ -15,9 +15,18 @@
         font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 13px;
         letter-spacing: 2.5px; text-transform: uppercase; color: #004aad;
     }
-    .erc-sec-eyebrow::before, .erc-sec-eyebrow::after {
-        content: ''; width: 35px; height: 2px; background: #ffc600;
+    /* Los dos guiones del eyebrow dejan el amarillo por el degradado navy→celeste,
+       espejados uno respecto al otro para que el celeste caiga hacia el texto. El
+       selector arranca con html[data-theme] (el layout siempre lo fija) para cubrir
+       todos los eyebrows de la página y para ganarle al celeste plano que el CSS
+       generado del modo oscuro aplica aquí. Las bandas navy conservan su propio
+       guion celeste, que va después y gana el empate. */
+    html[data-theme] .erc-sec-eyebrow::before,
+    html[data-theme] .erc-sec-eyebrow::after {
+        content: ''; width: 35px; height: 2px;
     }
+    html[data-theme] .erc-sec-eyebrow::before { background: linear-gradient(90deg, #083058 0%, #00b6ff 100%); }
+    html[data-theme] .erc-sec-eyebrow::after { background: linear-gradient(90deg, #00b6ff 0%, #083058 100%); }
     .erc-sec-head h2 {
         font-family: 'Montserrat', sans-serif; font-size: 34px; font-weight: 800;
         color: #07294d; margin: 14px 0 12px; line-height: 1.25;
@@ -35,14 +44,29 @@
     }
     .erc-tax-about__img { width: 100%; height: 400px; object-fit: cover; display: block; }
     .erc-tax-about__img--fallback { width: auto; max-width: 60%; margin: 0 auto; height: 400px; object-fit: contain; filter: brightness(0) invert(1); opacity: .92; padding: 30px 0; }
+    /* La píldora pasa a celeste de marca con la letra en blanco (antes amarillo con
+       letra navy), y su sombra deja el halo amarillo. */
     .erc-tax-about__badge {
         position: absolute; left: -18px; top: 30px;
         display: inline-flex; align-items: center; gap: 9px;
-        background: #ffc600; color: #07294d; border-radius: 50px;
+        background: #00b6ff; color: #fff; border-radius: 50px;
         padding: 10px 20px; font-family: 'Montserrat', sans-serif;
-        font-weight: 700; font-size: 13px; box-shadow: 0 10px 26px rgba(255, 198, 0, 0.35);
+        font-weight: 700; font-size: 13px; box-shadow: 0 10px 26px rgba(0, 182, 255, 0.38);
     }
-    .erc-tax-about__accent { position: absolute; right: -20px; bottom: -20px; width: 55%; height: 55%; border: 3px solid #ffc600; border-radius: 18px; z-index: -1; }
+    /* El aro pasa a filete con el degradado navy→celeste. Un borde no admite
+       degradado, así que se pinta el relleno y se recorta el interior con una
+       máscara, que deja las esquinas de 18px intactas. El prefijo .erc-tax-about
+       es para ganarle al `border: 3px solid #00b6ff` del modo oscuro generado. */
+    .erc-tax-about .erc-tax-about__accent {
+        position: absolute; right: -20px; bottom: -20px; width: 55%; height: 55%;
+        border: 3px solid transparent; border-radius: 18px;
+        background: linear-gradient(100deg, #083058 0%, #00b6ff 100%) border-box;
+        -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+        mask-composite: exclude;
+        z-index: -1;
+    }
     .erc-tax-about__title { font-size: 32px; font-weight: 800; color: #07294d; font-family: 'Montserrat', sans-serif; line-height: 1.25; margin: 0 0 16px; }
     .erc-tax-about__text { font-size: 15.5px; line-height: 27px; color: #505050; margin: 0 0 14px; }
     .erc-tax-points { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 22px; }
@@ -52,7 +76,7 @@
         background: #fff; border: 1px solid #e6edf6; border-radius: 14px;
         padding: 16px 18px; transition: all .3s ease;
     }
-    .erc-tax-point:hover { border-color: rgba(255, 198, 0, .6); box-shadow: 0 10px 24px rgba(7, 41, 77, .08); transform: translateY(-3px); }
+    .erc-tax-point:hover { border-color: rgba(0, 182, 255, .6); box-shadow: 0 10px 24px rgba(7, 41, 77, .08); transform: translateY(-3px); }
     .erc-tax-point i { color: #ffc600; font-size: 18px; margin-top: 2px; }
     .erc-tax-point b { color: #07294d; font-size: 14.5px; display: block; margin-bottom: 3px; }
     .erc-tax-point span { color: #505050; font-size: 13.5px; line-height: 21px; }
@@ -64,14 +88,16 @@
         background: #fff; border: 1px solid #e6edf6; border-radius: 18px;
         padding: 30px 28px; transition: all .3s ease; display: flex; flex-direction: column;
     }
-    .erc-tax-card:hover { transform: translateY(-6px); box-shadow: 0 18px 40px rgba(7, 41, 77, .12); border-color: rgba(255, 198, 0, .55); }
+    .erc-tax-card:hover { transform: translateY(-6px); box-shadow: 0 18px 40px rgba(7, 41, 77, .12); border-color: rgba(0, 182, 255, .55); }
     .erc-tax-card__icon {
         width: 58px; height: 58px; border-radius: 16px;
         background: rgba(0, 74, 173, .08); color: #004aad;
         display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 18px;
         transition: all .3s ease;
     }
-    .erc-tax-card:hover .erc-tax-card__icon { background: #ffc600; color: #07294d; }
+    /* La caja del icono pasa a celeste con el icono en blanco (antes el amarillo con
+       el icono navy), como el resto de hovers con relleno celeste del sitio. */
+    .erc-tax-card:hover .erc-tax-card__icon { background: #00b6ff; color: #fff; }
     .erc-tax-card h3 { font-family: 'Montserrat', sans-serif; font-size: 19px; font-weight: 700; color: #07294d; margin: 0 0 10px; }
     .erc-tax-card p { color: #505050; font-size: 14px; line-height: 24px; margin: 0 0 16px; flex: 1; }
     .erc-tax-card ul { list-style: none; margin: 0; padding: 0; }
@@ -89,7 +115,7 @@
         background: #fff; border: 1px solid #e6edf6; border-radius: 16px;
         padding: 26px 22px; text-align: center; transition: all .3s ease; position: relative;
     }
-    .erc-tax-step:hover { transform: translateY(-4px); box-shadow: 0 14px 32px rgba(7, 41, 77, .10); border-color: rgba(255, 198, 0, .55); }
+    .erc-tax-step:hover { transform: translateY(-4px); box-shadow: 0 14px 32px rgba(7, 41, 77, .10); border-color: rgba(0, 182, 255, .55); }
     /* Con dos clases gana a `.erc-tax-step span`, que pisaba el color y el tamaño
        y dejaba el número gris sobre el chip navy. */
     .erc-tax-step .erc-tax-step__num {
@@ -113,8 +139,11 @@
     .erc-tax-band::after { content: ''; position: absolute; width: 420px; height: 420px; border-radius: 50%; border: 2px solid rgba(0, 182, 255, .16); bottom: -180px; left: -120px; }
     .erc-tax-band .container { position: relative; z-index: 2; }
     .erc-tax-band .erc-sec-eyebrow { color: #fff; }
-    .erc-tax-band .erc-sec-eyebrow::before,
-    .erc-tax-band .erc-sec-eyebrow::after { background: #00b6ff; }
+    /* La banda conserva el guion celeste plano: sobre el navy, el extremo navy del
+       degradado general se perdería. Va con html[data-theme] delante para ganarle
+       a ese degradado, que es más específico que el selector de la banda. */
+    html[data-theme] .erc-tax-band .erc-sec-eyebrow::before,
+    html[data-theme] .erc-tax-band .erc-sec-eyebrow::after { background: #00b6ff; }
     .erc-tax-band h2 { font-family: 'Montserrat', sans-serif; font-size: 32px; font-weight: 800; color: #fff; margin: 14px 0 12px; }
     .erc-tax-band p { color: rgba(255, 255, 255, .78); font-size: 15.5px; line-height: 27px; max-width: 620px; margin: 0 auto 30px; }
 

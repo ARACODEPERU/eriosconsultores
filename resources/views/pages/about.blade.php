@@ -164,9 +164,12 @@
         font-size: 18px;
         transition: all .3s ease;
     }
+    /* Hover de la caja del icono en celeste de marca con el icono en blanco
+       (antes navy con el icono amarillo), como el resto de hovers con relleno
+       celeste del sitio. */
     .erc-about__feats li:hover .erc-about__feat-icon {
-        background: #004aad;
-        color: #ffc600;
+        background: #00b6ff;
+        color: #fff;
     }
 
     .erc-about__actions {
@@ -196,10 +199,9 @@
         transition: all .35s ease;
     }
     .erc-btn-main:hover {
-        /* El celeste heredado #00A0F0 se unifica al de marca al tocar esta regla. */
-        background:
-            linear-gradient(100deg, rgba(8, 48, 88, 0.55) 0%, rgba(8, 48, 88, 0.30) 55%, rgba(8, 48, 88, 0) 85%),
-            linear-gradient(100deg, rgba(0, 182, 255, 0.95) 0%, rgba(0, 182, 255, 0.75) 60%, rgba(0, 182, 255, 0.55) 100%);
+        /* El hover deja el degradado con velo navy por celeste plano con la letra
+           en blanca, igual que el resto de botones del sitio. */
+        background: #00b6ff;
         color: #fff;
         text-decoration: none;
     }
@@ -216,9 +218,12 @@
         text-decoration: none;
         transition: all .35s ease;
     }
+    /* El borde también pasa a celeste: el relleno se pinta por debajo del borde,
+       así que si el borde se quedara navy asomaría un aro azul sobre el celeste. */
     .erc-btn-ghost:hover {
-        background: #004aad;
+        background: #00b6ff;
         color: #fff;
+        border-color: #00b6ff;
         text-decoration: none;
     }
 
@@ -242,14 +247,22 @@
         position: relative;
         overflow: hidden;
     }
-    .erc-mvv-card::before {
+    /* La barra que aparece al pasar el ratón deja el amarillo por el degradado
+       navy→celeste, el mismo del aro y de las rayitas de la sección «sobre»: arranca
+       en #083058, el navy de identidad, no en el azul fuerte.
+       El prefijo es la clase del grid, no `html[data-theme]`, a propósito: así esta
+       regla le gana al fondo que el CSS generado del modo oscuro fija en la barra
+       (una clase más) pero sigue perdiendo, por orden, contra
+       `.erc-mvv-card:hover::before`, que es la que la hace crecer. Con `html[...]`
+       delante quedaría por encima del hover y la barra no llegaría a verse. */
+    .erc-mvv-grid .erc-mvv-card::before {
         content: '';
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
         height: 4px;
-        background: linear-gradient(90deg, #004aad, #ffc600);
+        background: linear-gradient(90deg, #083058 0%, #00b6ff 100%);
         transform: scaleX(0);
         transform-origin: left;
         transition: transform .4s ease;
@@ -279,9 +292,11 @@
         font-size: 22px;
         transition: all .35s ease;
     }
+    /* Hover en celeste con el icono en blanco (antes navy con el icono amarillo),
+       igual que las cajas de la sección «sobre». */
     .erc-mvv-card:hover .erc-mvv-card__icon {
-        background: #004aad;
-        color: #ffc600;
+        background: #00b6ff;
+        color: #fff;
         transform: rotate(-6deg);
     }
     .erc-mvv-card__num {

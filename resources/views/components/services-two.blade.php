@@ -220,15 +220,18 @@
             flex-wrap: wrap;
             gap: 10px;
         }
+        /* Formato homologado con el botón «Aula Virtual»: sus medidas y las esquinas
+           de 14px. Se aplica a la clase base porque los dos botones de la tarjeta van
+           en la misma fila y con formas distintas el desajuste se notaba. */
         .erc-svc-btn {
             display: inline-flex;
             align-items: center;
             gap: 8px;
             font-family: 'Montserrat', sans-serif;
             font-weight: 700;
-            font-size: 14px;
-            padding: 12px 22px;
-            border-radius: 5px;
+            font-size: 14.5px;
+            padding: 13px 28px;
+            border-radius: 14px;
             border: 2px solid transparent;
             cursor: pointer;
             text-decoration: none;
@@ -236,16 +239,27 @@
             line-height: 1;
         }
         .erc-svc-btn:hover { text-decoration: none; transform: translateY(-2px); }
-        .erc-svc-btn--request {
-            background: #ffc600;
-            color: #07294d;
-            box-shadow: 0 6px 18px rgba(255, 198, 0, 0.22);
+        /* El relleno del botón de solicitud deja el amarillo por el degradado del
+           botón «Aula Virtual», con la letra en blanca.
+           El prefijo es la clase de la fila de botones, no `html[data-theme]`, a
+           propósito: así esta regla le gana al fondo que el CSS generado del modo
+           oscuro fija en el botón (una clase más, y ese degradado se conserva
+           también en oscuro) pero queda por debajo, por orden, del
+           `.erc-svc-btn--request:hover`, que es el que lo pone en celeste. Con
+           `html[...]` delante el hover no llegaría a aplicarse. */
+        .erc-service-card__actions .erc-svc-btn--request {
+            background:
+                linear-gradient(100deg, rgba(8, 48, 88, 0.85) 0%, rgba(8, 48, 88, 0.45) 55%, rgba(8, 48, 88, 0) 85%),
+                linear-gradient(100deg, rgba(0, 72, 176, 0.95) 0%, rgba(0, 72, 176, 0.80) 100%);
+            color: #fff;
+            box-shadow: 0 10px 26px rgba(8, 48, 88, .35);
         }
         .erc-svc-btn--request:hover {
-            background: #004aad;
-            /* Sobre el azul fuerte la letra deja el amarillo por el celeste. */
-            color: #00b6ff;
-            box-shadow: 0 10px 24px rgba(0, 74, 173, 0.4);
+            /* Hover celeste de marca con la letra en blanca, como el de «Aula
+               Virtual» en el header. */
+            background: #00b6ff;
+            color: #fff;
+            box-shadow: 0 12px 28px rgba(0, 182, 255, .45);
         }
         .erc-svc-btn--request:hover .erc-anim-arrow { transform: translateX(6px); }
         .erc-svc-btn--wa {
@@ -367,27 +381,45 @@
         .erc-svc-form .list-unstyled { margin: 0; }
         .erc-svc-form-message { color: #e5484d; font-size: 13px; margin: 10px 0 0; }
 
+        /* Formato homologado con el botón «Aula Virtual»: degradado oficial
+           invertido con la letra en blanca y esquinas de 14px. Antes era la
+           píldora amarilla con la letra navy. */
         .erc-svc-submit {
             display: inline-flex;
             align-items: center;
             gap: 10px;
-            background: #ffc600;
-            color: #07294d;
+            background:
+                linear-gradient(100deg, rgba(8, 48, 88, 0.85) 0%, rgba(8, 48, 88, 0.45) 55%, rgba(8, 48, 88, 0) 85%),
+                linear-gradient(100deg, rgba(0, 72, 176, 0.95) 0%, rgba(0, 72, 176, 0.80) 100%);
+            color: #fff;
             font-family: 'Montserrat', sans-serif;
             font-weight: 700;
             font-size: 15px;
             padding: 13px 32px;
-            border-radius: 50px;
+            border-radius: 14px;
             border: none;
             cursor: pointer;
             transition: all .35s ease;
-            box-shadow: 0 8px 22px rgba(255, 198, 0, 0.35);
+            box-shadow: 0 10px 26px rgba(8, 48, 88, .35);
         }
+        /* El CSS generado del modo oscuro trae el fondo que la píldora amarilla
+           mapeaba a celeste, y un selector de una sola clase le empata. Con el
+           prefijo html[data-theme="dark"] esta regla le gana y el degradado se
+           mantiene también en oscuro. Va antes del hover a propósito: así el
+           celeste del hover, que empata en peso, sigue ganando por ir después. */
+        html[data-theme="dark"] .erc-svc-submit {
+            background:
+                linear-gradient(100deg, rgba(8, 48, 88, 0.85) 0%, rgba(8, 48, 88, 0.45) 55%, rgba(8, 48, 88, 0) 85%),
+                linear-gradient(100deg, rgba(0, 72, 176, 0.95) 0%, rgba(0, 72, 176, 0.80) 100%);
+            color: #fff;
+        }
+        /* Hover celeste plano con la letra en blanca y sombra celeste, como el de
+           «Aula Virtual» (antes azul fuerte con la letra amarilla). */
         .erc-svc-submit:hover {
-            background: #004aad;
-            color: #ffc600;
+            background: #00b6ff;
+            color: #fff;
             transform: translateY(-2px);
-            box-shadow: 0 12px 26px rgba(0, 74, 173, 0.3);
+            box-shadow: 0 12px 28px rgba(0, 182, 255, .45);
         }
         .erc-svc-submit[disabled] { opacity: .45; cursor: not-allowed; transform: none; }
 

@@ -112,28 +112,45 @@
     .erc-form .help-block.with-errors { color: #e5484d; font-size: 12.5px; margin-top: 6px; }
     .erc-form .list-unstyled { margin: 0; }
 
+    /* Formato homologado con el botón «Aula Virtual»: degradado oficial invertido
+       con la letra en blanca y esquinas de 14px. Antes era la píldora amarilla con
+       la letra navy. */
     .erc-submit {
         display: inline-flex;
         align-items: center;
         gap: 10px;
-        background: #ffc600;
-        color: #07294d;
+        background:
+            linear-gradient(100deg, rgba(8, 48, 88, 0.85) 0%, rgba(8, 48, 88, 0.45) 55%, rgba(8, 48, 88, 0) 85%),
+            linear-gradient(100deg, rgba(0, 72, 176, 0.95) 0%, rgba(0, 72, 176, 0.80) 100%);
+        color: #fff;
         font-family: 'Montserrat', sans-serif;
         font-weight: 700;
         font-size: 15px;
         padding: 14px 34px;
-        border-radius: 50px;
+        border-radius: 14px;
         border: none;
         cursor: pointer;
         transition: all .35s ease;
-        box-shadow: 0 8px 22px rgba(255, 198, 0, 0.35);
+        box-shadow: 0 10px 26px rgba(8, 48, 88, .35);
     }
+    /* El CSS generado del modo oscuro trae el fondo que la píldora amarilla mapeaba
+       a celeste, y un selector de una clase le empata. Con el prefijo
+       html[data-theme="dark"] esta regla le gana y el degradado se mantiene también
+       en oscuro. Va antes del hover a propósito: así el celeste del hover, que
+       empata en peso, sigue ganando por ir después. */
+    html[data-theme="dark"] .erc-submit {
+        background:
+            linear-gradient(100deg, rgba(8, 48, 88, 0.85) 0%, rgba(8, 48, 88, 0.45) 55%, rgba(8, 48, 88, 0) 85%),
+            linear-gradient(100deg, rgba(0, 72, 176, 0.95) 0%, rgba(0, 72, 176, 0.80) 100%);
+        color: #fff;
+    }
+    /* Hover celeste plano con la letra en blanca y sombra celeste, como el de
+       «Aula Virtual» (antes azul fuerte con la letra celeste). */
     .erc-submit:hover {
-        background: #004aad;
-        /* Sobre el azul fuerte la letra deja el amarillo por el celeste. */
-        color: #00b6ff;
+        background: #00b6ff;
+        color: #fff;
         transform: translateY(-2px);
-        box-shadow: 0 12px 26px rgba(0, 74, 173, 0.3);
+        box-shadow: 0 12px 28px rgba(0, 182, 255, .45);
     }
     .erc-submit[disabled] { opacity: .45; cursor: not-allowed; transform: none; }
 

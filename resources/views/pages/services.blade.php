@@ -24,15 +24,21 @@
         position: relative;
         margin-bottom: 12px;
     }
-    .erc-services-head .erc-eyebrow::before,
-    .erc-services-head .erc-eyebrow::after {
+    /* Los dos guiones de debajo del eyebrow dejan el amarillo por el degradado
+       navy→celeste, espejados uno respecto al otro para que el celeste caiga hacia
+       el centro, donde se juntan. El selector arranca con html[data-theme] (el layout
+       siempre lo fija) para ganarle al celeste plano que el CSS generado del modo
+       oscuro aplica aquí. */
+    html[data-theme] .erc-services-head .erc-eyebrow::before,
+    html[data-theme] .erc-services-head .erc-eyebrow::after {
         content: '';
         position: absolute;
         bottom: 0;
         width: 35px;
         height: 2px;
-        background: #ffc600;
     }
+    html[data-theme] .erc-services-head .erc-eyebrow::before { background: linear-gradient(90deg, #083058 0%, #00b6ff 100%); }
+    html[data-theme] .erc-services-head .erc-eyebrow::after { background: linear-gradient(90deg, #00b6ff 0%, #083058 100%); }
     .erc-services-head .erc-eyebrow::before { left: 50%; transform: translateX(-100%); margin-right: 8px; }
     .erc-services-head .erc-eyebrow::after { left: 50%; transform: translateX(0); margin-left: 8px; }
     .erc-services-head h2 {
@@ -225,23 +231,35 @@
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        /* La banda es azul: el botón deja el amarillo por el celeste de marca,
-           con la letra en blanca. */
-        background: #00b6ff;
+        /* Formato homologado con el botón «Aula Virtual» del header: degradado
+           oficial invertido (navy denso sobre azul fuerte #0048B0) con la letra
+           en blanca y esquinas de 14px. Antes era una pastilla celeste plana. */
+        background:
+            linear-gradient(100deg,
+                    rgba(8, 48, 88, 0.85) 0%,
+                    rgba(8, 48, 88, 0.45) 55%,
+                    rgba(8, 48, 88, 0) 85%),
+            linear-gradient(100deg,
+                    rgba(0, 72, 176, 0.95) 0%,
+                    rgba(0, 72, 176, 0.80) 100%);
         color: #fff;
         font-family: 'Montserrat', sans-serif;
         font-weight: 700;
         font-size: 15px;
         padding: 14px 30px;
-        border-radius: 5px;
+        border-radius: 14px;
         white-space: nowrap;
         text-decoration: none;
         transition: all .35s ease;
+        box-shadow: 0 10px 26px rgba(8, 48, 88, .35);
     }
     .erc-cta-band__btn:hover {
-        background: #07294d;
-        color: #00b6ff;
+        /* Hover celeste de marca con la letra en blanca y sombra celeste, como
+           el de «Aula Virtual». Antes el fondo era navy y la letra celeste. */
+        background: #00b6ff;
+        color: #fff;
         text-decoration: none;
+        box-shadow: 0 12px 28px rgba(0, 182, 255, .45);
     }
     @media (max-width: 575px) {
         .erc-services-head h2 { font-size: 27px; }
