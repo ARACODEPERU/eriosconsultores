@@ -10,7 +10,7 @@
                             <i class="fa fa-play" aria-hidden="true"></i>
                         </a>
                     </div>
-                    <p class="erc-video__note">Conoce a ERIOS en 2 minutos</p>
+                    <p class="erc-video__note">Conoce a ERIOS</p>
                 </div>
 
                 {{-- ======== Beneficios ======== --}}

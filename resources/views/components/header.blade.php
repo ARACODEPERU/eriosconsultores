@@ -107,8 +107,8 @@
                                 <div class="dropdown-menu erc-nav__dropmenu">
                                     <a class="dropdown-item" href="{{ route('web_services') }}">Visión general</a>
                                     <div class="dropdown-divider"></div>
-                                    <a class="dropdown-item {{ request()->routeIs('web_leadership') ? 'active' : '' }}" href="{{ route('web_leadership') }}">Liderazgo</a>
-                                    <a class="dropdown-item {{ request()->routeIs('web_accounting') ? 'active' : '' }}" href="{{ route('web_accounting') }}">Contable</a>
+                                    <a class="dropdown-item {{ request()->routeIs('web_leadership') ? 'active' : '' }}" href="{{ route('web_leadership') }}">Liderazgo 360</a>
+                                    <a class="dropdown-item {{ request()->routeIs('web_accounting') ? 'active' : '' }}" href="{{ route('web_accounting') }}">Contable 360</a>
                                     <a class="dropdown-item {{ request()->routeIs('web_taxcompliance') ? 'active' : '' }}" href="{{ route('web_taxcompliance') }}">Tax &amp; Compliance</a>
                                 </div>
                             </li>
